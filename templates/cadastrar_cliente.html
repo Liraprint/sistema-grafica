@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cadastrar Cliente - Gráfica</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
+        .box { background: white; width: 500px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        .flash { color: red; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>📝 Cadastrar Empresa</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">
+                    {% for message in messages %}{{ message }}<br>{% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="post">
+            <p><label>Nome da Empresa *</label><br>
+               <input type="text" name="nome_empresa" placeholder="Ex: Minha Gráfica Ltda" required></p>
+            <p><label>CNPJ</label><br>
+               <input type="text" name="cnpj" placeholder="Ex: 12.345.678/0001-90"></p>
+            <p><label>Telefone</label><br>
+               <input type="text" name="telefone" placeholder="Ex: (11) 99999-9999"></p>
+            <p><label>WhatsApp</label><br>
+               <input type="text" name="whatsapp" placeholder="Ex: (11) 99999-9999"></p>
+            <p><label>E-mail</label><br>
+               <input type="text" name="email" placeholder="Ex: contato@minhagrafica.com.br"></p>
+            <p><button type="submit">Salvar Empresa</button></p>
+        </form>
+        <p><a href="/clientes">Voltar</a></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clientes - Gráfica</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c3e50; color: white; }
+        a { text-decoration: none; margin: 0 5px; }
+        .btn { padding: 5px 10px; border: none; border-radius: 3px; color: white; text-align: center; display: inline-block; }
+        .green { background: #27ae60; }
+        .blue { background: #3498db; }
+        .logout { float: right; background: #e74c3c; padding: 10px; color: white; }
+    </style>
+</head>
+<body>
+    <h1>📋 Clientes Cadastrados</h1>
+    <a href="/logout" class="logout">Sair</a>
+    <p>Usuário: <b>{{ session.usuario }}</b> ({{ session.nivel }})</p>
+    
+    <a href="/cadastrar_cliente" class="btn green">➕ Cadastrar Empresa</a>
+    
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Empresa</th>
+            <th>CNPJ</th>
+            <th>Telefone</th>
+            <th>WhatsApp</th>
+            <th>Ações</th>
+        </tr>
+        {% for cliente in clientes %}
+        <tr>
+            <td>{{ cliente.id }}</td>
+            <td>{{ cliente.nome_empresa }}</td>
+            <td>{{ cliente.cnpj }}</td>
+            <td>{{ cliente.telefone }}</td>
+            <td>{{ cliente.whatsapp }}</td>
+            <td>
+                <a href="/editar/{{ cliente.id }}" class="btn green">✏️ Editar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

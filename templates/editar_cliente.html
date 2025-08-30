@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editar Cliente - Gráfica</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
+        .box { background: white; width: 600px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        .btn-blue { background: #3498db; }
+        .flash { color: red; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>✏️ Editar: {{ cliente.nome_empresa }}</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">
+                    {% for message in messages %}{{ message }}<br>{% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="post">
+            <p><label>Nome da Empresa *</label><br>
+               <input type="text" name="nome_empresa" value="{{ cliente.nome_empresa }}" required></p>
+            <p><label>CNPJ</label><br>
+               <input type="text" name="cnpj" value="{{ cliente.cnpj }}"></p>
+            <p><label>Telefone</label><br>
+               <input type="text" name="telefone" value="{{ cliente.telefone }}"></p>
+            <p><label>WhatsApp</label><br>
+               <input type="text" name="whatsapp" value="{{ cliente.whatsapp }}"></p>
+            <p><label>E-mail</label><br>
+               <input type="text" name="email" value="{{ cliente.email }}"></p>
+            <p>
+                <button type="submit">💾 Salvar Alterações</button>
+                <a href="/historico/{{ cliente.id }}" class="btn-blue">📂 Ver Histórico</a>
+            </p>
+        </form>
+        <p><a href="/clientes">Voltar</a></p>
+    </div>
+</body>
+</html>
