@@ -37,7 +37,7 @@ def login():
         try:
             conn = conectar_db()
             cursor = conn.cursor()
-            cursor.execute("SELECT \"nome de usuário\", \"NÍVEL\" FROM usuários WHERE \"nome de usuário\" = %s AND \"SENHA\" = %s", (user, pwd))
+            cursor.execute("SELECT \"nome de usuário\", \"NÍVEL\" FROM \"usuários\" WHERE \"nome de usuário\" = %s AND \"SENHA\" = %s", (user, pwd))
             result = cursor.fetchone()
             conn.close()
 
@@ -283,7 +283,7 @@ def gerenciar_usuarios():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, \"nome de usuário\", \"NÍVEL\" FROM usuários")
+        cursor.execute("SELECT id, \"nome de usuário\", \"NÍVEL\" FROM \"usuários\"")
         usuarios = cursor.fetchall()
         conn.close()
         
@@ -359,7 +359,7 @@ def criar_usuario():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO usuários (\"nome de usuário\", \"SENHA\", \"NÍVEL\") VALUES (%s, %s, %s)", (username, password, nivel))
+        cursor.execute("INSERT INTO \"usuários\" (\"nome de usuário\", \"SENHA\", \"NÍVEL\") VALUES (%s, %s, %s)", (username, password, nivel))
         conn.commit()
         conn.close()
         flash("Usuário criado com sucesso!")
@@ -384,7 +384,7 @@ def excluir_usuario(id):
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM usuários WHERE id = %s", (id,))
+        cursor.execute("DELETE FROM \"usuários\" WHERE id = %s", (id,))
         conn.commit()
         conn.close()
         
@@ -413,7 +413,7 @@ def alterar_senha():
         try:
             conn = conectar_db()
             cursor = conn.cursor()
-            cursor.execute("UPDATE usuários SET \"SENHA\" = %s WHERE \"nome de usuário\" = %s", (nova_senha, session['usuario']))
+            cursor.execute("UPDATE \"usuários\" SET \"SENHA\" = %s WHERE \"nome de usuário\" = %s", (nova_senha, session['usuario']))
             conn.commit()
             conn.close()
             
