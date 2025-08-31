@@ -14,7 +14,7 @@ def conectar_db():
         host="db.muqksofhbonebgbpuucy.supabase.co",  # Seu host
         database="postgres",
         user="postgres",
-        password="Le22913879#",       # Sua senha do banco
+        password="Le22913879Le",       # Sua senha do banco
         port="5432"
     )
 
