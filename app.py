@@ -37,7 +37,7 @@ def login():
         try:
             conn = conectar_db()
             cursor = conn.cursor()
-            cursor.execute("SELECT username, nivel FROM usuarios WHERE username = %s AND password = %s", (user, pwd))
+            cursor.execute("SELECT \"nome de usuário\", \"NÍVEL\" FROM usuários WHERE \"nome de usuário\" = %s AND \"SENHA\" = %s", (user, pwd))
             result = cursor.fetchone()
             conn.close()
 
@@ -65,7 +65,7 @@ def clientes():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM clientes")
+        cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM Clientes")
         lista = cursor.fetchall()
         conn.close()
         
@@ -100,8 +100,8 @@ def cadastrar_cliente():
             conn = conectar_db()
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO clientes (
-                    nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacoes
+                INSERT INTO Clientes (
+                    nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacao
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', dados)
             conn.commit()
@@ -146,8 +146,8 @@ def editar_cliente(id):
             )
             
             cursor.execute('''
-                UPDATE clientes SET
-                    nome_responsavel=%s, cnpj=%s, telefone=%s, whatsapp=%s, email=%s, endereco=%s, observacoes=%s, nome_empresa=%s
+                UPDATE Clientes SET
+                    nome_responsavel=%s, cnpj=%s, telefone=%s, whatsapp=%s, email=%s, endereco=%s, observacao=%s, nome_empresa=%s
                 WHERE id = %s
             ''', dados)
             conn.commit()
@@ -156,7 +156,7 @@ def editar_cliente(id):
             flash("Dados atualizados com sucesso!")
             return redirect(url_for('clientes'))
         
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT * FROM Clientes WHERE id = %s", (id,))
         cliente = cursor.fetchone()
         conn.close()
         
@@ -181,14 +181,14 @@ def historico(id):
         conn = conectar_db()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT nome_empresa FROM clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT nome_empresa FROM Clientes WHERE id = %s", (id,))
         nome_empresa = cursor.fetchone()
         if not nome_empresa:
             flash("Cliente não encontrado!")
             conn.close()
             return redirect(url_for('clientes'))
         
-        cursor.execute("SELECT * FROM servicos WHERE cliente_id = %s", (id,))
+        cursor.execute("SELECT * FROM serviços WHERE \"ID do cliente\" = %s", (id,))
         servicos = cursor.fetchall()
         conn.close()
         
@@ -261,9 +261,9 @@ def adicionar_servico(id):
         conn = conectar_db()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO servicos (cliente_id, descricao, valor, data, usuario)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (id, descricao, valor, data, usuario))
+            INSERT INTO serviços ("ID do cliente", descrição, dados, usuário)
+            VALUES (%s, %s, %s, %s)
+        ''', (id, descricao, valor, usuario))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -283,7 +283,7 @@ def gerenciar_usuarios():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, nivel FROM usuarios")
+        cursor.execute("SELECT id, \"nome de usuário\", \"NÍVEL\" FROM usuários")
         usuarios = cursor.fetchall()
         conn.close()
         
@@ -325,7 +325,7 @@ def gerenciar_usuarios():
                 <p>
                     <select name="nivel" required style="padding: 8px;">
                         <option value="">Selecione o nível</option>
-                        <option value="admin">Admin</option>
+                        <option value="administrador">Administrador</option>
                         <option value="vendedor">Vendedor</option>
                         <option value="consulta">Consulta</option>
                     </select>
@@ -352,14 +352,14 @@ def criar_usuario():
     password = request.form['password']
     nivel = request.form['nivel']
     
-    if nivel not in ['admin', 'vendedor', 'consulta']:
+    if nivel not in ['administrador', 'vendedor', 'consulta']:
         flash("Nível inválido!")
         return redirect(url_for('gerenciar_usuarios'))
     
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO usuarios (username, password, nivel) VALUES (%s, %s, %s)", (username, password, nivel))
+        cursor.execute("INSERT INTO usuários (\"nome de usuário\", \"SENHA\", \"NÍVEL\") VALUES (%s, %s, %s)", (username, password, nivel))
         conn.commit()
         conn.close()
         flash("Usuário criado com sucesso!")
@@ -384,7 +384,7 @@ def excluir_usuario(id):
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM usuarios WHERE id = %s", (id,))
+        cursor.execute("DELETE FROM usuários WHERE id = %s", (id,))
         conn.commit()
         conn.close()
         
@@ -413,7 +413,7 @@ def alterar_senha():
         try:
             conn = conectar_db()
             cursor = conn.cursor()
-            cursor.execute("UPDATE usuarios SET password = %s WHERE username = %s", (nova_senha, session['usuario']))
+            cursor.execute("UPDATE usuários SET \"SENHA\" = %s WHERE \"nome de usuário\" = %s", (nova_senha, session['usuario']))
             conn.commit()
             conn.close()
             
@@ -449,14 +449,14 @@ def excluir_cliente(id):
         conn = conectar_db()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT nome_empresa FROM clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT nome_empresa FROM Clientes WHERE id = %s", (id,))
         cliente = cursor.fetchone()
         if not cliente:
             flash("Cliente não encontrado!")
             conn.close()
             return redirect(url_for('clientes'))
         
-        cursor.execute("DELETE FROM clientes WHERE id = %s", (id,))
+        cursor.execute("DELETE FROM Clientes WHERE id = %s", (id,))
         conn.commit()
         conn.close()
         
