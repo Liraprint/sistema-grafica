@@ -21,16 +21,21 @@ headers = {
 # Funções para acessar o Supabase
 # ========================
 
-def buscar_usuarios_por_login(username, password):
+def buscar_usuario_por_login(username, password):
     try:
-        # Ajustado para os nomes reais das colunas e tabela
-        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
+        # A URL codifica os espaços e acentos corretamente
+        # Tabela: "usuários" → precisa de aspas e codificação
+        table_name = "%22usu%C3%A1rios%22"  # Codificação de "usuários"
+        query = f"nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
+        url = f"{SUPABASE_URL}/rest/v1/{table_name}?{query}"
+        
         response = requests.get(url, headers=headers)
+        
         if response.status_code == 200:
             dados = response.json()
             return dados[0] if len(dados) > 0 else None
         else:
-            print("Erro ao buscar usuário:", response.status_code, response.text)
+            print("Erro na API:", response.status_code, response.text)
             return None
     except Exception as e:
         print("Erro de conexão:", e)
@@ -53,7 +58,7 @@ def login():
         pwd = request.form['password']
         
         try:
-            usuario = buscar_usuarios_por_login(user, pwd)
+            usuario = buscar_usuario_por_login(user, pwd)
             if usuario:
                 session['usuario'] = usuario['nome de usuário']
                 session['nivel'] = usuario['NÍVEL']
@@ -62,6 +67,7 @@ def login():
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
+            print("Erro no login:", e)
     
     return render_template('login.html')
 
@@ -76,7 +82,7 @@ def clientes():
         return redirect(url_for('login'))
     
     try:
-        # Aqui você vai buscar os clientes depois
+        # Buscar clientes (vamos implementar depois)
         flash("Página em construção: buscar clientes")
         return render_template('clientes.html', clientes=[], nivel=session['nivel'])
     except Exception as e:
