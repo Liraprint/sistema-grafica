@@ -33,35 +33,7 @@ def buscar_usuario_por_login(username, password):
         print("Erro de conexão:", e)
         return None
 
-def buscar_clientes():
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/Clientes"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print("Erro ao buscar clientes:", response.status_code, response.text)
-            return []
-    except Exception as e:
-        print("Erro de conexão:", e)
-        return []
-
-def cadastrar_cliente(dados):
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/Clientes"
-        response = requests.post(url, json=dados, headers=headers)
-        if response.status_code == 201:
-            return True
-        else:
-            print("Erro ao cadastrar cliente:", response.status_code, response.text)
-            return False
-    except Exception as e:
-        print("Erro de conexão:", e)
-        return False
-
 def buscar_usuarios():
-    if session.get('nivel') != 'administrador':
-        return []
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         response = requests.get(url, headers=headers)
@@ -73,6 +45,37 @@ def buscar_usuarios():
     except Exception as e:
         print("Erro de conexão:", e)
         return []
+
+def criar_usuario(username, password, nivel):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/usuarios"
+        dados = {
+            "nome de usuário": username,
+            "SENHA": password,
+            "NÍVEL": nivel
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        if response.status_code == 201:
+            return True
+        else:
+            print("Erro ao criar usuário:", response.status_code, response.text)
+            return False
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return False
+
+def excluir_usuario(id):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            return True
+        else:
+            print("Erro ao excluir usuário:", response.status_code, response.text)
+            return False
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return False
 
 # ========================
 # Páginas do sistema
@@ -113,56 +116,102 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    try:
-        clientes = buscar_clientes()
-        return render_template('clientes.html', clientes=clientes, nivel=session['nivel'])
-    except Exception as e:
-        flash("Erro ao carregar clientes.")
-        return redirect(url_for('clientes'))
-
-@app.route('/cadastrar_cliente', methods=['GET', 'POST'])
-def cadastrar_cliente():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        nome = request.form['nome_empresa']
-        if not nome:
-            flash("Nome da empresa é obrigatório!")
-            return redirect(url_for('cadastrar_cliente'))
-        
-        dados = {
-            "nome_empresa": nome,
-            "nome_responsavel": request.form['nome_responsavel'],
-            "cnpj": request.form['cnpj'],
-            "telefone": request.form['telefone'],
-            "whatsapp": request.form['whatsapp'],
-            "email": request.form['email'],
-            "endereco": request.form['endereco'],
-            "observacoes": request.form['observacoes']
-        }
-        
-        if cadastrar_cliente(dados):
-            flash("Empresa cadastrada com sucesso!")
-            return redirect(url_for('clientes'))
-        else:
-            flash("Erro ao cadastrar empresa.")
-            return redirect(url_for('cadastrar_cliente'))
-    
-    return render_template('cadastrar_cliente.html')
+    # Vamos focar em usuários agora
+    return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
-        return redirect(url_for('clientes'))
+        return redirect(url_for('login'))
     
     try:
         usuarios = buscar_usuarios()
-        return render_template('gerenciar_usuarios.html', usuarios=usuarios)
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Gerenciar Usuários</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; background: white; }}
+                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th {{ background: #2c3e50; color: white; }}
+                a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
+                .btn-green {{ background: #27ae60; }}
+                .btn-red {{ background: #e74c3c; }}
+                .btn-back {{ background: #95a5a6; }}
+            </style>
+        </head>
+        <body>
+            <h1>🔐 Gerenciar Usuários</h1>
+            <p><a href="/logout" class="btn-back">Sair</a></p>
+            
+            <h3>Usuários Cadastrados</h3>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Nível</th>
+                    <th>Ações</th>
+                </tr>
+                {''.join(f'<tr><td>{u["id"]}</td><td>{u["nome de usuário"]}</td><td>{u["NÍVEL"].upper()}</td><td><a href="/excluir_usuario/{u["id"]}" onclick="return confirm(\'Tem certeza?\')">❌ Excluir</a></td></tr>' for u in usuarios)}
+            </table>
+
+            <h3>Adicionar Novo Usuário</h3>
+            <form method="post" action="/criar_usuario">
+                <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
+                <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
+                <p>
+                    <select name="nivel" required style="padding: 8px;">
+                        <option value="">Selecione o nível</option>
+                        <option value="administrador">Administrador</option>
+                        <option value="vendedor">Vendedor</option>
+                        <option value="consulta">Consulta</option>
+                    </select>
+                </p>
+                <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
+            </form>
+        </body>
+        </html>
+        '''
     except Exception as e:
         flash("Erro ao carregar usuários.")
-        return redirect(url_for('clientes'))
+        return redirect(url_for('login'))
+
+@app.route('/criar_usuario', methods=['POST'])
+def criar_usuario():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('login'))
+    
+    username = request.form['username']
+    password = request.form['password']
+    nivel = request.form['nivel']
+    
+    if nivel not in ['administrador', 'vendedor', 'consulta']:
+        flash("Nível inválido!")
+        return redirect(url_for('gerenciar_usuarios'))
+    
+    if criar_usuario(username, password, nivel):
+        flash("Usuário criado com sucesso!")
+    else:
+        flash("Erro ao criar usuário.")
+    
+    return redirect(url_for('gerenciar_usuarios'))
+
+@app.route('/excluir_usuario/<int:id>')
+def excluir_usuario(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('login'))
+    
+    if excluir_usuario(id):
+        flash("Usuário excluído!")
+    else:
+        flash("Erro ao excluir usuário.")
+    
+    return redirect(url_for('gerenciar_usuarios'))
 
 # ========================
 # Iniciar o app
