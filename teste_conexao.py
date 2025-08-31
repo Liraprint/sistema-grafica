@@ -22,14 +22,15 @@ try:
     cursor = conn.cursor()
     cursor.execute("SELECT version();")
     version = cursor.fetchone()
-    print(f"Banco de dados: {version[0]}")
+    print(f"Versão do banco: {version[0]}")
     
-    cursor.execute("SELECT * FROM usuários LIMIT 1;")
+    # Teste com a tabela usuários
+    cursor.execute("SELECT * FROM \"usuários\" LIMIT 1;")
     resultado = cursor.fetchone()
     if resultado:
-        print(f"Primeiro usuário encontrado: {resultado}")
+        print(f"Usuário encontrado: {resultado}")
     else:
-        print("Tabela 'usuários' está vazia ou não tem dados.")
+        print("Tabela 'usuários' existe, mas está vazia.")
     
     conn.close()
 except Exception as e:

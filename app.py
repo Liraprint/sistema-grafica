@@ -11,7 +11,7 @@ app.secret_key = 'minha_chave_secreta_123'
 # ========================
 def conectar_db():
     return psycopg2.connect(
-        host="db.muqksofhbonebgbpuucy.supabase.co",  # Seu host
+        host="muqksofhbonebgbpuucy.supabase.co",  # Seu host
         database="postgres",
         user="postgres",
         password="Le22913879Le",       # Sua senha do banco
