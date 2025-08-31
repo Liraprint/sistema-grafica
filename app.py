@@ -23,12 +23,8 @@ headers = {
 
 def buscar_usuario_por_login(username, password):
     try:
-        # A URL codifica os espaços e acentos corretamente
-        # Tabela: "usuários" → precisa de aspas e codificação
-        table_name = "%22usu%C3%A1rios%22"  # Codificação de "usuários"
-        query = f"nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
-        url = f"{SUPABASE_URL}/rest/v1/{table_name}?{query}"
-        
+        # Busca no schema public, tabela usuarios (sem acento)
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         
         if response.status_code == 200:
@@ -82,7 +78,7 @@ def clientes():
         return redirect(url_for('login'))
     
     try:
-        # Buscar clientes (vamos implementar depois)
+        # Aqui você vai buscar os clientes depois
         flash("Página em construção: buscar clientes")
         return render_template('clientes.html', clientes=[], nivel=session['nivel'])
     except Exception as e:
