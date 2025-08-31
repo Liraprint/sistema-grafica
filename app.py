@@ -1,79 +1,22 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-import sqlite3
-import os
+import psycopg2  # para conectar ao Supabase
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
 
-# Caminho do banco de dados
-DB = 'grafica.db'
-
 # ========================
-# Conectar ao banco
+# Conectar ao banco (Supabase)
 # ========================
 def conectar_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# ========================
-# Criar tabelas
-# ========================
-def inicializar_banco():
-    conn = conectar_db()
-    cursor = conn.cursor()
-
-    # Tabela de usuários
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            nivel TEXT NOT NULL
-        )
-    ''')
-
-    # Criar admin padrão
-    cursor.execute("SELECT * FROM usuarios WHERE username = 'admin'")
-    if cursor.fetchone() is None:
-        cursor.execute('''
-            INSERT INTO usuarios (username, password, nivel)
-            VALUES ('admin', '123456', 'admin')
-        ''')
-
-    # Tabela de clientes
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS clientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome_empresa TEXT NOT NULL,
-            nome_responsavel TEXT,
-            cnpj TEXT,
-            telefone TEXT,
-            whatsapp TEXT,
-            email TEXT,
-            endereco TEXT,
-            observacoes TEXT
-        )
-    ''')
-
-    # Tabela de serviços
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS servicos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cliente_id INTEGER,
-            descricao TEXT NOT NULL,
-            valor REAL,
-            data TEXT,
-            usuario TEXT,
-            FOREIGN KEY(cliente_id) REFERENCES clientes(id)
-        )
-    ''')
-
-    conn.commit()
-    conn.close()
-
-inicializar_banco()
+    return psycopg2.connect(
+        host="db.muqksofhbonebgbpuucy.supabase.co",  # Seu host
+        database="postgres",
+        user="postgres",
+        password="Le22913879#",       # Sua senha do banco
+        port="5432"
+    )
 
 # ========================
 # Páginas do sistema
@@ -91,18 +34,21 @@ def login():
         user = request.form['username']
         pwd = request.form['password']
         
-        conn = conectar_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT username, nivel FROM usuarios WHERE username = ? AND password = ?", (user, pwd))
-        result = cursor.fetchone()
-        conn.close()
+        try:
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT username, nivel FROM usuarios WHERE username = %s AND password = %s", (user, pwd))
+            result = cursor.fetchone()
+            conn.close()
 
-        if result:
-            session['usuario'] = result['username']
-            session['nivel'] = result['nivel']
-            return redirect(url_for('clientes'))
-        else:
-            flash("Usuário ou senha incorretos!")
+            if result:
+                session['usuario'] = result[0]
+                session['nivel'] = result[1]
+                return redirect(url_for('clientes'))
+            else:
+                flash("Usuário ou senha incorretos!")
+        except Exception as e:
+            flash("Erro ao conectar ao banco de dados.")
     
     return render_template('login.html')
 
@@ -116,13 +62,17 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM clientes")
-    lista = cursor.fetchall()
-    conn.close()
-    
-    return render_template('clientes.html', clientes=lista, nivel=session['nivel'])
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM clientes")
+        lista = cursor.fetchall()
+        conn.close()
+        
+        return render_template('clientes.html', clientes=lista, nivel=session['nivel'])
+    except Exception as e:
+        flash("Erro ao carregar clientes.")
+        return redirect(url_for('clientes'))
 
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
@@ -146,18 +96,22 @@ def cadastrar_cliente():
             request.form['observacoes']
         )
         
-        conn = conectar_db()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO clientes (
-                nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', dados)
-        conn.commit()
-        conn.close()
-        
-        flash("Empresa cadastrada com sucesso!")
-        return redirect(url_for('clientes'))
+        try:
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO clientes (
+                    nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacoes
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', dados)
+            conn.commit()
+            conn.close()
+            
+            flash("Empresa cadastrada com sucesso!")
+            return redirect(url_for('clientes'))
+        except Exception as e:
+            flash("Erro ao cadastrar empresa.")
+            return redirect(url_for('cadastrar_cliente'))
     
     return render_template('cadastrar_cliente.html')
 
@@ -169,47 +123,51 @@ def editar_cliente(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
 
-    if request.method == 'POST':
-        nome = request.form['nome_empresa']
-        if not nome:
-            flash("Nome da empresa é obrigatório!")
-            return redirect(url_for('editar_cliente', id=id))
+        if request.method == 'POST':
+            nome = request.form['nome_empresa']
+            if not nome:
+                flash("Nome da empresa é obrigatório!")
+                return redirect(url_for('editar_cliente', id=id))
+            
+            dados = (
+                request.form['nome_responsavel'],
+                request.form['cnpj'],
+                request.form['telefone'],
+                request.form['whatsapp'],
+                request.form['email'],
+                request.form['endereco'],
+                request.form['observacoes'],
+                nome,
+                id
+            )
+            
+            cursor.execute('''
+                UPDATE clientes SET
+                    nome_responsavel=%s, cnpj=%s, telefone=%s, whatsapp=%s, email=%s, endereco=%s, observacoes=%s, nome_empresa=%s
+                WHERE id = %s
+            ''', dados)
+            conn.commit()
+            conn.close()
+            
+            flash("Dados atualizados com sucesso!")
+            return redirect(url_for('clientes'))
         
-        dados = (
-            request.form['nome_responsavel'],
-            request.form['cnpj'],
-            request.form['telefone'],
-            request.form['whatsapp'],
-            request.form['email'],
-            request.form['endereco'],
-            request.form['observacoes'],
-            nome,
-            id
-        )
-        
-        cursor.execute('''
-            UPDATE clientes SET
-                nome_responsavel=?, cnpj=?, telefone=?, whatsapp=?, email=?, endereco=?, observacoes=?, nome_empresa=?
-            WHERE id = ?
-        ''', dados)
-        conn.commit()
+        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+        cliente = cursor.fetchone()
         conn.close()
         
-        flash("Dados atualizados com sucesso!")
+        if not cliente:
+            flash("Cliente não encontrado!")
+            return redirect(url_for('clientes'))
+        
+        return render_template('editar_cliente.html', cliente=cliente)
+    except Exception as e:
+        flash("Erro ao carregar cliente.")
         return redirect(url_for('clientes'))
-    
-    cursor.execute("SELECT * FROM clientes WHERE id = ?", (id,))
-    cliente = cursor.fetchone()
-    conn.close()
-    
-    if not cliente:
-        flash("Cliente não encontrado!")
-        return redirect(url_for('clientes'))
-    
-    return render_template('editar_cliente.html', cliente=cliente)
 
 # ========================
 # Histórico de Serviços
@@ -219,67 +177,72 @@ def historico(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT nome_empresa FROM clientes WHERE id = ?", (id,))
-    nome_empresa = cursor.fetchone()
-    if not nome_empresa:
-        flash("Cliente não encontrado!")
-        return redirect(url_for('clientes'))
-    
-    cursor.execute("SELECT * FROM servicos WHERE cliente_id = ?", (id,))
-    servicos = cursor.fetchall()
-    conn.close()
-    
-    tabela_servicos = ''.join(
-        f'<tr><td>{s["id"]}</td><td>{s["descricao"]}</td><td>R$ {s["valor"]:.2f}</td><td>{s["data"]}</td><td>{s["usuario"]}</td></tr>'
-        for s in servicos
-    )
-    
-    html = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Histórico - {nome_empresa[0]}</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
-            table {{ width: 100%; border-collapse: collapse; background: white; }}
-            th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-            th {{ background: #2c3e50; color: white; }}
-            a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
-            .btn-green {{ background: #27ae60; }}
-            .btn-back {{ background: #95a5a6; }}
-        </style>
-    </head>
-    <body>
-        <h1>📂 Histórico de Serviços - {nome_empresa[0]}</h1>
-        <p>
-            <a href="/editar/{id}" class="btn-green">✏️ Editar Cliente</a>
-            <a href="/clientes" class="btn-back">← Voltar</a>
-        </p>
-        <h3>Serviços Realizados</h3>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Descrição</th>
-                <th>Valor (R$)</th>
-                <th>Data</th>
-                <th>Registrado por</th>
-            </tr>
-            {tabela_servicos if servicos else '<tr><td colspan="5">Nenhum serviço registrado.</td></tr>'}
-        </table>
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome_empresa FROM clientes WHERE id = %s", (id,))
+        nome_empresa = cursor.fetchone()
+        if not nome_empresa:
+            flash("Cliente não encontrado!")
+            conn.close()
+            return redirect(url_for('clientes'))
+        
+        cursor.execute("SELECT * FROM servicos WHERE cliente_id = %s", (id,))
+        servicos = cursor.fetchall()
+        conn.close()
+        
+        tabela_servicos = ''.join(
+            f'<tr><td>{s[0]}</td><td>{s[2]}</td><td>R$ {float(s[3]):.2f}</td><td>{s[4]}</td><td>{s[5]}</td></tr>'
+            for s in servicos
+        )
+        
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Histórico - {nome_empresa[0]}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; background: white; }}
+                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th {{ background: #2c3e50; color: white; }}
+                a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
+                .btn-green {{ background: #27ae60; }}
+                .btn-back {{ background: #95a5a6; }}
+            </style>
+        </head>
+        <body>
+            <h1>📂 Histórico de Serviços - {nome_empresa[0]}</h1>
+            <p>
+                <a href="/editar/{id}" class="btn-green">✏️ Editar Cliente</a>
+                <a href="/clientes" class="btn-back">← Voltar</a>
+            </p>
+            <h3>Serviços Realizados</h3>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Data</th>
+                    <th>Registrado por</th>
+                </tr>
+                {tabela_servicos if servicos else '<tr><td colspan="5">Nenhum serviço registrado.</td></tr>'}
+            </table>
 
-        <h3>Adicionar Novo Serviço</h3>
-        <form method="post" action="/adicionar_servico/{id}">
-            <p><input type="text" name="descricao" placeholder="Descrição do serviço" required style="padding: 8px; width: 300px;"></p>
-            <p><input type="number" step="0.01" name="valor" placeholder="Valor (R$)" style="padding: 8px; width: 150px;"></p>
-            <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Adicionar Serviço</button></p>
-        </form>
-    </body>
-    </html>
-    '''
-    return html
+            <h3>Adicionar Novo Serviço</h3>
+            <form method="post" action="/adicionar_servico/{id}">
+                <p><input type="text" name="descricao" placeholder="Descrição do serviço" required style="padding: 8px; width: 300px;"></p>
+                <p><input type="number" step="0.01" name="valor" placeholder="Valor (R$)" style="padding: 8px; width: 150px;"></p>
+                <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Adicionar Serviço</button></p>
+            </form>
+        </body>
+        </html>
+        '''
+        return html
+    except Exception as e:
+        flash("Erro ao carregar histórico.")
+        return redirect(url_for('clientes'))
 
 # ========================
 # Adicionar Serviço
@@ -294,14 +257,17 @@ def adicionar_servico(id):
     data = datetime.now().strftime("%d/%m/%Y %H:%M")
     usuario = session['usuario']
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO servicos (cliente_id, descricao, valor, data, usuario)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (id, descricao, valor, data, usuario))
-    conn.commit()
-    conn.close()
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO servicos (cliente_id, descricao, valor, data, usuario)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (id, descricao, valor, data, usuario))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        pass
     
     return redirect(url_for('historico', id=id))
 
@@ -314,60 +280,64 @@ def gerenciar_usuarios():
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, username, nivel FROM usuarios")
-    usuarios = cursor.fetchall()
-    conn.close()
-    
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Gerenciar Usuários</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
-            table {{ width: 100%; border-collapse: collapse; background: white; }}
-            th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-            th {{ background: #2c3e50; color: white; }}
-            a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
-            .btn-green {{ background: #27ae60; }}
-            .btn-red {{ background: #e74c3c; }}
-            .btn-back {{ background: #95a5a6; }}
-        </style>
-    </head>
-    <body>
-        <h1>🔐 Gerenciar Usuários</h1>
-        <p><a href="/clientes" class="btn-back">← Voltar</a></p>
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, nivel FROM usuarios")
+        usuarios = cursor.fetchall()
+        conn.close()
         
-        <h3>Usuários Cadastrados</h3>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Usuário</th>
-                <th>Nível</th>
-                <th>Ações</th>
-            </tr>
-            {''.join(f'<tr><td>{u["id"]}</td><td>{u["username"]}</td><td>{u["nivel"].upper()}</td><td><a href="/excluir_usuario/{u["id"]}" onclick="return confirm(\'Tem certeza?\')">❌ Excluir</a></td></tr>' for u in usuarios)}
-        </table>
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Gerenciar Usuários</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; background: white; }}
+                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th {{ background: #2c3e50; color: white; }}
+                a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
+                .btn-green {{ background: #27ae60; }}
+                .btn-red {{ background: #e74c3c; }}
+                .btn-back {{ background: #95a5a6; }}
+            </style>
+        </head>
+        <body>
+            <h1>🔐 Gerenciar Usuários</h1>
+            <p><a href="/clientes" class="btn-back">← Voltar</a></p>
+            
+            <h3>Usuários Cadastrados</h3>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Nível</th>
+                    <th>Ações</th>
+                </tr>
+                {''.join(f'<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2].upper()}</td><td><a href="/excluir_usuario/{u[0]}" onclick="return confirm(\'Tem certeza?\')">❌ Excluir</a></td></tr>' for u in usuarios)}
+            </table>
 
-        <h3>Adicionar Novo Usuário</h3>
-        <form method="post" action="/criar_usuario">
-            <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
-            <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
-            <p>
-                <select name="nivel" required style="padding: 8px;">
-                    <option value="">Selecione o nível</option>
-                    <option value="admin">Admin</option>
-                    <option value="vendedor">Vendedor</option>
-                    <option value="consulta">Consulta</option>
-                </select>
-            </p>
-            <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
-        </form>
-    </body>
-    </html>
-    '''
+            <h3>Adicionar Novo Usuário</h3>
+            <form method="post" action="/criar_usuario">
+                <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
+                <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
+                <p>
+                    <select name="nivel" required style="padding: 8px;">
+                        <option value="">Selecione o nível</option>
+                        <option value="admin">Admin</option>
+                        <option value="vendedor">Vendedor</option>
+                        <option value="consulta">Consulta</option>
+                    </select>
+                </p>
+                <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
+            </form>
+        </body>
+        </html>
+        '''
+    except Exception as e:
+        flash("Erro ao carregar usuários.")
+        return redirect(url_for('clientes'))
 
 # ========================
 # Criar Novo Usuário
@@ -389,11 +359,11 @@ def criar_usuario():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO usuarios (username, password, nivel) VALUES (?, ?, ?)", (username, password, nivel))
+        cursor.execute("INSERT INTO usuarios (username, password, nivel) VALUES (%s, %s, %s)", (username, password, nivel))
         conn.commit()
         conn.close()
         flash("Usuário criado com sucesso!")
-    except sqlite3.IntegrityError:
+    except Exception as e:
         flash("Usuário já existe!")
     
     return redirect(url_for('gerenciar_usuarios'))
@@ -407,18 +377,21 @@ def excluir_usuario(id):
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
     
-    # Não pode excluir o admin (ID 1)
     if id == 1:
         flash("Não pode excluir o usuário admin!")
         return redirect(url_for('gerenciar_usuarios'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM usuarios WHERE id = ?", (id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios WHERE id = %s", (id,))
+        conn.commit()
+        conn.close()
+        
+        flash("Usuário excluído!")
+    except Exception as e:
+        flash("Erro ao excluir usuário.")
     
-    flash("Usuário excluído!")
     return redirect(url_for('gerenciar_usuarios'))
 
 # ========================
@@ -437,14 +410,18 @@ def alterar_senha():
             flash("As senhas não conferem!")
             return redirect(url_for('alterar_senha'))
         
-        conn = conectar_db()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE usuarios SET password = ? WHERE username = ?", (nova_senha, session['usuario']))
-        conn.commit()
-        conn.close()
-        
-        flash("Senha alterada com sucesso!")
-        return redirect(url_for('clientes'))
+        try:
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE usuarios SET password = %s WHERE username = %s", (nova_senha, session['usuario']))
+            conn.commit()
+            conn.close()
+            
+            flash("Senha alterada com sucesso!")
+            return redirect(url_for('clientes'))
+        except Exception as e:
+            flash("Erro ao alterar senha.")
+            return redirect(url_for('alterar_senha'))
     
     return f'''
     <h1>🔐 Alterar Senha - {session['usuario']}</h1>
@@ -468,24 +445,26 @@ def excluir_cliente(id):
         flash("Você não tem permissão para excluir clientes.")
         return redirect(url_for('clientes'))
     
-    conn = conectar_db()
-    cursor = conn.cursor()
-    
-    # Verificar se o cliente existe
-    cursor.execute("SELECT nome_empresa FROM clientes WHERE id = ?", (id,))
-    cliente = cursor.fetchone()
-    if not cliente:
-        flash("Cliente não encontrado!")
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT nome_empresa FROM clientes WHERE id = %s", (id,))
+        cliente = cursor.fetchone()
+        if not cliente:
+            flash("Cliente não encontrado!")
+            conn.close()
+            return redirect(url_for('clientes'))
+        
+        cursor.execute("DELETE FROM clientes WHERE id = %s", (id,))
+        conn.commit()
         conn.close()
+        
+        flash(f"Empresa '{cliente[0]}' excluída com sucesso!")
         return redirect(url_for('clientes'))
-    
-    # Excluir cliente
-    cursor.execute("DELETE FROM clientes WHERE id = ?", (id,))
-    conn.commit()
-    conn.close()
-    
-    flash(f"Empresa '{cliente['nome_empresa']}' excluída com sucesso!")
-    return redirect(url_for('clientes'))
+    except Exception as e:
+        flash("Erro ao excluir cliente.")
+        return redirect(url_for('clientes'))
 
 # ========================
 # Iniciar o app
