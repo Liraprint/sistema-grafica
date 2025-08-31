@@ -1,53 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cadastrar Cliente - Gráfica</title>
+    <title>Cadastrar Empresa</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
-        .box { background: white; width: 600px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-        .flash { color: red; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="text"], input[type="email"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>📝 Cadastrar Empresa</h2>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash">
-                    {% for message in messages %}{{ message }}<br>{% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+    <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px;">
+        <h1><i class="fas fa-file-alt"></i> Cadastrar Empresa</h1>
+
         <form method="post">
-            <p><label>Nome da Empresa *</label><br>
-               <input type="text" name="nome_empresa" placeholder="Ex: Gráfica Rápida LTDA" required></p>
-            
-            <p><label>Nome do Responsável</label><br>
-               <input type="text" name="nome_responsavel" placeholder="Ex: Ana Souza"></p>
-            
-            <p><label>CNPJ</label><br>
-               <input type="text" name="cnpj" placeholder="Ex: 12.345.678/0001-90"></p>
-            
-            <p><label>Telefone</label><br>
-               <input type="text" name="telefone" placeholder="Ex: (11) 3333-4444"></p>
-            
-            <p><label>WhatsApp</label><br>
-               <input type="text" name="whatsapp" placeholder="Ex: (11) 99999-1234"></p>
-            
-            <p><label>E-mail</label><br>
-               <input type="text" name="email" placeholder="Ex: contato@grafica.com.br"></p>
-            
-            <p><label>Endereço</label><br>
-               <textarea name="endereco" placeholder="Ex: Rua das Flores, 123, Centro, São Paulo - SP, 01000-000"></textarea></p>
-            
-            <p><label>Observações</label><br>
-               <textarea name="observacoes" placeholder="Ex: Prefere receber por e-mail, paga em PIX"></textarea></p>
-            
-            <p><button type="submit">💾 Salvar Empresa</button></p>
+            <div class="form-group">
+                <label for="nome_empresa">Nome da Empresa *</label>
+                <input type="text" name="nome_empresa" id="nome_empresa" required placeholder="Ex: Gráfica Rápida LTDA">
+            </div>
+
+            <div class="form-group">
+                <label for="nome_responsavel">Nome do Responsável</label>
+                <input type="text" name="nome_responsavel" id="nome_responsavel" placeholder="Ex: Ana Souza">
+            </div>
+
+            <div class="form-group">
+                <label for="cnpj">CNPJ</label>
+                <input type="text" name="cnpj" id="cnpj" placeholder="Ex: 12.345.678/0001-90">
+            </div>
+
+            <div class="form-group">
+                <label for="telefone">Telefone</label>
+                <input type="text" name="telefone" id="telefone" placeholder="Ex: (11) 3333-4444">
+            </div>
+
+            <div class="form-group">
+                <label for="whatsapp">WhatsApp</label>
+                <input type="text" name="whatsapp" id="whatsapp" placeholder="Ex: (11) 99999-1234">
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" name="email" id="email" placeholder="Ex: contato@empresa.com">
+            </div>
+
+            <div class="form-group">
+                <label for="endereco">Endereço</label>
+                <input type="text" name="endereco" id="endereco" placeholder="Ex: Rua das Flores, 123">
+            </div>
+
+            <div class="form-group">
+                <label for="observacoes">Observações</label>
+                <input type="text" name="observacoes" id="observacoes" placeholder="Ex: Cliente VIP">
+            </div>
+
+            <button type="submit">Salvar Empresa</button>
         </form>
-        <p><a href="/clientes">Voltar</a></p>
     </div>
 </body>
 </html>
