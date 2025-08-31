@@ -65,7 +65,7 @@ def clientes():
     try:
         conn = conectar_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM Clientes")
+        cursor.execute("SELECT id, nome_empresa, cnpj, telefone, whatsapp FROM \"Clientes\"")
         lista = cursor.fetchall()
         conn.close()
         
@@ -100,7 +100,7 @@ def cadastrar_cliente():
             conn = conectar_db()
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO Clientes (
+                INSERT INTO \"Clientes\" (
                     nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacao
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', dados)
@@ -146,7 +146,7 @@ def editar_cliente(id):
             )
             
             cursor.execute('''
-                UPDATE Clientes SET
+                UPDATE \"Clientes\" SET
                     nome_responsavel=%s, cnpj=%s, telefone=%s, whatsapp=%s, email=%s, endereco=%s, observacao=%s, nome_empresa=%s
                 WHERE id = %s
             ''', dados)
@@ -156,7 +156,7 @@ def editar_cliente(id):
             flash("Dados atualizados com sucesso!")
             return redirect(url_for('clientes'))
         
-        cursor.execute("SELECT * FROM Clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT * FROM \"Clientes\" WHERE id = %s", (id,))
         cliente = cursor.fetchone()
         conn.close()
         
@@ -181,14 +181,14 @@ def historico(id):
         conn = conectar_db()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT nome_empresa FROM Clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT nome_empresa FROM \"Clientes\" WHERE id = %s", (id,))
         nome_empresa = cursor.fetchone()
         if not nome_empresa:
             flash("Cliente não encontrado!")
             conn.close()
             return redirect(url_for('clientes'))
         
-        cursor.execute("SELECT * FROM serviços WHERE \"ID do cliente\" = %s", (id,))
+        cursor.execute("SELECT * FROM \"serviços\" WHERE \"ID do cliente\" = %s", (id,))
         servicos = cursor.fetchall()
         conn.close()
         
@@ -261,7 +261,7 @@ def adicionar_servico(id):
         conn = conectar_db()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO serviços ("ID do cliente", descrição, dados, usuário)
+            INSERT INTO \"serviços\" ("ID do cliente", descrição, dados, usuário)
             VALUES (%s, %s, %s, %s)
         ''', (id, descricao, valor, usuario))
         conn.commit()
@@ -449,14 +449,14 @@ def excluir_cliente(id):
         conn = conectar_db()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT nome_empresa FROM Clientes WHERE id = %s", (id,))
+        cursor.execute("SELECT nome_empresa FROM \"Clientes\" WHERE id = %s", (id,))
         cliente = cursor.fetchone()
         if not cliente:
             flash("Cliente não encontrado!")
             conn.close()
             return redirect(url_for('clientes'))
         
-        cursor.execute("DELETE FROM Clientes WHERE id = %s", (id,))
+        cursor.execute("DELETE FROM \"Clientes\" WHERE id = %s", (id,))
         conn.commit()
         conn.close()
         
