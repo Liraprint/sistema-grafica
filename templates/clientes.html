@@ -3,156 +3,52 @@
 <head>
     <title>Clientes - Gráfica</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f0f4f8; 
-            padding: 20px; 
-            margin: 0;
-            color: #333;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .logo {
-            width: 200px;
-            margin-bottom: 10px;
-        }
-        h1 {
-            color: #2c3e50;
-            margin: 10px 0;
-        }
-        .user-bar {
-            background: #2c3e50;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .user-bar a {
-            color: white;
-            text-decoration: none;
-            margin-left: 15px;
-            font-weight: bold;
-        }
-        .user-bar a:hover {
-            text-decoration: underline;
-        }
-        .btn {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            text-decoration: none;
-            display: inline-block;
-            margin: 5px;
-        }
-        .btn-green {
-            background: #27ae60;
-        }
-        .btn-blue {
-            background: #3498db;
-        }
-        .btn-red {
-            background: #e74c3c;
-        }
-        .btn:hover {
-            opacity: 0.9;
-        }
-        .actions {
-            text-align: center;
-            margin: 15px 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #2c3e50;
-            color: white;
-        }
-        tr:hover {
-            background: #f9f9f9;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }
+        img { width: 200px; display: block; margin: 0 auto 20px auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .logout { float: right; background: #e74c3c; color: white; padding: 10px; text-decoration: none; }
+        a { text-decoration: none; margin: 0 5px; }
+        .btn { padding: 5px 10px; border: none; border-radius: 3px; color: white; }
+        .green { background: #27ae60; }
+        .blue { background: #3498db; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Cabeçalho com logo -->
-        <div class="header">
-            <img src="/static/logo.png" alt="Logo da Gráfica" class="logo">
-            <h1>📋 Clientes Cadastrados</h1>
-        </div>
-
-        <!-- Barra de usuário -->
-        <div class="user-bar">
-            <span>Usuário: <b>{{ session.usuario }}</b> ({{ session.nivel }})</span>
-            <div>
-                <a href="/alterar_senha">🔐 Alterar Senha</a>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-        </div>
-
-        <!-- Botões de ação -->
-        <div class="actions">
-            {% if nivel == 'admin' %}
-                <a href="/gerenciar_usuarios" class="btn btn-blue">🔐 Gerenciar Usuários</a>
-            {% endif %}
-            <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
-        </div>
-
-        <!-- Tabela de clientes -->
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Empresa</th>
-                <th>CNPJ</th>
-                <th>Telefone</th>
-                <th>WhatsApp</th>
-                <th>Ações</th>
-            </tr>
-            {% for cliente in clientes %}
-            <tr>
-                <td>{{ cliente.id }}</td>
-                <td>{{ cliente.nome_empresa }}</td>
-                <td>{{ cliente.cnpj }}</td>
-                <td>{{ cliente.telefone }}</td>
-                <td>{{ cliente.whatsapp }}</td>
-                <td>
-                    <a href="/editar/{{ cliente.id }}" class="btn btn-green">✏️ Editar</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-
-        <!-- Rodapé -->
-        <div class="footer">
-            Sistema de Gestão - Minha Gráfica Rápida<br>
-            Todos os direitos reservados © 2025
-        </div>
+    <div class="header">
+        <img src="/static/logo.png" alt="Logo">
+        <h1>📋 Clientes Cadastrados</h1>
+        <a href="/logout" class="logout">Sair</a>
+        <p>Usuário: <b>{{ session.usuario }}</b> ({{ session.nivel }})</p>
+        <p><a href="/alterar_senha">🔐 Alterar minha senha</a></p>
+        
+        {% if nivel == 'admin' %}
+            <a href="/gerenciar_usuarios" class="btn blue">🔐 Gerenciar Usuários</a>
+        {% endif %}
+        
+        <a href="/cadastrar_cliente" class="btn green">➕ Cadastrar Empresa</a>
     </div>
+
+    <table width="100%" border="1" cellpadding="10">
+        <tr>
+            <th>ID</th>
+            <th>Empresa</th>
+            <th>CNPJ</th>
+            <th>Telefone</th>
+            <th>WhatsApp</th>
+            <th>Ações</th>
+        </tr>
+        {% for cliente in clientes %}
+        <tr>
+            <td>{{ cliente.id }}</td>
+            <td>{{ cliente.nome_empresa }}</td>
+            <td>{{ cliente.cnpj }}</td>
+            <td>{{ cliente.telefone }}</td>
+            <td>{{ cliente.whatsapp }}</td>
+            <td>
+                <a href="/editar/{{ cliente.id }}" class="btn green">✏️ Editar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
 </body>
 </html>
