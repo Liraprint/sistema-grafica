@@ -24,24 +24,37 @@
         <form method="post">
             <p><label>Nome da Empresa *</label><br>
                <input type="text" name="nome_empresa" value="{{ cliente.nome_empresa }}" required></p>
+            
+            <p><label>Nome do Responsável</label><br>
+               <input type="text" name="nome_responsavel" value="{{ cliente.nome_responsavel }}"></p>
+            
             <p><label>CNPJ</label><br>
                <input type="text" name="cnpj" value="{{ cliente.cnpj }}"></p>
+            
             <p><label>Telefone</label><br>
                <input type="text" name="telefone" value="{{ cliente.telefone }}"></p>
+            
             <p><label>WhatsApp</label><br>
                <input type="text" name="whatsapp" value="{{ cliente.whatsapp }}"></p>
+            
             <p><label>E-mail</label><br>
                <input type="text" name="email" value="{{ cliente.email }}"></p>
+            
+            <p><label>Endereço</label><br>
+               <textarea name="endereco">{{ cliente.endereco }}</textarea></p>
+            
+            <p><label>Observações</label><br>
+               <textarea name="observacoes">{{ cliente.observacoes }}</textarea></p>
+            
             <p>
                 <button type="submit">💾 Salvar Alterações</button>
-                <a href="/historico/{{ cliente.id }}" class="btn-blue">📂 Ver Histórico</a>
+                <a href="/historico/{{ cliente.id }}" class="btn-blue">📋 Serviços Realizados</a>
             </p>
         </form>
 
-        <!-- Botão de excluir -->
         <p>
             <a href="/excluir_cliente/{{ cliente.id }}" 
-               onclick="return confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')"
+               onclick="return confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.');"
                style="background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                 🗑️ Excluir Empresa
             </a>

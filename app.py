@@ -47,10 +47,13 @@ def inicializar_banco():
         CREATE TABLE IF NOT EXISTS clientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome_empresa TEXT NOT NULL,
+            nome_responsavel TEXT,
             cnpj TEXT,
             telefone TEXT,
             whatsapp TEXT,
-            email TEXT
+            email TEXT,
+            endereco TEXT,
+            observacoes TEXT
         )
     ''')
 
@@ -134,17 +137,21 @@ def cadastrar_cliente():
         
         dados = (
             nome,
+            request.form['nome_responsavel'],
             request.form['cnpj'],
             request.form['telefone'],
             request.form['whatsapp'],
-            request.form['email']
+            request.form['email'],
+            request.form['endereco'],
+            request.form['observacoes']
         )
         
         conn = conectar_db()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO clientes (nome_empresa, cnpj, telefone, whatsapp, email)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO clientes (
+                nome_empresa, nome_responsavel, cnpj, telefone, whatsapp, email, endereco, observacoes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', dados)
         conn.commit()
         conn.close()
@@ -172,17 +179,20 @@ def editar_cliente(id):
             return redirect(url_for('editar_cliente', id=id))
         
         dados = (
+            request.form['nome_responsavel'],
             request.form['cnpj'],
-            nome,
             request.form['telefone'],
             request.form['whatsapp'],
             request.form['email'],
+            request.form['endereco'],
+            request.form['observacoes'],
+            nome,
             id
         )
         
         cursor.execute('''
             UPDATE clientes SET
-                cnpj=?, nome_empresa=?, telefone=?, whatsapp=?, email=?
+                nome_responsavel=?, cnpj=?, telefone=?, whatsapp=?, email=?, endereco=?, observacoes=?, nome_empresa=?
             WHERE id = ?
         ''', dados)
         conn.commit()
