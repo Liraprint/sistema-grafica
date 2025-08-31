@@ -1,7 +1,7 @@
 import psycopg2
 
 # Dados do seu banco Supabase
-host = "db.muqksofhbonebgbpuucy.supabase.co"
+host = "sjyixcnzamddedqvlrhv.supabase.co"
 database = "postgres"
 user = "postgres"
 password = "Le22913879Le"
