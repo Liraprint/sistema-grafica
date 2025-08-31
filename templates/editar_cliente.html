@@ -37,6 +37,16 @@
                 <a href="/historico/{{ cliente.id }}" class="btn-blue">📂 Ver Histórico</a>
             </p>
         </form>
+
+        <!-- Botão de excluir -->
+        <p>
+            <a href="/excluir_cliente/{{ cliente.id }}" 
+               onclick="return confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')"
+               style="background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                🗑️ Excluir Empresa
+            </a>
+        </p>
+
         <p><a href="/clientes">Voltar</a></p>
     </div>
 </body>

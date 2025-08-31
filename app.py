@@ -447,6 +447,37 @@ def alterar_senha():
     '''
 
 # ========================
+# Excluir Cliente
+# ========================
+@app.route('/excluir_cliente/<int:id>')
+def excluir_cliente(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    if session['nivel'] == 'consulta':
+        flash("Você não tem permissão para excluir clientes.")
+        return redirect(url_for('clientes'))
+    
+    conn = conectar_db()
+    cursor = conn.cursor()
+    
+    # Verificar se o cliente existe
+    cursor.execute("SELECT nome_empresa FROM clientes WHERE id = ?", (id,))
+    cliente = cursor.fetchone()
+    if not cliente:
+        flash("Cliente não encontrado!")
+        conn.close()
+        return redirect(url_for('clientes'))
+    
+    # Excluir cliente
+    cursor.execute("DELETE FROM clientes WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    
+    flash(f"Empresa '{cliente['nome_empresa']}' excluída com sucesso!")
+    return redirect(url_for('clientes'))
+
+# ========================
 # Iniciar o app
 # ========================
 if __name__ == '__main__':
