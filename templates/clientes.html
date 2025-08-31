@@ -18,6 +18,7 @@
     <h1>📋 Clientes Cadastrados</h1>
     <a href="/logout" class="logout">Sair</a>
     <p>Usuário: <b>{{ session.usuario }}</b> ({{ session.nivel }})</p>
+    <p><a href="/alterar_senha">🔐 Alterar minha senha</a></p>
     
     {% if nivel == 'admin' %}
         <a href="/gerenciar_usuarios" class="btn blue">🔐 Gerenciar Usuários</a>

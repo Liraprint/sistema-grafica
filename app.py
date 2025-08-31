@@ -14,7 +14,7 @@ DB = 'grafica.db'
 # ========================
 def conectar_db():
     conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row  # Permite acessar colunas por nome
+    conn.row_factory = sqlite3.Row
     return conn
 
 # ========================
@@ -397,7 +397,7 @@ def excluir_usuario(id):
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
     
-    # Não pode excluir o admin
+    # Não pode excluir o admin (ID 1)
     if id == 1:
         flash("Não pode excluir o usuário admin!")
         return redirect(url_for('gerenciar_usuarios'))
@@ -410,6 +410,41 @@ def excluir_usuario(id):
     
     flash("Usuário excluído!")
     return redirect(url_for('gerenciar_usuarios'))
+
+# ========================
+# Alterar Senha
+# ========================
+@app.route('/alterar_senha', methods=['GET', 'POST'])
+def alterar_senha():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        nova_senha = request.form['nova_senha']
+        confirmar_senha = request.form['confirmar_senha']
+        
+        if nova_senha != confirmar_senha:
+            flash("As senhas não conferem!")
+            return redirect(url_for('alterar_senha'))
+        
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET password = ? WHERE username = ?", (nova_senha, session['usuario']))
+        conn.commit()
+        conn.close()
+        
+        flash("Senha alterada com sucesso!")
+        return redirect(url_for('clientes'))
+    
+    return f'''
+    <h1>🔐 Alterar Senha - {session['usuario']}</h1>
+    <p><a href="/clientes">← Voltar</a></p>
+    <form method="post">
+        <p><input type="password" name="nova_senha" placeholder="Nova senha" required style="padding: 8px; width: 200px;"></p>
+        <p><input type="password" name="confirmar_senha" placeholder="Confirmar senha" required style="padding: 8px; width: 200px;"></p>
+        <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">Salvar Nova Senha</button></p>
+    </form>
+    '''
 
 # ========================
 # Iniciar o app
