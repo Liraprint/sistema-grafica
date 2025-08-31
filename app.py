@@ -21,30 +21,20 @@ headers = {
 # Funções para acessar o Supabase
 # ========================
 
-def buscar_usuarios():
-    try:
-        response = requests.get(f"{SUPABASE_URL}/rest/v1/usuarios", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print("Erro ao buscar usuários:", response.status_code, response.text)
-            return []
-    except Exception as e:
-        print("Erro de conexão:", e)
-        return []
-
 def buscar_usuarios_por_login(username, password):
     try:
-        url = f"{SUPABASE_URL}/rest/v1/usuarios?username=eq.{username}&password=eq.{password}"
+        # Ajustado para os nomes reais das colunas e tabela
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
-            return response.json()
+            dados = response.json()
+            return dados[0] if len(dados) > 0 else None
         else:
             print("Erro ao buscar usuário:", response.status_code, response.text)
-            return []
+            return None
     except Exception as e:
         print("Erro de conexão:", e)
-        return []
+        return None
 
 # ========================
 # Páginas do sistema
@@ -63,10 +53,10 @@ def login():
         pwd = request.form['password']
         
         try:
-            usuarios = buscar_usuarios_por_login(user, pwd)
-            if usuarios:
-                session['usuario'] = usuarios[0]['username']
-                session['nivel'] = usuarios[0]['nivel']
+            usuario = buscar_usuarios_por_login(user, pwd)
+            if usuario:
+                session['usuario'] = usuario['nome de usuário']
+                session['nivel'] = usuario['NÍVEL']
                 return redirect(url_for('clientes'))
             else:
                 flash("Usuário ou senha incorretos!")
@@ -86,8 +76,8 @@ def clientes():
         return redirect(url_for('login'))
     
     try:
-        # Aqui você fará a busca dos clientes da mesma forma
-        flash("Função em construção: buscar clientes")
+        # Aqui você vai buscar os clientes depois
+        flash("Página em construção: buscar clientes")
         return render_template('clientes.html', clientes=[], nivel=session['nivel'])
     except Exception as e:
         flash("Erro ao carregar clientes.")
