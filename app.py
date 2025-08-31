@@ -70,7 +70,6 @@ def inicializar_banco():
     conn.commit()
     conn.close()
 
-# Inicializar banco de dados
 inicializar_banco()
 
 # ========================
@@ -223,7 +222,6 @@ def historico(id):
     servicos = cursor.fetchall()
     conn.close()
     
-    # Montar a página HTML do histórico
     tabela_servicos = ''.join(
         f'<tr><td>{s["id"]}</td><td>{s["descricao"]}</td><td>R$ {s["valor"]:.2f}</td><td>{s["data"]}</td><td>{s["usuario"]}</td></tr>'
         for s in servicos
@@ -296,6 +294,122 @@ def adicionar_servico(id):
     conn.close()
     
     return redirect(url_for('historico', id=id))
+
+# ========================
+# Gerenciar Usuários
+# ========================
+@app.route('/gerenciar_usuarios')
+def gerenciar_usuarios():
+    if 'usuario' not in session or session['nivel'] != 'admin':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+    
+    conn = conectar_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, nivel FROM usuarios")
+    usuarios = cursor.fetchall()
+    conn.close()
+    
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Gerenciar Usuários</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; background: white; }}
+            th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+            th {{ background: #2c3e50; color: white; }}
+            a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
+            .btn-green {{ background: #27ae60; }}
+            .btn-red {{ background: #e74c3c; }}
+            .btn-back {{ background: #95a5a6; }}
+        </style>
+    </head>
+    <body>
+        <h1>🔐 Gerenciar Usuários</h1>
+        <p><a href="/clientes" class="btn-back">← Voltar</a></p>
+        
+        <h3>Usuários Cadastrados</h3>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Usuário</th>
+                <th>Nível</th>
+                <th>Ações</th>
+            </tr>
+            {''.join(f'<tr><td>{u["id"]}</td><td>{u["username"]}</td><td>{u["nivel"].upper()}</td><td><a href="/excluir_usuario/{u["id"]}" onclick="return confirm(\'Tem certeza?\')">❌ Excluir</a></td></tr>' for u in usuarios)}
+        </table>
+
+        <h3>Adicionar Novo Usuário</h3>
+        <form method="post" action="/criar_usuario">
+            <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
+            <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
+            <p>
+                <select name="nivel" required style="padding: 8px;">
+                    <option value="">Selecione o nível</option>
+                    <option value="admin">Admin</option>
+                    <option value="vendedor">Vendedor</option>
+                    <option value="consulta">Consulta</option>
+                </select>
+            </p>
+            <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
+        </form>
+    </body>
+    </html>
+    '''
+
+# ========================
+# Criar Novo Usuário
+# ========================
+@app.route('/criar_usuario', methods=['POST'])
+def criar_usuario():
+    if 'usuario' not in session or session['nivel'] != 'admin':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+    
+    username = request.form['username']
+    password = request.form['password']
+    nivel = request.form['nivel']
+    
+    if nivel not in ['admin', 'vendedor', 'consulta']:
+        flash("Nível inválido!")
+        return redirect(url_for('gerenciar_usuarios'))
+    
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO usuarios (username, password, nivel) VALUES (?, ?, ?)", (username, password, nivel))
+        conn.commit()
+        conn.close()
+        flash("Usuário criado com sucesso!")
+    except sqlite3.IntegrityError:
+        flash("Usuário já existe!")
+    
+    return redirect(url_for('gerenciar_usuarios'))
+
+# ========================
+# Excluir Usuário
+# ========================
+@app.route('/excluir_usuario/<int:id>')
+def excluir_usuario(id):
+    if 'usuario' not in session or session['nivel'] != 'admin':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+    
+    # Não pode excluir o admin
+    if id == 1:
+        flash("Não pode excluir o usuário admin!")
+        return redirect(url_for('gerenciar_usuarios'))
+    
+    conn = conectar_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM usuarios WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    
+    flash("Usuário excluído!")
+    return redirect(url_for('gerenciar_usuarios'))
 
 # ========================
 # Iniciar o app
