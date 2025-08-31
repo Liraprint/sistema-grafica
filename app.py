@@ -155,54 +155,7 @@ def gerenciar_usuarios():
     
     try:
         usuarios = buscar_usuarios()
-        return f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Gerenciar Usuários</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; }}
-                table {{ width: 100%; border-collapse: collapse; background: white; }}
-                th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-                th {{ background: #2c3e50; color: white; }}
-                a {{ text-decoration: none; margin: 0 5px; padding: 5px 10px; background: #3498db; color: white; border-radius: 3px; }}
-                .btn-green {{ background: #27ae60; }}
-                .btn-red {{ background: #e74c3c; }}
-                .btn-back {{ background: #95a5a6; }}
-            </style>
-        </head>
-        <body>
-            <h1>🔐 Gerenciar Usuários</h1>
-            <p><a href="/clientes" class="btn-back">← Voltar ao Menu</a></p>
-            
-            <h3>Usuários Cadastrados</h3>
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Usuário</th>
-                    <th>Nível</th>
-                    <th>Ações</th>
-                </tr>
-                {''.join(f'<tr><td>{u["id"]}</td><td>{u["nome de usuário"]}</td><td>{u["NÍVEL"].upper()}</td><td><a href="/excluir_usuario/{u["id"]}" onclick="return confirm(\'Tem certeza?\')">❌ Excluir</a></td></tr>' for u in usuarios)}
-            </table>
-
-            <h3>Adicionar Novo Usuário</h3>
-            <form method="post" action="/criar_usuario">
-                <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
-                <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
-                <p>
-                    <select name="nivel" required style="padding: 8px;">
-                        <option value="">Selecione o nível</option>
-                        <option value="administrador">Administrador</option>
-                        <option value="vendedor">Vendedor</option>
-                        <option value="consulta">Consulta</option>
-                    </select>
-                </p>
-                <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
-            </form>
-        </body>
-        </html>
-        '''
+        return render_template('gerenciar_usuarios.html', usuarios=usuarios)
     except Exception as e:
         flash("Erro ao carregar usuários.")
         return redirect(url_for('clientes'))
