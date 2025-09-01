@@ -74,7 +74,7 @@
         {% for u in usuarios %}
         <tr>
             <td>{{ u.id }}</td>
-            <td>{{ u["nome de usuário"] }}</td>
+            <td>{{ u["nome de usuario"] }}</td>
             <td>{{ u["NÍVEL"].upper() }}</td>
             <td><a href="/excluir_usuario/{{ u.id }}" onclick="return confirm('Tem certeza?')">❌ Excluir</a></td>
         </tr>
