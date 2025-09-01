@@ -23,6 +23,7 @@ headers = {
 
 def buscar_usuario_por_login(username, password):
     try:
+        # Nome da tabela sem acento: usuarios
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -35,7 +36,8 @@ def buscar_usuario_por_login(username, password):
 
 def buscar_usuarios():
     try:
-        url = f"{SUPABASE_URL}/rest/v1/usuarios"
+        # Nome da tabela sem acento: usuarios
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             return response.json()
@@ -48,6 +50,7 @@ def buscar_usuarios():
 
 def criar_usuario(username, password, nivel):
     try:
+        # Nome da tabela sem acento: usuarios
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         dados = {
             "nome de usuário": username,
@@ -66,6 +69,7 @@ def criar_usuario(username, password, nivel):
 
 def excluir_usuario(id):
     try:
+        # Nome da tabela sem acento: usuarios
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
         if response.status_code == 204:
@@ -166,18 +170,26 @@ def criar_usuario():
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
     
-    username = request.form['username']
-    password = request.form['password']
-    nivel = request.form['nivel']
+    username = request.form.get('username')
+    password = request.form.get('password')
+    nivel = request.form.get('nivel')
+    
+    if not username or not password or not nivel:
+        flash("Todos os campos são obrigatórios!")
+        return redirect(url_for('gerenciar_usuarios'))
     
     if nivel not in ['administrador', 'vendedor', 'consulta']:
         flash("Nível inválido!")
         return redirect(url_for('gerenciar_usuarios'))
     
-    if criar_usuario(username, password, nivel):
-        flash("Usuário criado com sucesso!")
-    else:
-        flash("Erro ao criar usuário.")
+    try:
+        if criar_usuario(username, password, nivel):
+            flash("Usuário criado com sucesso!")
+        else:
+            flash("Erro ao criar usuário.")
+    except Exception as e:
+        print("Erro ao criar usuário:", e)
+        flash("Erro interno no servidor.")
     
     return redirect(url_for('gerenciar_usuarios'))
 
@@ -187,10 +199,14 @@ def excluir_usuario(id):
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
     
-    if excluir_usuario(id):
-        flash("Usuário excluído!")
-    else:
-        flash("Erro ao excluir usuário.")
+    try:
+        if excluir_usuario(id):
+            flash("Usuário excluído!")
+        else:
+            flash("Erro ao excluir usuário.")
+    except Exception as e:
+        print("Erro ao excluir usuário:", e)
+        flash("Erro interno no servidor.")
     
     return redirect(url_for('gerenciar_usuarios'))
 
