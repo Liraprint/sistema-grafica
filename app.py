@@ -23,8 +23,8 @@ headers = {
 
 def buscar_usuario_por_login(username, password):
     try:
-        # Nome da tabela sem acento: usuarios
-        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usu%C3%A1rio=eq.{username}&SENHA=eq.{password}"
+        # Nome da coluna com espaço: nome de usuario
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             dados = response.json()
@@ -36,7 +36,7 @@ def buscar_usuario_por_login(username, password):
 
 def buscar_usuarios():
     try:
-        # Nome da tabela sem acento: usuarios
+        # Nome da coluna com espaço: nome de usuario
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -50,10 +50,10 @@ def buscar_usuarios():
 
 def criar_usuario(username, password, nivel):
     try:
-        # Nome da tabela sem acento: usuarios
+        # Nome da coluna com espaço: nome de usuario
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         dados = {
-            "nome de usuário": username,
+            "nome de usuario": username,
             "SENHA": password,
             "NÍVEL": nivel
         }
@@ -69,7 +69,7 @@ def criar_usuario(username, password, nivel):
 
 def excluir_usuario(id):
     try:
-        # Nome da tabela sem acento: usuarios
+        # Nome da coluna com espaço: nome de usuario
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
         if response.status_code == 204:
@@ -100,7 +100,7 @@ def login():
         try:
             usuario = buscar_usuario_por_login(user, pwd)
             if usuario:
-                session['usuario'] = usuario['nome de usuário']
+                session['usuario'] = usuario['nome de usuario']
                 session['nivel'] = usuario['NÍVEL']
                 return redirect(url_for('clientes'))
             else:
