@@ -23,7 +23,7 @@ headers = {
 
 def buscar_usuario_por_login(username, password):
     try:
-        # Nome da coluna com espaço: nome de usuario
+        # Busca com o nome exato da coluna: "nome de usuario"
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -36,7 +36,6 @@ def buscar_usuario_por_login(username, password):
 
 def buscar_usuarios():
     try:
-        # Nome da coluna com espaço: nome de usuario
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -50,10 +49,9 @@ def buscar_usuarios():
 
 def criar_usuario(username, password, nivel):
     try:
-        # Nome da coluna com espaço: nome de usuario
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         dados = {
-            "nome de usuario": username,
+            "nome de usuario": username,  # Nome exato da coluna
             "SENHA": password,
             "NÍVEL": nivel
         }
@@ -69,10 +67,10 @@ def criar_usuario(username, password, nivel):
 
 def excluir_usuario(id):
     try:
-        # Nome da coluna com espaço: nome de usuario
+        # DELETE na tabela usuarios com o id certo
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
-        if response.status_code == 204:
+        if response.status_code == 204:  # 204 = sucesso no DELETE
             return True
         else:
             print("Erro ao excluir usuário:", response.status_code, response.text)
@@ -120,7 +118,6 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Menu principal com botões
     return f'''
     <!DOCTYPE html>
     <html>
