@@ -412,7 +412,7 @@ def cadastrar_cliente():
             }}
             .grid-3 {{
                 display: grid;
-                grid-template-columns: 2fr 1fr 1fr;
+                grid-template-columns: 1fr 1fr 2fr;
                 gap: 15px;
             }}
             .form-container label {{
@@ -513,15 +513,15 @@ def cadastrar_cliente():
                 <div class="grid-3">
                     <div>
                         <label>CEP</label>
-                        <input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000">
+                        <input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" style="width: 150px;">
                     </div>
                     <div>
                         <label>Bairro</label>
-                        <input type="text" name="bairro" id="bairro">
+                        <input type="text" name="bairro" id="bairro" style="width: 150px;">
                     </div>
                     <div>
                         <label>Endereço</label>
-                        <input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 300px;">
+                        <input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 350px;">
                     </div>
                 </div>
 
