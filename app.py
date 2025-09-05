@@ -314,7 +314,6 @@ def cadastrar_cliente():
         bairro = request.form.get('bairro')
         cidade = request.form.get('cidade')
         cep = request.form.get('cep')
-        servicos = request.form.getlist('servicos')
 
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
@@ -394,16 +393,6 @@ def cadastrar_cliente():
                 border: 1px solid #ddd;
                 border-radius: 6px;
                 font-size: 14px;
-            }}
-            .checkbox-group {{
-                margin: 15px 0;
-            }}
-            .checkbox-item {{
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 8px;
-                font-weight: normal;
             }}
             .btn {{
                 padding: 12px 20px;
@@ -509,36 +498,151 @@ def cadastrar_cliente():
                     </div>
                 </div>
 
-                <!-- Serviços Frequentes -->
-                <div class="checkbox-group">
-                    <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #2c3e50;">Serviços Frequentes</label>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="banners">
-                        <label>Banners</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="cartoes">
-                        <label>Cartões</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="adesivos">
-                        <label>Adesivos</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="convites">
-                        <label>Convites</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="folders">
-                        <label>Folders</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" name="servicos" value="etiquetas">
-                        <label>Etiquetas</label>
-                    </div>
-                </div>
-
                 <button type="submit" class="btn">💾 Salvar Empresa</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/abrir_ficha_servico')
+def abrir_ficha_servico():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ficha de Serviço - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .btn:hover {{
+                opacity: 0.9;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Ficha de Serviço</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <form method="post" class="form-container">
+                <label>Data do Serviço *</label>
+                <input type="date" name="data" required>
+
+                <label>Serviço Realizado *</label>
+                <input type="text" name="servico" required>
+
+                <label>Quantidade</label>
+                <input type="number" name="quantidade">
+
+                <label>Valor Total (R$)</label>
+                <input type="number" name="valor" step="0.01">
+
+                <label>Status</label>
+                <select name="status">
+                    <option value="pendente">Pendente</option>
+                    <option value="em_andamento">Em Andamento</option>
+                    <option value="concluido">Concluído</option>
+                </select>
+
+                <label>Observações</label>
+                <textarea name="observacoes" rows="4"></textarea>
+
+                <button type="submit" class="btn">💾 Salvar Ficha</button>
             </form>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
