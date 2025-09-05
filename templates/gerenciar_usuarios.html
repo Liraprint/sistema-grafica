@@ -1,99 +1,220 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Gerenciar Usuários</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Usuários - Sua Gráfica</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
         body {
-            font-family: Arial, sans-serif;
-            background: #f0f4f8;
-            padding: 20px;
-            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
         }
-        .btn {
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+        h1 {
+            font-size: 28px;
+            margin: 0;
+            font-weight: 600;
+        }
+        .user-info {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-info a {
+            color: #8ed3ff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        .back-btn {
             display: inline-block;
-            margin: 10px;
-            padding: 15px 30px;
-            font-size: 18px;
+            padding: 10px 20px;
+            background: #95a5a6;
             color: white;
             text-decoration: none;
             border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: opacity 0.2s;
         }
-        .btn-green { background: #27ae60; }
-        .btn-blue { background: #3498db; }
-        .btn-red { background: #e74c3c; }
-        .user-info {
-            margin-bottom: 20px;
-            font-size: 16px;
-            color: #555;
+        .back-btn:hover {
+            opacity: 0.9;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            margin: 20px auto;
-            max-width: 800px;
+            margin: 0;
         }
         th, td {
-            padding: 12px;
+            padding: 16px 20px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
         }
         th {
-            background: #2c3e50;
-            color: white;
+            background: #ecf0f1;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        a {
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f1f7fb;
+            transition: background 0.3s;
+        }
+        .action-link {
+            color: #3498db;
             text-decoration: none;
-            margin: 0 5px;
+            font-weight: 500;
             padding: 5px 10px;
-            background: #3498db;
-            color: white;
-            border-radius: 3px;
+            border-radius: 4px;
+            display: inline-block;
         }
-        .btn-back { background: #95a5a6; }
+        .action-link:hover {
+            background: #e0f0ff;
+        }
+        /* Formulário de criação */
+        .form-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        .form-container h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .form-container input, .form-container select {
+            padding: 10px;
+            margin: 5px 0;
+            width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-container button {
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .form-container button:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #ecf0f1;
+            color: #7f8c8d;
+            font-size: 13px;
+            border-top: 1px solid #bdc3c7;
+        }
+        @media (max-width: 768px) {
+            .user-info {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            .form-container {
+                padding: 15px;
+            }
+            .form-container input, .form-container select {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="user-info">
-        👤 Logado como: <strong>{{ session['usuario'] }}</strong> | Nível: <strong>{{ session['nivel'].upper() }}</strong>
-        <br><a href="/logout" style="color: #e74c3c;">Sair</a>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Gerenciar Usuários</h1>
+        </div>
+
+        <div class="user-info">
+            <span>👤 Logado como: <strong>{{ session['usuario'] }}</strong> | Nível: <strong>{{ session['nivel'].upper() }}</strong></span>
+            <a href="/logout">🚪 Sair</a>
+        </div>
+
+        <a href="/clientes" class="back-btn">← Voltar ao Menu</a>
+
+        <!-- Tabela de usuários -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Nível</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td>{{ u["nome de usuario"] }}</td>
+                    <td>{{ u["NÍVEL"].upper() }}</td>
+                    <td><a href="/excluir_usuario/{{ u.id }}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')">❌ Excluir</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Formulário de criação -->
+        <div class="form-container">
+            <h3>➕ Adicionar Novo Usuário</h3>
+            <form method="post" action="/criar_usuario">
+                <p>
+                    <input type="text" name="username" placeholder="Nome de usuário" required>
+                </p>
+                <p>
+                    <input type="password" name="password" placeholder="Senha" required>
+                </p>
+                <p>
+                    <select name="nivel" required>
+                        <option value="">Selecione o nível</option>
+                        <option value="administrador">Administrador</option>
+                        <option value="vendedor">Vendedor</option>
+                        <option value="consulta">Consulta</option>
+                    </select>
+                </p>
+                <p><button type="submit">Criar Usuário</button></p>
+            </form>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="footer">
+            Sistema de Gestão para Gráfica Rápida | Todos os direitos reservados © 2025
+        </div>
     </div>
-
-    <h1>🔐 Gerenciar Usuários</h1>
-
-    <p><a href="/clientes" class="btn btn-back">← Voltar ao Menu</a></p>
-
-    <h3>Usuários Cadastrados</h3>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Usuário</th>
-            <th>Nível</th>
-            <th>Ações</th>
-        </tr>
-        {% for u in usuarios %}
-        <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u["nome de usuario"] }}</td>
-            <td>{{ u["NÍVEL"].upper() }}</td>
-            <td><a href="/excluir_usuario/{{ u.id }}" onclick="return confirm('Tem certeza?')">❌ Excluir</a></td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <h3>Adicionar Novo Usuário</h3>
-    <form method="post" action="/criar_usuario">
-        <p><input type="text" name="username" placeholder="Nome de usuário" required style="padding: 8px; width: 200px;"></p>
-        <p><input type="password" name="password" placeholder="Senha" required style="padding: 8px; width: 200px;"></p>
-        <p>
-            <select name="nivel" required style="padding: 8px;">
-                <option value="">Selecione o nível</option>
-                <option value="administrador">Administrador</option>
-                <option value="vendedor">Vendedor</option>
-                <option value="consulta">Consulta</option>
-            </select>
-        </p>
-        <p><button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">➕ Criar Usuário</button></p>
-    </form>
 </body>
 </html>
