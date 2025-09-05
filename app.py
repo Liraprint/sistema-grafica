@@ -122,33 +122,119 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Vamos manter o menu simples por enquanto, mas já preparado para usar template
     return f'''
     <!DOCTYPE html>
-    <html>
+    <html lang="pt-BR">
     <head>
-        <title>Menu Principal</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Menu da Gráfica</title>
         <style>
-            body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; text-align: center; }}
-            .btn {{ display: inline-block; margin: 10px; padding: 15px 30px; font-size: 18px; color: white; text-decoration: none; border-radius: 8px; }}
-            .btn-green {{ background: #27ae60; }}
-            .btn-blue {{ background: #3498db; }}
-            .btn-red {{ background: #e74c3c; }}
-            .user-info {{ margin-bottom: 20px; font-size: 16px; color: #555; }}
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 50px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 40px 20px;
+            }}
+            h1 {{
+                font-size: 32px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .user-info a {{
+                color: #8ed3ff;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .user-info a:hover {{
+                text-decoration: underline;
+            }}
+            .btn {{
+                display: block;
+                width: 90%;
+                margin: 25px auto;
+                padding: 16px 20px;
+                font-size: 18px;
+                font-weight: 600;
+                text-align: center;
+                text-decoration: none;
+                border-radius: 10px;
+                color: white;
+                transition: all 0.3s ease;
+                border: none;
+                cursor: pointer;
+            }}
+            .btn-green {{
+                background: #27ae60;
+            }}
+            .btn-blue {{
+                background: #3498db;
+            }}
+            .btn-red {{
+                background: #e74c3c;
+            }}
+            .btn:hover {{
+                transform: translateY(-3px);
+                box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            @media (max-width: 768px) {{
+                .btn {{
+                    width: 95%;
+                    font-size: 17px;
+                }}
+            }}
         </style>
     </head>
     <body>
-        <div class="user-info">
-            👤 Logado como: <strong>{session['usuario']}</strong> | Nível: <strong>{session['nivel'].upper()}</strong>
-            <br><a href="/logout" style="color: #e74c3c;">Sair</a>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Menu da Gráfica</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
+            <a href="/clientes" class="btn btn-blue">📋 Listar Empresas</a>
+            {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
+            <div class="footer">
+                Sistema de Gestão © 2025
+            </div>
         </div>
-        
-        <h1>📋 Menu da Gráfica</h1>
-        
-        <p><a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a></p>
-        <p><a href="/clientes" class="btn btn-blue">📋 Listar Empresas</a></p>
-        
-        {f'<p><a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a></p>' if session['nivel'] == 'administrador' else ''}
     </body>
     </html>
     '''
