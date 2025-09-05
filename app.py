@@ -510,16 +510,16 @@ def cadastrar_cliente():
                 <!-- Linha 4 -->
                 <div class="grid-3">
                     <div>
-                        <label>Endereço</label>
-                        <input type="text" name="endereco">
+                        <label>CEP</label>
+                        <input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000">
                     </div>
                     <div>
                         <label>Bairro</label>
-                        <input type="text" name="bairro">
+                        <input type="text" name="bairro" id="bairro">
                     </div>
                     <div>
-                        <label>CEP</label>
-                        <input type="text" name="cep">
+                        <label>Endereço</label>
+                        <input type="text" name="endereco" id="endereco">
                     </div>
                 </div>
 
@@ -527,11 +527,11 @@ def cadastrar_cliente():
                 <div class="grid-2">
                     <div>
                         <label>Cidade</label>
-                        <input type="text" name="cidade">
+                        <input type="text" name="cidade" id="cidade">
                     </div>
                     <div>
                         <label>Estado</label>
-                        <select name="estado">
+                        <select name="estado" id="estado">
                             <option value="">Selecione</option>
                             <option value="AC">AC</option>
                             <option value="AL">AL</option>
@@ -570,6 +570,33 @@ def cadastrar_cliente():
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
+
+        <script>
+            function buscarEnderecoPorCEP() {{
+                const cep = document.getElementById('cep').value.replace(/\D/g, '');
+                if (cep.length !== 8) {{
+                    alert('CEP inválido!');
+                    return;
+                }}
+
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+                    .then(response => response.json())
+                    .then(data => {{
+                        if (data.erro) {{
+                            alert('CEP não encontrado!');
+                            return;
+                        }}
+                        document.getElementById('endereco').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                        document.getElementById('estado').value = data.uf;
+                    }})
+                    .catch(error => {{
+                        console.error('Erro ao buscar CEP:', error);
+                        alert('Erro ao buscar CEP. Tente novamente.');
+                    }});
+            }}
+        </script>
     </body>
     </html>
     '''
