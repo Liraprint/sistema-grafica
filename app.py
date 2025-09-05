@@ -298,6 +298,242 @@ def excluir_usuario_view(id):
     
     return redirect(url_for('gerenciar_usuarios'))
 
+@app.route('/cadastrar_cliente', methods=['GET', 'POST'])
+def cadastrar_cliente():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        responsavel = request.form.get('responsavel')
+        whatsapp = request.form.get('whatsapp')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+        bairro = request.form.get('bairro')
+        cidade = request.form.get('cidade')
+        cep = request.form.get('cep')
+        servicos = request.form.getlist('servicos')
+
+        if not nome or not cnpj:
+            flash("Nome e CNPJ são obrigatórios!")
+            return redirect(url_for('cadastrar_cliente'))
+
+        # Aqui você vai conectar ao Supabase para salvar
+        # Por enquanto, só exibe sucesso
+        flash("Empresa cadastrada com sucesso!")
+        return redirect(url_for('clientes'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cadastrar Empresa - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 2fr 1fr 1fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .checkbox-group {{
+                margin: 15px 0;
+            }}
+            .checkbox-group label {{
+                font-weight: normal;
+                margin-right: 15px;
+            }}
+            .checkbox-group input {{
+                margin-right: 5px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .btn:hover {{
+                opacity: 0.9;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Cadastrar Nova Empresa</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <form method="post" class="form-container">
+                <!-- Linha 1 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome da Empresa *</label>
+                        <input type="text" name="nome" required>
+                    </div>
+                    <div>
+                        <label>CNPJ *</label>
+                        <input type="text" name="cnpj" required>
+                    </div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome do Responsável</label>
+                        <input type="text" name="responsavel">
+                    </div>
+                    <div>
+                        <label>WhatsApp</label>
+                        <input type="text" name="whatsapp">
+                    </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Telefone</label>
+                        <input type="text" name="telefone">
+                    </div>
+                    <div>
+                        <label>E-mail</label>
+                        <input type="email" name="email">
+                    </div>
+                </div>
+
+                <!-- Linha 4 -->
+                <div class="grid-3">
+                    <div>
+                        <label>Endereço</label>
+                        <input type="text" name="endereco">
+                    </div>
+                    <div>
+                        <label>Bairro</label>
+                        <input type="text" name="bairro">
+                    </div>
+                    <div>
+                        <label>CEP</label>
+                        <input type="text" name="cep">
+                    </div>
+                </div>
+
+                <!-- Linha 5 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Cidade</label>
+                        <input type="text" name="cidade">
+                    </div>
+                </div>
+
+                <!-- Serviços Frequentes -->
+                <div class="checkbox-group">
+                    <label>Serviços Frequentes</label>
+                    <div style="margin-top: 5px;">
+                        <label><input type="checkbox" name="servicos" value="banners"> Banners</label>
+                        <label><input type="checkbox" name="servicos" value="cartoes"> Cartões</label>
+                        <label><input type="checkbox" name="servicos" value="adesivos"> Adesivos</label>
+                        <label><input type="checkbox" name="servicos" value="convites"> Convites</label>
+                        <label><input type="checkbox" name="servicos" value="folders"> Folders</label>
+                        <label><input type="checkbox" name="servicos" value="etiquetas"> Etiquetas</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">💾 Salvar Empresa</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
 # ========================
 # Iniciar o app
 # ========================
