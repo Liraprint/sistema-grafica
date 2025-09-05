@@ -83,6 +83,34 @@ def excluir_usuario(id):
         print("Erro de conexão:", e)
         return False
 
+def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas"
+        dados = {
+            "nome_empresa": nome,
+            "cnpj": cnpj,
+            "responsavel": responsavel,
+            "telefone": telefone,
+            "whatsapp": whatsapp,
+            "email": email,
+            "endereco": endereco,
+            "bairro": bairro,
+            "cidade": cidade,
+            "estado": estado,
+            "cep": cep
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        if response.status_code == 201:
+            return True
+        else:
+            print("❌ Erro ao criar empresa:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
+            return False
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return False
+
 # ========================
 # Páginas do sistema
 # ========================
@@ -307,19 +335,24 @@ def cadastrar_cliente():
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
         responsavel = request.form.get('responsavel')
-        whatsapp = request.form.get('whatsapp')
         telefone = request.form.get('telefone')
+        whatsapp = request.form.get('whatsapp')
         email = request.form.get('email')
         endereco = request.form.get('endereco')
         bairro = request.form.get('bairro')
         cidade = request.form.get('cidade')
+        estado = request.form.get('estado')
         cep = request.form.get('cep')
 
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('cadastrar_cliente'))
 
-        flash("Empresa cadastrada com sucesso!")
+        if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep):
+            flash("Empresa cadastrada com sucesso!")
+        else:
+            flash("Erro ao cadastrar empresa.")
+
         return redirect(url_for('clientes'))
 
     return f'''
@@ -495,6 +528,39 @@ def cadastrar_cliente():
                     <div>
                         <label>Cidade</label>
                         <input type="text" name="cidade">
+                    </div>
+                    <div>
+                        <label>Estado</label>
+                        <select name="estado">
+                            <option value="">Selecione</option>
+                            <option value="AC">AC</option>
+                            <option value="AL">AL</option>
+                            <option value="AP">AP</option>
+                            <option value="AM">AM</option>
+                            <option value="BA">BA</option>
+                            <option value="CE">CE</option>
+                            <option value="DF">DF</option>
+                            <option value="ES">ES</option>
+                            <option value="GO">GO</option>
+                            <option value="MA">MA</option>
+                            <option value="MT">MT</option>
+                            <option value="MS">MS</option>
+                            <option value="MG">MG</option>
+                            <option value="PA">PA</option>
+                            <option value="PB">PB</option>
+                            <option value="PR">PR</option>
+                            <option value="PE">PE</option>
+                            <option value="PI">PI</option>
+                            <option value="RJ">RJ</option>
+                            <option value="RN">RN</option>
+                            <option value="RS">RS</option>
+                            <option value="RO">RO</option>
+                            <option value="RR">RR</option>
+                            <option value="SC">SC</option>
+                            <option value="SP">SP</option>
+                            <option value="SE">SE</option>
+                            <option value="TO">TO</option>
+                        </select>
                     </div>
                 </div>
 
