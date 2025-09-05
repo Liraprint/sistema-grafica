@@ -83,7 +83,7 @@ def excluir_usuario(id):
         print("Erro de conexão:", e)
         return False
 
-def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep):
+def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero):
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas"
         dados = {
@@ -97,7 +97,8 @@ def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, 
             "bairro": bairro,
             "cidade": cidade,
             "estado": estado,
-            "cep": cep
+            "cep": cep,
+            "numero": numero
         }
         response = requests.post(url, json=dados, headers=headers)
         if response.status_code == 201:
@@ -343,12 +344,13 @@ def cadastrar_cliente():
         cidade = request.form.get('cidade')
         estado = request.form.get('estado')
         cep = request.form.get('cep')
+        numero = request.form.get('numero')
 
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('cadastrar_cliente'))
 
-        if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep):
+        if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero):
             flash("Empresa cadastrada com sucesso!")
         else:
             flash("Erro ao cadastrar empresa.")
@@ -519,12 +521,16 @@ def cadastrar_cliente():
                     </div>
                     <div>
                         <label>Endereço</label>
-                        <input type="text" name="endereco" id="endereco">
+                        <input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 300px;">
                     </div>
                 </div>
 
                 <!-- Linha 5 -->
-                <div class="grid-2">
+                <div class="grid-3">
+                    <div>
+                        <label>Número</label>
+                        <input type="text" name="numero" placeholder="Ex: 123">
+                    </div>
                     <div>
                         <label>Cidade</label>
                         <input type="text" name="cidade" id="cidade">
