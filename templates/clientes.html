@@ -3,85 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menu da Gráfica</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Clientes - Sua Gráfica</title>
     <style>
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .container {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            background: white;
-        }
-        .btn {
-            font-size: 1.1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        .btn-success {
-            background-color: #28a745;
-            border-color: #218838;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #0056b3;
-        }
-        .btn-danger {
-            background-color: #dc3545;
-            border-color: #c82333;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .user-info {
-            text-align: center;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
+            min-height: 100vh;
+            padding: 20px;
         }
-        .logout-link {
-            color: #dc3545;
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            position: relative;
+        }
+
+        .logo {
+            width: 220px;
+            margin: 0 auto 15px auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .user-bar {
+            background: #34495e;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .user-bar a {
+            color: #8ed3ff;
             text-decoration: none;
-            font-size: 0.9rem;
+            margin: 0 10px;
+            font-weight: 500;
         }
-        .logout-link:hover {
+
+        .user-bar a:hover {
             text-decoration: underline;
+        }
+
+        .actions {
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-green {
+            background: #27ae60;
+        }
+
+        .btn-blue {
+            background: #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+        }
+
+        th {
+            background: #ecf0f1;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        tr:hover {
+            background: #f1f7fb;
+            transition: background 0.3s;
+        }
+
+        .action-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .action-link:hover {
+            background: #e0f0ff;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #7f8c8d;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 768px) {
+            .user-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .actions {
+                padding: 15px;
+            }
+            .btn {
+                display: block;
+                margin: 10px auto;
+                width: 90%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="user-info">
-            <strong>👤 Logado como: {{ session['usuario'] }}</strong> | 
-            <strong>Nível: {{ session['nivel'].upper() }}</strong>
-            <br>
-            <a href="/logout" class="logout-link">Sair</a>
+        <!-- Cabeçalho com logo -->
+        <div class="header">
+            <img src="/static/logo.png" alt="Logo da Gráfica" class="logo">
+            <h1>📋 Clientes Cadastrados</h1>
+            <p class="subtitle">Sistema de Gestão - Sua Gráfica Rápida</p>
         </div>
 
-        <h1 class="text-center mb-4"><i class="fas fa-file-alt"></i> Menu da Gráfica</h1>
+        <!-- Barra de usuário -->
+        <div class="user-bar">
+            <span>👤 Usuário: <strong>{{ session.usuario }}</strong> ({{ session.nivel }})</span>
+            <div>
+                <a href="/alterar_senha">🔐 Alterar Senha</a>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+        </div>
 
-        <div class="d-flex flex-column align-items-center gap-3">
-            <a href="/cadastrar_cliente" class="btn btn-success w-100 d-flex align-items-center justify-content-center">
-                <i class="fas fa-plus me-2"></i> Cadastrar Nova Empresa
-            </a>
-            <a href="/clientes" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
-                <i class="fas fa-list me-2"></i> Listar Empresas
-            </a>
-            {% if session['nivel'] == 'administrador' %}
-            <a href="/gerenciar_usuarios" class="btn btn-danger w-100 d-flex align-items-center justify-content-center">
-                <i class="fas fa-users me-2"></i> Gerenciar Usuários
-            </a>
+        <!-- Botões de ação -->
+        <div class="actions">
+            {% if nivel == 'admin' %}
+                <a href="/gerenciar_usuarios" class="btn btn-blue">🔐 Gerenciar Usuários</a>
             {% endif %}
+            <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
+        </div>
+
+        <!-- Tabela de clientes -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Empresa</th>
+                    <th>CNPJ</th>
+                    <th>Telefone</th>
+                    <th>WhatsApp</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr>
+                    <td>{{ cliente.id }}</td>
+                    <td>{{ cliente.nome_empresa }}</td>
+                    <td>{{ cliente.cnpj }}</td>
+                    <td>{{ cliente.telefone }}</td>
+                    <td>{{ cliente.whatsapp }}</td>
+                    <td>
+                        <a href="/editar/{{ cliente.id }}" class="action-link">✏️ Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Rodapé -->
+        <div class="footer">
+            Sistema de Gestão para Gráfica Rápida | Todos os direitos reservados © 2025
         </div>
     </div>
-
-    <!-- Font Awesome Icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
