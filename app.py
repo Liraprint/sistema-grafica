@@ -122,6 +122,7 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
+    # Vamos manter o menu simples por enquanto, mas já preparado para usar template
     return f'''
     <!DOCTYPE html>
     <html>
