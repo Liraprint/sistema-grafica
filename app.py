@@ -55,6 +55,7 @@ def criar_usuario(username, password, nivel):
             "NÍVEL": nivel
         }
         response = requests.post(url, json=dados, headers=headers)
+        
         if response.status_code == 201:
             return True
         else:
@@ -70,6 +71,7 @@ def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
+        
         if response.status_code == 204:
             return True
         else:

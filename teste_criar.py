@@ -1,8 +1,8 @@
 import requests
 
-# Dados do seu banco Supabase
+# Dados do Supabase
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2MDkwOTgsImV4cCI6MjA3MjE4NTA5OH0.toGehyP5oKDlFHcFGnVm4QuvFBNzQZNBGdl-22-qSw0"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -17,18 +17,13 @@ dados = {
     "NÍVEL": "vendedor"
 }
 
-print("Tentando criar um novo usuário...")
+print("Tentando criar usuário...")
+response = requests.post(f"{SUPABASE_URL}/rest/v1/usuarios", json=dados, headers=headers)
 
-try:
-    url = f"{SUPABASE_URL}/rest/v1/usuarios"
-    response = requests.post(url, json=dados, headers=headers)
-    
-    if response.status_code == 201:
-        print("✅ Usuário criado com sucesso!")
-        print("Resposta:", response.json())
-    else:
-        print("❌ Falha ao criar usuário!")
-        print("Status:", response.status_code)
-        print("Resposta:", response.text)
-except Exception as e:
-    print("❌ Erro de conexão:", e)
+if response.status_code == 201:
+    print("✅ Usuário criado com sucesso!")
+    print("Resposta:", response.json())
+else:
+    print("❌ Falha ao criar usuário")
+    print("Status:", response.status_code)
+    print("Resposta:", response.text)
