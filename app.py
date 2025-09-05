@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
 
 # ========================
-# Dados do Supabase (API) - Usando Service Role Key
+# Dados do Supabase (API) - Service Role Key
 # ========================
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
@@ -55,13 +55,10 @@ def criar_usuario(username, password, nivel):
             "NÍVEL": nivel
         }
         response = requests.post(url, json=dados, headers=headers)
-        
         if response.status_code == 201:
             return True
         else:
-            print("❌ Erro ao criar usuário:")
-            print("Status:", response.status_code)
-            print("Resposta:", response.text)
+            print("Erro ao criar usuário:", response.status_code, response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
@@ -71,13 +68,10 @@ def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
-        
         if response.status_code == 204:
             return True
         else:
-            print("❌ Erro ao excluir usuário:")
-            print("Status:", response.status_code)
-            print("Resposta:", response.text)
+            print("Erro ao excluir usuário:", response.status_code, response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
@@ -122,14 +116,36 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    try:
-        # Aqui você vai buscar os clientes da API do Supabase
-        # Por enquanto, vamos deixar vazio
-        clientes = []  # Substitua por buscar_clientes() quando tiver
-        return render_template('clientes.html', clientes=clientes, nivel=session['nivel'])
-    except Exception as e:
-        flash("Erro ao carregar clientes.")
-        return redirect(url_for('clientes'))
+    # Menu principal com botões
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Menu Principal</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; background: #f0f4f8; padding: 20px; text-align: center; }}
+            .btn {{ display: inline-block; margin: 10px; padding: 15px 30px; font-size: 18px; color: white; text-decoration: none; border-radius: 8px; }}
+            .btn-green {{ background: #27ae60; }}
+            .btn-blue {{ background: #3498db; }}
+            .btn-red {{ background: #e74c3c; }}
+            .user-info {{ margin-bottom: 20px; font-size: 16px; color: #555; }}
+        </style>
+    </head>
+    <body>
+        <div class="user-info">
+            👤 Logado como: <strong>{session['usuario']}</strong> | Nível: <strong>{session['nivel'].upper()}</strong>
+            <br><a href="/logout" style="color: #e74c3c;">Sair</a>
+        </div>
+        
+        <h1>📋 Menu da Gráfica</h1>
+        
+        <p><a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a></p>
+        <p><a href="/clientes" class="btn btn-blue">📋 Listar Empresas</a></p>
+        
+        {f'<p><a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a></p>' if session['nivel'] == 'administrador' else ''}
+    </body>
+    </html>
+    '''
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
@@ -145,7 +161,7 @@ def gerenciar_usuarios():
         return redirect(url_for('clientes'))
 
 @app.route('/criar_usuario', methods=['POST'])
-def criar_usuario_view():
+def criar_usuario():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
@@ -174,7 +190,7 @@ def criar_usuario_view():
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/excluir_usuario/<int:id>')
-def excluir_usuario_view(id):
+def excluir_usuario(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
