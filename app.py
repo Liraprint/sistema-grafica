@@ -166,7 +166,7 @@ def gerenciar_usuarios():
         return redirect(url_for('clientes'))
 
 @app.route('/criar_usuario', methods=['POST'])
-def criar_usuario():
+def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
@@ -195,7 +195,7 @@ def criar_usuario():
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/excluir_usuario/<int:id>')
-def excluir_usuario(id):
+def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
