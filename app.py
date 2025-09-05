@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
 
 # ========================
-# Dados do Supabase (API) - Service Role Key
+# Dados do Supabase (API) - Usando Service Role Key
 # ========================
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
@@ -55,10 +55,13 @@ def criar_usuario(username, password, nivel):
             "NÍVEL": nivel
         }
         response = requests.post(url, json=dados, headers=headers)
+        
         if response.status_code == 201:
             return True
         else:
-            print("Erro ao criar usuário:", response.status_code, response.text)
+            print("❌ Erro ao criar usuário:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
@@ -68,10 +71,13 @@ def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
+        
         if response.status_code == 204:
             return True
         else:
-            print("Erro ao excluir usuário:", response.status_code, response.text)
+            print("❌ Erro ao excluir usuário:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
@@ -116,7 +122,6 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Menu principal com botões
     return f'''
     <!DOCTYPE html>
     <html>
@@ -161,7 +166,7 @@ def gerenciar_usuarios():
         return redirect(url_for('clientes'))
 
 @app.route('/criar_usuario', methods=['POST'])
-def criar_usuario():
+def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
@@ -190,7 +195,7 @@ def criar_usuario():
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/excluir_usuario/<int:id>')
-def excluir_usuario(id):
+def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
