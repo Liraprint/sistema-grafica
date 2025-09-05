@@ -23,7 +23,6 @@ headers = {
 
 def buscar_usuario_por_login(username, password):
     try:
-        # Busca com o nome exato da coluna: "nome de usuario"
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -51,7 +50,7 @@ def criar_usuario(username, password, nivel):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         dados = {
-            "nome de usuario": username,  # Nome exato da coluna
+            "nome de usuario": username,
             "SENHA": password,
             "NÍVEL": nivel
         }
@@ -59,7 +58,9 @@ def criar_usuario(username, password, nivel):
         if response.status_code == 201:
             return True
         else:
-            print("Erro ao criar usuário:", response.status_code, response.text)
+            print("❌ Erro ao criar usuário:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
@@ -67,13 +68,14 @@ def criar_usuario(username, password, nivel):
 
 def excluir_usuario(id):
     try:
-        # DELETE na tabela usuarios com o id certo
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
-        if response.status_code == 204:  # 204 = sucesso no DELETE
+        if response.status_code == 204:
             return True
         else:
-            print("Erro ao excluir usuário:", response.status_code, response.text)
+            print("❌ Erro ao excluir usuário:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
             return False
     except Exception as e:
         print("Erro de conexão:", e)
