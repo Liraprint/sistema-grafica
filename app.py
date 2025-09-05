@@ -320,8 +320,6 @@ def cadastrar_cliente():
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('cadastrar_cliente'))
 
-        # Aqui você vai conectar ao Supabase para salvar
-        # Por enquanto, só exibe sucesso
         flash("Empresa cadastrada com sucesso!")
         return redirect(url_for('clientes'))
 
@@ -400,12 +398,12 @@ def cadastrar_cliente():
             .checkbox-group {{
                 margin: 15px 0;
             }}
-            .checkbox-group label {{
+            .checkbox-item {{
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
                 font-weight: normal;
-                margin-right: 15px;
-            }}
-            .checkbox-group input {{
-                margin-right: 5px;
             }}
             .btn {{
                 padding: 12px 20px;
@@ -513,14 +511,30 @@ def cadastrar_cliente():
 
                 <!-- Serviços Frequentes -->
                 <div class="checkbox-group">
-                    <label>Serviços Frequentes</label>
-                    <div style="margin-top: 5px;">
-                        <label><input type="checkbox" name="servicos" value="banners"> Banners</label>
-                        <label><input type="checkbox" name="servicos" value="cartoes"> Cartões</label>
-                        <label><input type="checkbox" name="servicos" value="adesivos"> Adesivos</label>
-                        <label><input type="checkbox" name="servicos" value="convites"> Convites</label>
-                        <label><input type="checkbox" name="servicos" value="folders"> Folders</label>
-                        <label><input type="checkbox" name="servicos" value="etiquetas"> Etiquetas</label>
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #2c3e50;">Serviços Frequentes</label>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="banners">
+                        <label>Banners</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="cartoes">
+                        <label>Cartões</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="adesivos">
+                        <label>Adesivos</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="convites">
+                        <label>Convites</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="folders">
+                        <label>Folders</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="servicos" value="etiquetas">
+                        <label>Etiquetas</label>
                     </div>
                 </div>
 
