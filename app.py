@@ -164,6 +164,9 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
+    # Mensagem flash
+    mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{list(session.get_flashed_messages())[0]}</div>' if session.get_flashed_messages() else ''
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -270,6 +273,7 @@ def clientes():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
+            {mensagem}
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
@@ -364,9 +368,9 @@ def cadastrar_cliente():
             return redirect(url_for('cadastrar_cliente'))
 
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero):
-            flash("✅ SUCESSO! Empresa cadastrada com sucesso no banco de dados.")
+            flash("✅ Empresa cadastrada com sucesso!")
         else:
-            flash("❌ ERRO! Não foi possível salvar a empresa. Verifique os dados e tente novamente.")
+            flash("❌ Erro ao cadastrar empresa.")
 
         return redirect(url_for('clientes'))
 
@@ -742,7 +746,7 @@ def listar_empresas():
                             <td>{e["cnpj"]}</td>
                             <td>{e["responsavel"]}</td>
                             <td>{e["whatsapp"]}</td>
-                            <td><a href="/editar_empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">✏️ Editar</a></td>
+                            <td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td>
                         </tr>
                         ''' for e in empresas)}
                     </tbody>
@@ -757,6 +761,139 @@ def listar_empresas():
     except Exception as e:
         flash("Erro ao carregar empresas.")
         return redirect(url_for('clientes'))
+
+@app.route('/empresa/<int:id>')
+def detalhes_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            empresa = response.json()[0] if response.json() else None
+            if not empresa:
+                flash("Empresa não encontrada.")
+                return redirect(url_for('listar_empresas'))
+        else:
+            flash("Erro ao carregar empresa.")
+            return redirect(url_for('listar_empresas'))
+    except Exception as e:
+        flash("Erro de conexão.")
+        return redirect(url_for('listar_empresas'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{empresa['nome_empresa']} - Detalhes</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .details {{
+                padding: 30px;
+            }}
+            .details p {{
+                margin: 10px 0;
+                font-size: 16px;
+            }}
+            .details strong {{
+                color: #2c3e50;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 10px 30px;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🏢 {empresa['nome_empresa']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/empresas" class="back-link">← Voltar à Lista</a>
+            <div class="details">
+                <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
+                <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
+                <p><strong>Telefone:</strong> {empresa['telefone']}</p>
+                <p><strong>WhatsApp:</strong> {empresa['whatsapp']}</p>
+                <p><strong>E-mail:</strong> {empresa['email']}</p>
+                <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
+            </div>
+            <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/abrir_ficha_servico')
 def abrir_ficha_servico():
