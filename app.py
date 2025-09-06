@@ -10,7 +10,6 @@ app.secret_key = 'minha_chave_secreta_123'
 # ========================
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
-
 headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -20,7 +19,6 @@ headers = {
 # ========================
 # Funções para acessar o Supabase
 # ========================
-
 def buscar_usuario_por_login(username, password):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
@@ -55,7 +53,6 @@ def criar_usuario(username, password, nivel):
             "NÍVEL": nivel
         }
         response = requests.post(url, json=dados, headers=headers)
-        
         if response.status_code == 201:
             return True
         else:
@@ -71,7 +68,6 @@ def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
-        
         if response.status_code == 204:
             return True
         else:
@@ -135,7 +131,6 @@ def buscar_empresas():
 # ========================
 # Páginas do sistema
 # ========================
-
 @app.route('/')
 def index():
     if 'usuario' not in session:
@@ -147,7 +142,6 @@ def login():
     if request.method == 'POST':
         user = request.form['username']
         pwd = request.form['password']
-        
         try:
             usuario = buscar_usuario_por_login(user, pwd)
             if usuario:
@@ -158,7 +152,7 @@ def login():
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
-    
+        return redirect(url_for('login'))
     return render_template('login.html')
 
 @app.route('/logout')
@@ -170,13 +164,11 @@ def logout():
 def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
-    # Mensagem flash segura para Render
     mensagem = ""
     if hasattr(session, 'flashes') and session.flashes:
         msg = session.flashes[0]
         mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{msg}</div>'
-    
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -300,7 +292,6 @@ def gerenciar_usuarios():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
-    
     try:
         usuarios = buscar_usuarios()
         return render_template('gerenciar_usuarios.html', usuarios=usuarios)
@@ -313,19 +304,15 @@ def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
-    
     username = request.form.get('username')
     password = request.form.get('password')
     nivel = request.form.get('nivel')
-    
     if not username or not password or not nivel:
         flash("Todos os campos são obrigatórios!")
         return redirect(url_for('gerenciar_usuarios'))
-    
     if nivel not in ['administrador', 'vendedor', 'consulta']:
         flash("Nível inválido!")
         return redirect(url_for('gerenciar_usuarios'))
-    
     try:
         if criar_usuario(username, password, nivel):
             flash("Usuário criado com sucesso!")
@@ -334,7 +321,6 @@ def criar_usuario_view():
     except Exception as e:
         print("Erro ao criar usuário:", e)
         flash("Erro interno no servidor.")
-    
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/excluir_usuario/<int:id>')
@@ -342,7 +328,6 @@ def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
-    
     try:
         if excluir_usuario(id):
             flash("Usuário excluído!")
@@ -351,14 +336,12 @@ def excluir_usuario_view(id):
     except Exception as e:
         print("Erro ao excluir usuário:", e)
         flash("Erro interno no servidor.")
-    
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-
     if request.method == 'POST':
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
@@ -373,9 +356,7 @@ def cadastrar_cliente():
         cep = request.form.get('cep')
         numero = request.form.get('numero')
 
-        # Endereço de entrega
         tem_entrega = request.form.get('tem_entrega') == 'on'
-
         if tem_entrega:
             entrega_endereco = request.form.get('entrega_endereco')
             entrega_numero = request.form.get('entrega_numero')
@@ -400,7 +381,6 @@ def cadastrar_cliente():
             flash("✅ Empresa cadastrada com sucesso!")
         else:
             flash("❌ Erro ao cadastrar empresa.")
-
         return redirect(url_for('clientes'))
 
     return f'''
@@ -530,7 +510,6 @@ def cadastrar_cliente():
                         <input type="text" name="cnpj" required>
                     </div>
                 </div>
-
                 <!-- Linha 2 -->
                 <div class="grid-2">
                     <div>
@@ -542,7 +521,6 @@ def cadastrar_cliente():
                         <input type="text" name="whatsapp">
                     </div>
                 </div>
-
                 <!-- Linha 3 -->
                 <div class="grid-2">
                     <div>
@@ -554,7 +532,6 @@ def cadastrar_cliente():
                         <input type="email" name="email">
                     </div>
                 </div>
-
                 <!-- Linha 4 -->
                 <div class="grid-3">
                     <div>
@@ -570,7 +547,6 @@ def cadastrar_cliente():
                         <input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 350px;">
                     </div>
                 </div>
-
                 <!-- Linha 5 -->
                 <div class="grid-3">
                     <div>
@@ -616,12 +592,12 @@ def cadastrar_cliente():
                     </div>
                 </div>
 
-                <!-- Checkbox para endereço de entrega -->
+                <!-- Checkbox corrigido: posição alinhada -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
-                    <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
                         <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()">
-                        <span>Endereço de entrega diferente do endereço da empresa?</span>
-                    </label>
+                        <label for="tem_entrega">Endereço de entrega diferente do endereço da empresa?</label>
+                    </div>
                 </div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
@@ -640,7 +616,6 @@ def cadastrar_cliente():
                             <input type="text" name="entrega_endereco" id="entrega_endereco" style="width: 100%; max-width: 350px;">
                         </div>
                     </div>
-
                     <div class="grid-3">
                         <div>
                             <label>Número de Entrega</label>
@@ -700,7 +675,6 @@ def cadastrar_cliente():
                     alert('CEP inválido!');
                     return;
                 }}
-
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(response => response.json())
                     .then(data => {{
@@ -728,7 +702,6 @@ def cadastrar_cliente():
             document.getElementById('entrega_cep').onblur = function() {{
                 const cep = this.value.replace(/\D/g, '');
                 if (cep.length !== 8) return;
-
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(r => r.json())
                     .then(data => {{
@@ -745,322 +718,10 @@ def cadastrar_cliente():
     </html>
     '''
 
-@app.route('/empresas')
-def listar_empresas():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    # Busca opcional
-    busca = request.args.get('q', '').strip()
-
-    try:
-        # Busca no Supabase
-        if busca:
-            url = f"{SUPABASE_URL}/rest/v1/empresas?or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
-        else:
-            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
-
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            empresas = response.json()
-        else:
-            flash("Erro ao carregar empresas.")
-            empresas = []
-    except Exception as e:
-        flash("Erro de conexão.")
-        empresas = []
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Empresas Cadastradas</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: #333;
-                min-height: 100vh;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                max-width: 1100px;
-                margin: 30px auto;
-                background: white;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-            }}
-            .header {{
-                background: #2c3e50;
-                color: white;
-                text-align: center;
-                padding: 30px;
-            }}
-            h1 {{
-                font-size: 28px;
-                margin: 0;
-                font-weight: 600;
-            }}
-            .user-info {{
-                background: #34495e;
-                color: white;
-                padding: 15px 20px;
-                font-size: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .search-box {{
-                padding: 20px 30px;
-                text-align: center;
-            }}
-            .search-box input {{
-                width: 70%;
-                padding: 12px;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                font-size: 16px;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-            }}
-            th, td {{
-                padding: 16px 20px;
-                text-align: left;
-            }}
-            th {{
-                background: #ecf0f1;
-                color: #2c3e50;
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 14px;
-            }}
-            tr:nth-child(even) {{
-                background: #f9f9f9;
-            }}
-            tr:hover {{
-                background: #f1f7fb;
-            }}
-            .back-link {{
-                display: inline-block;
-                margin: 20px 30px;
-                color: #3498db;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
-            }}
-            .footer {{
-                text-align: center;
-                padding: 20px;
-                background: #ecf0f1;
-                color: #7f8c8d;
-                font-size: 13px;
-                border-top: 1px solid #bdc3c7;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>📋 Empresas Cadastradas</h1>
-            </div>
-            <div class="user-info">
-                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-            
-            <div class="search-box">
-                <form method="get" style="display: inline;">
-                    <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
-                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-                </form>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Empresa</th>
-                        <th>CNPJ</th>
-                        <th>Responsável</th>
-                        <th>WhatsApp</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {''.join(f'''
-                    <tr>
-                        <td>{e["id"]}</td>
-                        <td>{e["nome_empresa"]}</td>
-                        <td>{e["cnpj"]}</td>
-                        <td>{e["responsavel"]}</td>
-                        <td>{e["whatsapp"]}</td>
-                        <td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td>
-                    </tr>
-                    ''' for e in empresas)}
-                </tbody>
-            </table>
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
-@app.route('/empresa/<int:id>')
-def detalhes_empresa(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            empresa = response.json()[0] if response.json() else None
-            if not empresa:
-                flash("Empresa não encontrada.")
-                return redirect(url_for('listar_empresas'))
-        else:
-            flash("Erro ao carregar empresa.")
-            return redirect(url_for('listar_empresas'))
-    except Exception as e:
-        flash("Erro de conexão.")
-        return redirect(url_for('listar_empresas'))
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{empresa['nome_empresa']} - Detalhes</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: #333;
-                min-height: 100vh;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                max-width: 800px;
-                margin: 30px auto;
-                background: white;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-            }}
-            .header {{
-                background: #2c3e50;
-                color: white;
-                text-align: center;
-                padding: 30px;
-            }}
-            h1 {{
-                font-size: 28px;
-                margin: 0;
-                font-weight: 600;
-            }}
-            .user-info {{
-                background: #34495e;
-                color: white;
-                padding: 15px 20px;
-                font-size: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .details {{
-                padding: 30px;
-            }}
-            .details p {{
-                margin: 10px 0;
-                font-size: 16px;
-            }}
-            .details strong {{
-                color: #2c3e50;
-            }}
-            .btn {{
-                padding: 12px 20px;
-                background: #27ae60;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                text-decoration: none;
-                margin: 10px 30px;
-            }}
-            .btn:hover {{
-                opacity: 0.9;
-            }}
-            .back-link {{
-                display: inline-block;
-                margin: 20px 30px;
-                color: #3498db;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
-            }}
-            .footer {{
-                text-align: center;
-                padding: 20px;
-                background: #ecf0f1;
-                color: #7f8c8d;
-                font-size: 13px;
-                border-top: 1px solid #bdc3c7;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🏢 {empresa['nome_empresa']}</h1>
-            </div>
-            <div class="user-info">
-                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-            <a href="/empresas" class="back-link">← Voltar à Lista</a>
-            <div class="details">
-                <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
-                <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
-                <p><strong>Telefone:</strong> {empresa['telefone']}</p>
-                <p><strong>WhatsApp:</strong> {empresa['whatsapp']}</p>
-                <p><strong>E-mail:</strong> {empresa['email']}</p>
-                <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
-                {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
-            </div>
-            <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
-            <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
 @app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
 def editar_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
-
-    # Buscar empresa
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1086,9 +747,7 @@ def editar_empresa(id):
         cep = request.form.get('cep')
         numero = request.form.get('numero')
 
-        # Endereço de entrega
         tem_entrega = request.form.get('tem_entrega') == 'on'
-
         if tem_entrega:
             entrega_endereco = request.form.get('entrega_endereco')
             entrega_numero = request.form.get('entrega_numero')
@@ -1138,7 +797,6 @@ def editar_empresa(id):
                 flash("❌ Erro ao atualizar empresa.")
         except Exception as e:
             flash("❌ Erro de conexão.")
-
         return redirect(url_for('editar_empresa', id=id))
 
     return f'''
@@ -1268,7 +926,6 @@ def editar_empresa(id):
                         <input type="text" name="cnpj" value="{empresa['cnpj']}" required>
                     </div>
                 </div>
-
                 <!-- Linha 2 -->
                 <div class="grid-2">
                     <div>
@@ -1280,7 +937,6 @@ def editar_empresa(id):
                         <input type="text" name="whatsapp" value="{empresa['whatsapp']}">
                     </div>
                 </div>
-
                 <!-- Linha 3 -->
                 <div class="grid-2">
                     <div>
@@ -1292,7 +948,6 @@ def editar_empresa(id):
                         <input type="email" name="email" value="{empresa['email']}">
                     </div>
                 </div>
-
                 <!-- Linha 4 -->
                 <div class="grid-3">
                     <div>
@@ -1308,7 +963,6 @@ def editar_empresa(id):
                         <input type="text" name="endereco" id="endereco" value="{empresa['endereco']}" style="width: 100%; max-width: 350px;">
                     </div>
                 </div>
-
                 <!-- Linha 5 -->
                 <div class="grid-3">
                     <div>
@@ -1354,17 +1008,17 @@ def editar_empresa(id):
                     </div>
                 </div>
 
-                <!-- Checkbox para endereço de entrega -->
+                <!-- Checkbox corrigido -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
-                    <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
-                        <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
-                               {"checked" if empresa.get("entrega_endereco") else ""}>
-                        <span>Endereço de entrega diferente do endereço da empresa?</span>
-                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
+                        <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()"
+                               {"checked" if empresa.get('entrega_endereco') else ''}>
+                        <label for="tem_entrega">Endereço de entrega diferente do endereço da empresa?</label>
+                    </div>
                 </div>
 
-                <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
-                <div id="campos-entrega" style="display: none;">
+                <!-- Campos de Endereço de Entrega -->
+                <div id="campos-entrega" style="display: {'block' if empresa.get('entrega_endereco') else 'none'};">
                     <div class="grid-3">
                         <div>
                             <label>CEP de Entrega</label>
@@ -1382,7 +1036,6 @@ def editar_empresa(id):
                                    value="{empresa.get('entrega_endereco', '')}" style="width: 100%; max-width: 350px;">
                         </div>
                     </div>
-
                     <div class="grid-3">
                         <div>
                             <label>Número de Entrega</label>
@@ -1398,33 +1051,33 @@ def editar_empresa(id):
                             <label>Estado de Entrega</label>
                             <select name="entrega_estado" id="entrega_estado">
                                 <option value="">Selecione</option>
-                                <option value="AC" {"selected" if empresa.get('entrega_estado') == "AC" else ""}>AC</option>
-                                <option value="AL" {"selected" if empresa.get('entrega_estado') == "AL" else ""}>AL</option>
-                                <option value="AP" {"selected" if empresa.get('entrega_estado') == "AP" else ""}>AP</option>
-                                <option value="AM" {"selected" if empresa.get('entrega_estado') == "AM" else ""}>AM</option>
-                                <option value="BA" {"selected" if empresa.get('entrega_estado') == "BA" else ""}>BA</option>
-                                <option value="CE" {"selected" if empresa.get('entrega_estado') == "CE" else ""}>CE</option>
-                                <option value="DF" {"selected" if empresa.get('entrega_estado') == "DF" else ""}>DF</option>
-                                <option value="ES" {"selected" if empresa.get('entrega_estado') == "ES" else ""}>ES</option>
-                                <option value="GO" {"selected" if empresa.get('entrega_estado') == "GO" else ""}>GO</option>
-                                <option value="MA" {"selected" if empresa.get('entrega_estado') == "MA" else ""}>MA</option>
-                                <option value="MT" {"selected" if empresa.get('entrega_estado') == "MT" else ""}>MT</option>
-                                <option value="MS" {"selected" if empresa.get('entrega_estado') == "MS" else ""}>MS</option>
-                                <option value="MG" {"selected" if empresa.get('entrega_estado') == "MG" else ""}>MG</option>
-                                <option value="PA" {"selected" if empresa.get('entrega_estado') == "PA" else ""}>PA</option>
-                                <option value="PB" {"selected" if empresa.get('entrega_estado') == "PB" else ""}>PB</option>
-                                <option value="PR" {"selected" if empresa.get('entrega_estado') == "PR" else ""}>PR</option>
-                                <option value="PE" {"selected" if empresa.get('entrega_estado') == "PE" else ""}>PE</option>
-                                <option value="PI" {"selected" if empresa.get('entrega_estado') == "PI" else ""}>PI</option>
-                                <option value="RJ" {"selected" if empresa.get('entrega_estado') == "RJ" else ""}>RJ</option>
-                                <option value="RN" {"selected" if empresa.get('entrega_estado') == "RN" else ""}>RN</option>
-                                <option value="RS" {"selected" if empresa.get('entrega_estado') == "RS" else ""}>RS</option>
-                                <option value="RO" {"selected" if empresa.get('entrega_estado') == "RO" else ""}>RO</option>
-                                <option value="RR" {"selected" if empresa.get('entrega_estado') == "RR" else ""}>RR</option>
-                                <option value="SC" {"selected" if empresa.get('entrega_estado') == "SC" else ""}>SC</option>
-                                <option value="SP" {"selected" if empresa.get('entrega_estado') == "SP" else ""}>SP</option>
-                                <option value="SE" {"selected" if empresa.get('entrega_estado') == "SE" else ""}>SE</option>
-                                <option value="TO" {"selected" if empresa.get('entrega_estado') == "TO" else ""}>TO</option>
+                                <option value="AC" {"selected" if empresa.get('entrega_estado') == 'AC' else ''}>AC</option>
+                                <option value="AL" {"selected" if empresa.get('entrega_estado') == 'AL' else ''}>AL</option>
+                                <option value="AP" {"selected" if empresa.get('entrega_estado') == 'AP' else ''}>AP</option>
+                                <option value="AM" {"selected" if empresa.get('entrega_estado') == 'AM' else ''}>AM</option>
+                                <option value="BA" {"selected" if empresa.get('entrega_estado') == 'BA' else ''}>BA</option>
+                                <option value="CE" {"selected" if empresa.get('entrega_estado') == 'CE' else ''}>CE</option>
+                                <option value="DF" {"selected" if empresa.get('entrega_estado') == 'DF' else ''}>DF</option>
+                                <option value="ES" {"selected" if empresa.get('entrega_estado') == 'ES' else ''}>ES</option>
+                                <option value="GO" {"selected" if empresa.get('entrega_estado') == 'GO' else ''}>GO</option>
+                                <option value="MA" {"selected" if empresa.get('entrega_estado') == 'MA' else ''}>MA</option>
+                                <option value="MT" {"selected" if empresa.get('entrega_estado') == 'MT' else ''}>MT</option>
+                                <option value="MS" {"selected" if empresa.get('entrega_estado') == 'MS' else ''}>MS</option>
+                                <option value="MG" {"selected" if empresa.get('entrega_estado') == 'MG' else ''}>MG</option>
+                                <option value="PA" {"selected" if empresa.get('entrega_estado') == 'PA' else ''}>PA</option>
+                                <option value="PB" {"selected" if empresa.get('entrega_estado') == 'PB' else ''}>PB</option>
+                                <option value="PR" {"selected" if empresa.get('entrega_estado') == 'PR' else ''}>PR</option>
+                                <option value="PE" {"selected" if empresa.get('entrega_estado') == 'PE' else ''}>PE</option>
+                                <option value="PI" {"selected" if empresa.get('entrega_estado') == 'PI' else ''}>PI</option>
+                                <option value="RJ" {"selected" if empresa.get('entrega_estado') == 'RJ' else ''}>RJ</option>
+                                <option value="RN" {"selected" if empresa.get('entrega_estado') == 'RN' else ''}>RN</option>
+                                <option value="RS" {"selected" if empresa.get('entrega_estado') == 'RS' else ''}>RS</option>
+                                <option value="RO" {"selected" if empresa.get('entrega_estado') == 'RO' else ''}>RO</option>
+                                <option value="RR" {"selected" if empresa.get('entrega_estado') == 'RR' else ''}>RR</option>
+                                <option value="SC" {"selected" if empresa.get('entrega_estado') == 'SC' else ''}>SC</option>
+                                <option value="SP" {"selected" if empresa.get('entrega_estado') == 'SP' else ''}>SP</option>
+                                <option value="SE" {"selected" if empresa.get('entrega_estado') == 'SE' else ''}>SE</option>
+                                <option value="TO" {"selected" if empresa.get('entrega_estado') == 'TO' else ''}>TO</option>
                             </select>
                         </div>
                     </div>
@@ -1444,7 +1097,6 @@ def editar_empresa(id):
                     alert('CEP inválido!');
                     return;
                 }}
-
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(response => response.json())
                     .then(data => {{
@@ -1468,11 +1120,9 @@ def editar_empresa(id):
                 campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none';
             }}
 
-            // Busca CEP de entrega
             document.getElementById('entrega_cep').onblur = function() {{
                 const cep = this.value.replace(/\D/g, '');
                 if (cep.length !== 8) return;
-
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(r => r.json())
                     .then(data => {{
@@ -1489,11 +1139,138 @@ def editar_empresa(id):
     </html>
     '''
 
+@app.route('/detalhes_empresa/<int:id>')
+def detalhes_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            empresa = response.json()[0] if response.json() else None
+            if not empresa:
+                flash("Empresa não encontrada.")
+                return redirect(url_for('listar_empresas'))
+        else:
+            flash("Erro ao carregar empresa.")
+            return redirect(url_for('listar_empresas'))
+    except Exception as e:
+        flash("Erro de conexão.")
+        return redirect(url_for('listar_empresas'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{empresa['nome_empresa']} - Detalhes</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+                border-radius: 16px 16px 0 0;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .user-info a {{
+                color: #8ed3ff;
+                text-decoration: none;
+            }}
+            .details {{
+                padding: 30px;
+            }}
+            .btn {{
+                padding: 10px 16px;
+                margin: 5px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+            }}
+            .btn-primary {{ background: #3498db; color: white; }}
+            .btn-success {{ background: #27ae60; color: white; }}
+            .btn-outline-primary {{ color: #3498db; border: 1px solid #3498db; background: transparent; }}
+            .back-link {{
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+                border-radius: 0 0 16px 16px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>{empresa['nome_empresa']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <div class="details">
+                <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
+                <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
+                <p><strong>Telefone:</strong> {empresa['telefone']}</p>
+                <p><strong>WhatsApp:</strong> {empresa['whatsapp']}</p>
+                <p><strong>E-mail:</strong> {empresa['email']}</p>
+                <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
+                {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
+            </div>
+            <a href="/abrir_ficha_servico" class="btn btn-primary">➕ Abrir Ficha de Serviço</a>
+            <a href="/editar_empresa/{empresa['id']}" class="btn btn-success">✏️ Editar Empresa</a>
+            <a href="/empresas" class="back-link">← Voltar à Lista</a>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
 @app.route('/abrir_ficha_servico')
 def abrir_ficha_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1516,7 +1293,7 @@ def abrir_ficha_servico():
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -1557,6 +1334,11 @@ def abrir_ficha_servico():
                 border-radius: 6px;
                 font-size: 14px;
             }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
             .btn {{
                 padding: 12px 20px;
                 background: #27ae60;
@@ -1593,38 +1375,216 @@ def abrir_ficha_servico():
     <body>
         <div class="container">
             <div class="header">
-                <h1>📋 Ficha de Serviço</h1>
+                <h1>➕ Ficha de Serviço</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-            <form method="post" class="form-container">
-                <label>Data do Serviço *</label>
-                <input type="date" name="data" required>
-
-                <label>Serviço Realizado *</label>
-                <input type="text" name="servico" required>
-
-                <label>Quantidade</label>
-                <input type="number" name="quantidade">
-
-                <label>Valor Total (R$)</label>
-                <input type="number" name="valor" step="0.01">
-
-                <label>Status</label>
-                <select name="status">
-                    <option value="pendente">Pendente</option>
-                    <option value="em_andamento">Em Andamento</option>
-                    <option value="concluido">Concluído</option>
-                </select>
-
-                <label>Observações</label>
-                <textarea name="observacoes" rows="4"></textarea>
-
+            <form method="post" action="/salvar_ficha" class="form-container">
+                <div class="grid-2">
+                    <div>
+                        <label>Data</label>
+                        <input type="date" name="data" required>
+                    </div>
+                    <div>
+                        <label>Serviço</label>
+                        <input type="text" name="servico" required>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <label>Quantidade</label>
+                        <input type="number" name="quantidade" min="1" value="1">
+                    </div>
+                    <div>
+                        <label>Valor</label>
+                        <input type="number" step="0.01" name="valor" placeholder="0.00">
+                    </div>
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="pendente">Pendente</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="concluido">Concluído</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Observações</label>
+                    <textarea name="observacoes" rows="4"></textarea>
+                </div>
                 <button type="submit" class="btn">💾 Salvar Ficha</button>
             </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/empresas')
+def listar_empresas():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    busca = request.args.get('q', '').strip()
+    try:
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            empresas = response.json()
+        else:
+            flash("Erro ao carregar empresas.")
+            empresas = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        empresas = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Listar Empresas - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1000px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search input {{
+                padding: 10px;
+                width: 70%;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 16px;
+            }}
+            .search button {{
+                padding: 10px 15px;
+                background: #3498db;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                cursor: pointer;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 30px;
+            }}
+            th, td {{
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }}
+            th {{
+                background: #f8f9fa;
+                font-weight: 600;
+            }}
+            .btn {{
+                padding: 6px 12px;
+                margin: 2px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+            }}
+            .btn-blue {{ background: #3498db; color: white; }}
+            .btn-green {{ background: #27ae60; color: white; }}
+            .btn-red {{ background: #e74c3c; color: white; }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Listar Empresas</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <div class="search">
+                <form method="get">
+                    <input type="text" name="q" placeholder="Buscar por nome ou CNPJ..." value="{busca}">
+                    <button type="submit">🔍 Buscar</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CNPJ</th>
+                        <th>Responsável</th>
+                        <th>Telefone</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'<tr><td>{e["nome_empresa"]}</td><td>{e["cnpj"]}</td><td>{e["responsavel"]}</td><td>{e["telefone"]}</td><td><a href="/detalhes_empresa/{e["id"]}" class="btn btn-blue">👁️ Ver</a></td></tr>' for e in empresas)}
+                </tbody>
+            </table>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
