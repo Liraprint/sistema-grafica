@@ -1055,6 +1055,440 @@ def detalhes_empresa(id):
     </html>
     '''
 
+@app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
+def editar_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # Buscar empresa
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar empresa.")
+        return redirect(url_for('listar_empresas'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        responsavel = request.form.get('responsavel')
+        telefone = request.form.get('telefone')
+        whatsapp = request.form.get('whatsapp')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+        bairro = request.form.get('bairro')
+        cidade = request.form.get('cidade')
+        estado = request.form.get('estado')
+        cep = request.form.get('cep')
+        numero = request.form.get('numero')
+
+        # Endereço de entrega
+        tem_entrega = request.form.get('tem_entrega') == 'on'
+
+        if tem_entrega:
+            entrega_endereco = request.form.get('entrega_endereco')
+            entrega_numero = request.form.get('entrega_numero')
+            entrega_bairro = request.form.get('entrega_bairro')
+            entrega_cidade = request.form.get('entrega_cidade')
+            entrega_estado = request.form.get('entrega_estado')
+            entrega_cep = request.form.get('entrega_cep')
+        else:
+            entrega_endereco = None
+            entrega_numero = None
+            entrega_bairro = None
+            entrega_cidade = None
+            entrega_estado = None
+            entrega_cep = None
+
+        if not nome or not cnpj:
+            flash("Nome e CNPJ são obrigatórios!")
+            return redirect(url_for('editar_empresa', id=id))
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+            dados = {
+                "nome_empresa": nome,
+                "cnpj": cnpj,
+                "responsavel": responsavel,
+                "telefone": telefone,
+                "whatsapp": whatsapp,
+                "email": email,
+                "endereco": endereco,
+                "bairro": bairro,
+                "cidade": cidade,
+                "estado": estado,
+                "cep": cep,
+                "numero": numero,
+                "entrega_endereco": entrega_endereco,
+                "entrega_numero": entrega_numero,
+                "entrega_bairro": entrega_bairro,
+                "entrega_cidade": entrega_cidade,
+                "entrega_estado": entrega_estado,
+                "entrega_cep": entrega_cep
+            }
+            response = requests.patch(url, json=dados, headers=headers)
+            if response.status_code == 204:
+                flash("✅ Empresa atualizada com sucesso!")
+                return redirect(url_for('detalhes_empresa', id=id))
+            else:
+                flash("❌ Erro ao atualizar empresa.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+        return redirect(url_for('editar_empresa', id=id))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Empresa - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 2fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .btn:hover {{
+                opacity: 0.9;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar {empresa['nome_empresa']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/empresa/{id}" class="back-link">← Voltar aos Detalhes</a>
+            <form method="post" class="form-container">
+                <!-- Linha 1 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome da Empresa *</label>
+                        <input type="text" name="nome" value="{empresa['nome_empresa']}" required>
+                    </div>
+                    <div>
+                        <label>CNPJ *</label>
+                        <input type="text" name="cnpj" value="{empresa['cnpj']}" required>
+                    </div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome do Responsável</label>
+                        <input type="text" name="responsavel" value="{empresa['responsavel']}">
+                    </div>
+                    <div>
+                        <label>WhatsApp</label>
+                        <input type="text" name="whatsapp" value="{empresa['whatsapp']}">
+                    </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Telefone</label>
+                        <input type="text" name="telefone" value="{empresa['telefone']}">
+                    </div>
+                    <div>
+                        <label>E-mail</label>
+                        <input type="email" name="email" value="{empresa['email']}">
+                    </div>
+                </div>
+
+                <!-- Linha 4 -->
+                <div class="grid-3">
+                    <div>
+                        <label>CEP</label>
+                        <input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" value="{empresa['cep']}" style="width: 150px;">
+                    </div>
+                    <div>
+                        <label>Bairro</label>
+                        <input type="text" name="bairro" id="bairro" value="{empresa['bairro']}" style="width: 150px;">
+                    </div>
+                    <div>
+                        <label>Endereço</label>
+                        <input type="text" name="endereco" id="endereco" value="{empresa['endereco']}" style="width: 100%; max-width: 350px;">
+                    </div>
+                </div>
+
+                <!-- Linha 5 -->
+                <div class="grid-3">
+                    <div>
+                        <label>Número</label>
+                        <input type="text" name="numero" value="{empresa['numero']}">
+                    </div>
+                    <div>
+                        <label>Cidade</label>
+                        <input type="text" name="cidade" id="cidade" value="{empresa['cidade']}">
+                    </div>
+                    <div>
+                        <label>Estado</label>
+                        <select name="estado" id="estado">
+                            <option value="">Selecione</option>
+                            <option value="AC" {"selected" if empresa['estado'] == "AC" else ""}>AC</option>
+                            <option value="AL" {"selected" if empresa['estado'] == "AL" else ""}>AL</option>
+                            <option value="AP" {"selected" if empresa['estado'] == "AP" else ""}>AP</option>
+                            <option value="AM" {"selected" if empresa['estado'] == "AM" else ""}>AM</option>
+                            <option value="BA" {"selected" if empresa['estado'] == "BA" else ""}>BA</option>
+                            <option value="CE" {"selected" if empresa['estado'] == "CE" else ""}>CE</option>
+                            <option value="DF" {"selected" if empresa['estado'] == "DF" else ""}>DF</option>
+                            <option value="ES" {"selected" if empresa['estado'] == "ES" else ""}>ES</option>
+                            <option value="GO" {"selected" if empresa['estado'] == "GO" else ""}>GO</option>
+                            <option value="MA" {"selected" if empresa['estado'] == "MA" else ""}>MA</option>
+                            <option value="MT" {"selected" if empresa['estado'] == "MT" else ""}>MT</option>
+                            <option value="MS" {"selected" if empresa['estado'] == "MS" else ""}>MS</option>
+                            <option value="MG" {"selected" if empresa['estado'] == "MG" else ""}>MG</option>
+                            <option value="PA" {"selected" if empresa['estado'] == "PA" else ""}>PA</option>
+                            <option value="PB" {"selected" if empresa['estado'] == "PB" else ""}>PB</option>
+                            <option value="PR" {"selected" if empresa['estado'] == "PR" else ""}>PR</option>
+                            <option value="PE" {"selected" if empresa['estado'] == "PE" else ""}>PE</option>
+                            <option value="PI" {"selected" if empresa['estado'] == "PI" else ""}>PI</option>
+                            <option value="RJ" {"selected" if empresa['estado'] == "RJ" else ""}>RJ</option>
+                            <option value="RN" {"selected" if empresa['estado'] == "RN" else ""}>RN</option>
+                            <option value="RS" {"selected" if empresa['estado'] == "RS" else ""}>RS</option>
+                            <option value="RO" {"selected" if empresa['estado'] == "RO" else ""}>RO</option>
+                            <option value="RR" {"selected" if empresa['estado'] == "RR" else ""}>RR</option>
+                            <option value="SC" {"selected" if empresa['estado'] == "SC" else ""}>SC</option>
+                            <option value="SP" {"selected" if empresa['estado'] == "SP" else ""}>SP</option>
+                            <option value="SE" {"selected" if empresa['estado'] == "SE" else ""}>SE</option>
+                            <option value="TO" {"selected" if empresa['estado'] == "TO" else ""}>TO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Checkbox para endereço de entrega -->
+                <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
+                               {"checked" if empresa.get("entrega_endereco") else ""}>
+                        <strong>Endereço de entrega diferente do endereço da empresa?</strong>
+                    </label>
+                </div>
+
+                <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
+                <div id="campos-entrega" style="display: none;">
+                    <div class="grid-3">
+                        <div>
+                            <label>CEP de Entrega</label>
+                            <input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" 
+                                   value="{empresa.get('entrega_cep', '')}" style="width: 150px;">
+                        </div>
+                        <div>
+                            <label>Bairro de Entrega</label>
+                            <input type="text" name="entrega_bairro" id="entrega_bairro" 
+                                   value="{empresa.get('entrega_bairro', '')}" style="width: 150px;">
+                        </div>
+                        <div>
+                            <label>Endereço de Entrega</label>
+                            <input type="text" name="entrega_endereco" id="entrega_endereco" 
+                                   value="{empresa.get('entrega_endereco', '')}" style="width: 100%; max-width: 350px;">
+                        </div>
+                    </div>
+
+                    <div class="grid-3">
+                        <div>
+                            <label>Número de Entrega</label>
+                            <input type="text" name="entrega_numero" placeholder="Ex: 123" 
+                                   value="{empresa.get('entrega_numero', '')}">
+                        </div>
+                        <div>
+                            <label>Cidade de Entrega</label>
+                            <input type="text" name="entrega_cidade" id="entrega_cidade" 
+                                   value="{empresa.get('entrega_cidade', '')}">
+                        </div>
+                        <div>
+                            <label>Estado de Entrega</label>
+                            <select name="entrega_estado" id="entrega_estado">
+                                <option value="">Selecione</option>
+                                <option value="AC" {"selected" if empresa.get('entrega_estado') == "AC" else ""}>AC</option>
+                                <option value="AL" {"selected" if empresa.get('entrega_estado') == "AL" else ""}>AL</option>
+                                <option value="AP" {"selected" if empresa.get('entrega_estado') == "AP" else ""}>AP</option>
+                                <option value="AM" {"selected" if empresa.get('entrega_estado') == "AM" else ""}>AM</option>
+                                <option value="BA" {"selected" if empresa.get('entrega_estado') == "BA" else ""}>BA</option>
+                                <option value="CE" {"selected" if empresa.get('entrega_estado') == "CE" else ""}>CE</option>
+                                <option value="DF" {"selected" if empresa.get('entrega_estado') == "DF" else ""}>DF</option>
+                                <option value="ES" {"selected" if empresa.get('entrega_estado') == "ES" else ""}>ES</option>
+                                <option value="GO" {"selected" if empresa.get('entrega_estado') == "GO" else ""}>GO</option>
+                                <option value="MA" {"selected" if empresa.get('entrega_estado') == "MA" else ""}>MA</option>
+                                <option value="MT" {"selected" if empresa.get('entrega_estado') == "MT" else ""}>MT</option>
+                                <option value="MS" {"selected" if empresa.get('entrega_estado') == "MS" else ""}>MS</option>
+                                <option value="MG" {"selected" if empresa.get('entrega_estado') == "MG" else ""}>MG</option>
+                                <option value="PA" {"selected" if empresa.get('entrega_estado') == "PA" else ""}>PA</option>
+                                <option value="PB" {"selected" if empresa.get('entrega_estado') == "PB" else ""}>PB</option>
+                                <option value="PR" {"selected" if empresa.get('entrega_estado') == "PR" else ""}>PR</option>
+                                <option value="PE" {"selected" if empresa.get('entrega_estado') == "PE" else ""}>PE</option>
+                                <option value="PI" {"selected" if empresa.get('entrega_estado') == "PI" else ""}>PI</option>
+                                <option value="RJ" {"selected" if empresa.get('entrega_estado') == "RJ" else ""}>RJ</option>
+                                <option value="RN" {"selected" if empresa.get('entrega_estado') == "RN" else ""}>RN</option>
+                                <option value="RS" {"selected" if empresa.get('entrega_estado') == "RS" else ""}>RS</option>
+                                <option value="RO" {"selected" if empresa.get('entrega_estado') == "RO" else ""}>RO</option>
+                                <option value="RR" {"selected" if empresa.get('entrega_estado') == "RR" else ""}>RR</option>
+                                <option value="SC" {"selected" if empresa.get('entrega_estado') == "SC" else ""}>SC</option>
+                                <option value="SP" {"selected" if empresa.get('entrega_estado') == "SP" else ""}>SP</option>
+                                <option value="SE" {"selected" if empresa.get('entrega_estado') == "SE" else ""}>SE</option>
+                                <option value="TO" {"selected" if empresa.get('entrega_estado') == "TO" else ""}>TO</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function buscarEnderecoPorCEP() {{
+                const cep = document.getElementById('cep').value.replace(/\D/g, '');
+                if (cep.length !== 8) {{
+                    alert('CEP inválido!');
+                    return;
+                }}
+
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+                    .then(response => response.json())
+                    .then(data => {{
+                        if (data.erro) {{
+                            alert('CEP não encontrado!');
+                            return;
+                        }}
+                        document.getElementById('endereco').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                        document.getElementById('estado').value = data.uf;
+                    }})
+                    .catch(error => {{
+                        console.error('Erro ao buscar CEP:', error);
+                        alert('Erro ao buscar CEP. Tente novamente.');
+                    }});
+            }}
+
+            function toggleEntrega() {{
+                const campos = document.getElementById('campos-entrega');
+                campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none';
+            }}
+
+            // Busca CEP de entrega
+            document.getElementById('entrega_cep').onblur = function() {{
+                const cep = this.value.replace(/\D/g, '');
+                if (cep.length !== 8) return;
+
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+                    .then(r => r.json())
+                    .then(data => {{
+                        if (!data.erro) {{
+                            document.getElementById('entrega_endereco').value = data.logradouro;
+                            document.getElementById('entrega_bairro').value = data.bairro;
+                            document.getElementById('entrega_cidade').value = data.localidade;
+                            document.getElementById('entrega_estado').value = data.uf;
+                        }}
+                    }});
+            }};
+        </script>
+    </body>
+    </html>
+    '''
+
 @app.route('/abrir_ficha_servico')
 def abrir_ficha_servico():
     if 'usuario' not in session:
