@@ -164,10 +164,11 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Mensagem flash segura
+    # Mensagem flash segura para Render
     mensagem = ""
-    if session.get_flashed_messages():
-        mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{list(session.get_flashed_messages())[0]}</div>'
+    if hasattr(session, 'flashes') and session.flashes:
+        msg = session.flashes[0]
+        mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{msg}</div>'
     
     return f'''
     <!DOCTYPE html>
