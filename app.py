@@ -131,7 +131,8 @@ def buscar_empresas():
     except Exception as e:
         print("Erro de conexão:", e)
         return []
-    # ========================
+
+# ========================
 # Páginas do sistema
 # ========================
 
@@ -170,7 +171,6 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Mensagem flash segura para Render
     mensagem = ""
     if hasattr(session, 'flashes') and session.flashes:
         msg = session.flashes[0]
@@ -221,14 +221,6 @@ def clientes():
                 justify-content: space-between;
                 align-items: center;
             }}
-            .user-info a {{
-                color: #8ed3ff;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .user-info a:hover {{
-                text-decoration: underline;
-            }}
             .btn {{
                 display: block;
                 width: 90%;
@@ -244,19 +236,10 @@ def clientes():
                 border: none;
                 cursor: pointer;
             }}
-            .btn-green {{
-                background: #27ae60;
-            }}
-            .btn-blue {{
-                background: #3498db;
-            }}
-            .btn-red {{
-                background: #e74c3c;
-            }}
-            .btn:hover {{
-                transform: translateY(-3px);
-                box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-            }}
+            .btn-green {{ background: #27ae60; }}
+            .btn-blue {{ background: #3498db; }}
+            .btn-red {{ background: #e74c3c; }}
+            .btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }}
             .footer {{
                 text-align: center;
                 padding: 20px;
@@ -264,12 +247,6 @@ def clientes():
                 color: #7f8c8d;
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
-            }}
-            @media (max-width: 768px) {{
-                .btn {{
-                    width: 95%;
-                    font-size: 17px;
-                }}
             }}
         </style>
     </head>
@@ -352,6 +329,7 @@ def excluir_usuario_view(id):
         flash("Erro interno no servidor.")
     
     return redirect(url_for('gerenciar_usuarios'))
+
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
     if 'usuario' not in session:
@@ -371,23 +349,13 @@ def cadastrar_cliente():
         cep = request.form.get('cep')
         numero = request.form.get('numero')
 
-        # Endereço de entrega
         tem_entrega = request.form.get('tem_entrega') == 'on'
-
-        if tem_entrega:
-            entrega_endereco = request.form.get('entrega_endereco')
-            entrega_numero = request.form.get('entrega_numero')
-            entrega_bairro = request.form.get('entrega_bairro')
-            entrega_cidade = request.form.get('entrega_cidade')
-            entrega_estado = request.form.get('entrega_estado')
-            entrega_cep = request.form.get('entrega_cep')
-        else:
-            entrega_endereco = None
-            entrega_numero = None
-            entrega_bairro = None
-            entrega_cidade = None
-            entrega_estado = None
-            entrega_cep = None
+        entrega_endereco = request.form.get('entrega_endereco') if tem_entrega else None
+        entrega_numero = request.form.get('entrega_numero') if tem_entrega else None
+        entrega_bairro = request.form.get('entrega_bairro') if tem_entrega else None
+        entrega_cidade = request.form.get('entrega_cidade') if tem_entrega else None
+        entrega_estado = request.form.get('entrega_estado') if tem_entrega else None
+        entrega_cep = request.form.get('entrega_cep') if tem_entrega else None
 
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
@@ -483,18 +451,12 @@ def cadastrar_cliente():
                 font-weight: 600;
                 cursor: pointer;
             }}
-            .btn:hover {{
-                opacity: 0.9;
-            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
                 color: #3498db;
                 text-decoration: none;
                 font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
             }}
             .footer {{
                 text-align: center;
@@ -614,13 +576,13 @@ def cadastrar_cliente():
                     </div>
                 </div>
 
-<!-- Checkbox para endereço de entrega -->
-<div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;">
-    <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin-right: 8px; vertical-align: middle;">
-    <label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">
-        Endereço de entrega diferente do endereço da empresa?
-    </label>
-</div>
+                <!-- Checkbox para endereço de entrega -->
+                <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;">
+                    <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin-right: 8px; vertical-align: middle;">
+                    <label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">
+                        Endereço de entrega diferente do endereço da empresa?
+                    </label>
+                </div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
                 <div id="campos-entrega" style="display: none;">
@@ -748,11 +710,9 @@ def listar_empresas():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # Busca opcional
     busca = request.args.get('q', '').strip()
 
     try:
-        # Busca no Supabase
         if busca:
             url = f"{SUPABASE_URL}/rest/v1/empresas?or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
         else:
@@ -1045,6 +1005,7 @@ def detalhes_empresa(id):
             </div>
             <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
             <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
+            <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📦 Gerar Etiqueta de Entrega</a>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
@@ -1052,12 +1013,12 @@ def detalhes_empresa(id):
     </body>
     </html>
     '''
+
 @app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
 def editar_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # Buscar empresa
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1083,23 +1044,13 @@ def editar_empresa(id):
         cep = request.form.get('cep')
         numero = request.form.get('numero')
 
-        # Endereço de entrega
         tem_entrega = request.form.get('tem_entrega') == 'on'
-
-        if tem_entrega:
-            entrega_endereco = request.form.get('entrega_endereco')
-            entrega_numero = request.form.get('entrega_numero')
-            entrega_bairro = request.form.get('entrega_bairro')
-            entrega_cidade = request.form.get('entrega_cidade')
-            entrega_estado = request.form.get('entrega_estado')
-            entrega_cep = request.form.get('entrega_cep')
-        else:
-            entrega_endereco = None
-            entrega_numero = None
-            entrega_bairro = None
-            entrega_cidade = None
-            entrega_estado = None
-            entrega_cep = None
+        entrega_endereco = request.form.get('entrega_endereco') if tem_entrega else None
+        entrega_numero = request.form.get('entrega_numero') if tem_entrega else None
+        entrega_bairro = request.form.get('entrega_bairro') if tem_entrega else None
+        entrega_cidade = request.form.get('entrega_cidade') if tem_entrega else None
+        entrega_estado = request.form.get('entrega_estado') if tem_entrega else None
+        entrega_cep = request.form.get('entrega_cep') if tem_entrega else None
 
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
@@ -1220,18 +1171,12 @@ def editar_empresa(id):
                 font-weight: 600;
                 cursor: pointer;
             }}
-            .btn:hover {{
-                opacity: 0.9;
-            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
                 color: #3498db;
                 text-decoration: none;
                 font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
             }}
             .footer {{
                 text-align: center;
@@ -1352,12 +1297,12 @@ def editar_empresa(id):
                 </div>
 
                 <!-- Checkbox para endereço de entrega -->
-                <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-left: 0;">
-                        <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
-                               {"checked" if empresa.get("entrega_endereco") else ""} style="margin: 0;">
-                        <strong style="margin: 0; font-size: 16px;">Endereço de entrega diferente do endereço da empresa?</strong>
-                    </div>
+                <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;">
+                    <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
+                           {"checked" if empresa.get("entrega_endereco") else ""} style="margin-right: 8px; vertical-align: middle;">
+                    <label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">
+                        Endereço de entrega diferente do endereço da empresa?
+                    </label>
                 </div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
@@ -1564,18 +1509,12 @@ def abrir_ficha_servico():
                 font-weight: 600;
                 cursor: pointer;
             }}
-            .btn:hover {{
-                opacity: 0.9;
-            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
                 color: #3498db;
                 text-decoration: none;
                 font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
             }}
             .footer {{
                 text-align: center;
@@ -1626,6 +1565,248 @@ def abrir_ficha_servico():
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/gerar_etiqueta/<int:id>')
+def gerar_etiqueta(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar empresa.")
+        return redirect(url_for('listar_empresas'))
+
+    tem_entrega = bool(empresa.get("entrega_endereco"))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gerar Etiqueta - Correios</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .radio-group {{
+                margin: 15px 0;
+                font-size: 16px;
+            }}
+            .radio-group label {{
+                display: block;
+                margin: 10px 0;
+                cursor: pointer;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 10px 30px;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            pre {{
+                background: #f1f1f1;
+                padding: 20px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 16px;
+                white-space: pre-wrap;
+                border: 1px solid #ddd;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 Etiqueta de Entrega</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/empresa/{id}" class="back-link">← Voltar aos Detalhes</a>
+
+            <div class="form-container">
+                <h3>Selecione o endereço de destino:</h3>
+                <form method="post" action="/imprimir_etiqueta/{id}">
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="tipo_endereco" value="principal" required> 
+                            <strong>Endereço da Empresa:</strong><br>
+                            {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})
+                        </label>
+                    </div>
+                    {f'''
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="tipo_endereco" value="entrega" required> 
+                            <strong>Endereço de Entrega:</strong><br>
+                            {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})
+                        </label>
+                    </div>
+                    ''' if tem_entrega else '<p><em>Nenhum endereço de entrega cadastrado.</em></p>'}
+                    <button type="submit" class="btn">🖨️ Gerar Etiqueta</button>
+                </form>
+            </div>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/imprimir_etiqueta/<int:id>', methods=['POST'])
+def imprimir_etiqueta(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar empresa.")
+        return redirect(url_for('listar_empresas'))
+
+    tipo = request.form.get('tipo_endereco')
+
+    # Remetente (sua empresa)
+    remetente = {
+        "nome": "Gráfica Rápida",
+        "endereco": "Av. Principal, 123",
+        "bairro": "Centro",
+        "cidade": "São Paulo",
+        "estado": "SP",
+        "cep": "01001-000"
+    }
+
+    # Destinatário
+    if tipo == "entrega":
+        destinatario = {
+            "nome": empresa['nome_empresa'],
+            "endereco": f"{empresa['entrega_endereco']}, {empresa['entrega_numero']}",
+            "bairro": empresa['entrega_bairro'],
+            "cidade": empresa['entrega_cidade'],
+            "estado": empresa['entrega_estado'],
+            "cep": empresa['entrega_cep']
+        }
+    else:
+        destinatario = {
+            "nome": empresa['nome_empresa'],
+            "endereco": f"{empresa['endereco']}, {empresa['numero']}",
+            "bairro": empresa['bairro'],
+            "cidade": empresa['cidade'],
+            "estado": empresa['estado'],
+            "cep": empresa['cep']
+        }
+
+    # Gerar etiqueta
+    etiqueta = f"""
+REMETENTE:
+{remetente['nome']}
+{remetente['endereco']}
+{remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}
+CEP: {remetente['cep']}
+
+DESTINATÁRIO:
+{destinatario['nome']}
+{destinatario['endereco']}
+{destinatario['bairro']} - {destinatario['cidade']} - {destinatario['estado']}
+CEP: {destinatario['cep']}
+    """.strip()
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Imprimir Etiqueta</title>
+        <style>
+            body {{ font-family: 'Segoe UI', sans-serif; padding: 40px; }}
+            pre {{ font-size: 18px; line-height: 1.6; }}
+            .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 20px; }}
+            @media print {{
+                .no-print {{ display: none; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <pre>{etiqueta}</pre>
+        <button onclick="window.print()" class="btn no-print">🖨️ Imprimir</button>
+        <a href="/empresa/{id}" class="btn no-print" style="background: #95a5a6;">← Voltar</a>
     </body>
     </html>
     '''
