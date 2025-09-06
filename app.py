@@ -592,7 +592,7 @@ def cadastrar_cliente():
                     </div>
                 </div>
 
-                <!-- Checkbox corrigido: posição alinhada -->
+                <!-- ✅ Checkbox corrigido: botão à esquerda, texto ao lado -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
                         <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()">
@@ -1008,7 +1008,7 @@ def editar_empresa(id):
                     </div>
                 </div>
 
-                <!-- Checkbox corrigido -->
+                <!-- ✅ Checkbox corrigido -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #2c3e50;">
                         <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()"
