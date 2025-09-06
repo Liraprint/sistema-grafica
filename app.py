@@ -618,10 +618,10 @@ def cadastrar_cliente():
 
                 <!-- Checkbox para endereço de entrega -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
-                    <label style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
                         <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()">
-                        <strong>Endereço de entrega diferente do endereço da empresa?</strong>
-                    </label>
+                        <strong style="margin-left: 5px;">Endereço de entrega diferente do endereço da empresa?</strong>
+                    </div>
                 </div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
@@ -1356,11 +1356,11 @@ def editar_empresa(id):
 
                 <!-- Checkbox para endereço de entrega -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
-                    <label style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
                         <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
                                {"checked" if empresa.get("entrega_endereco") else ""}>
-                        <strong>Endereço de entrega diferente do endereço da empresa?</strong>
-                    </label>
+                        <strong style="margin-left: 5px;">Endereço de entrega diferente do endereço da empresa?</strong>
+                    </div>
                 </div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
