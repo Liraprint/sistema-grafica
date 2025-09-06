@@ -614,7 +614,7 @@ def cadastrar_cliente():
                     </div>
                 </div>
 
-  <!-- Checkbox para endereço de entrega -->
+<!-- Checkbox para endereço de entrega -->
 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
     <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin: 0; flex-shrink: 0;">
     <span style="font-weight: 600; font-size: 16px; line-height: 1.2; margin: 0; padding: 0;">
