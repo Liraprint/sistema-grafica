@@ -632,138 +632,172 @@ def listar_empresas():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # Busca opcional
+    busca = request.args.get('q', '').strip()
+
     try:
-        empresas = buscar_empresas()
-        return f'''
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Empresas Cadastradas</title>
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-                body {{
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: #333;
-                    min-height: 100vh;
-                    padding: 0;
-                    margin: 0;
-                }}
-                .container {{
-                    max-width: 1100px;
-                    margin: 30px auto;
-                    background: white;
-                    border-radius: 16px;
-                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                    overflow: hidden;
-                }}
-                .header {{
-                    background: #2c3e50;
-                    color: white;
-                    text-align: center;
-                    padding: 30px;
-                }}
-                h1 {{
-                    font-size: 28px;
-                    margin: 0;
-                    font-weight: 600;
-                }}
-                .user-info {{
-                    background: #34495e;
-                    color: white;
-                    padding: 15px 20px;
-                    font-size: 15px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }}
-                table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                }}
-                th, td {{
-                    padding: 16px 20px;
-                    text-align: left;
-                }}
-                th {{
-                    background: #ecf0f1;
-                    color: #2c3e50;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    font-size: 14px;
-                }}
-                tr:nth-child(even) {{
-                    background: #f9f9f9;
-                }}
-                tr:hover {{
-                    background: #f1f7fb;
-                }}
-                .back-link {{
-                    display: inline-block;
-                    margin: 20px 30px;
-                    color: #3498db;
-                    text-decoration: none;
-                    font-weight: 500;
-                }}
-                .back-link:hover {{
-                    text-decoration: underline;
-                }}
-                .footer {{
-                    text-align: center;
-                    padding: 20px;
-                    background: #ecf0f1;
-                    color: #7f8c8d;
-                    font-size: 13px;
-                    border-top: 1px solid #bdc3c7;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📋 Empresas Cadastradas</h1>
-                </div>
-                <div class="user-info">
-                    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                    <a href="/logout">🚪 Sair</a>
-                </div>
-                <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Empresa</th>
-                            <th>CNPJ</th>
-                            <th>Responsável</th>
-                            <th>WhatsApp</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {''.join(f'''
-                        <tr>
-                            <td>{e["id"]}</td>
-                            <td>{e["nome_empresa"]}</td>
-                            <td>{e["cnpj"]}</td>
-                            <td>{e["responsavel"]}</td>
-                            <td>{e["whatsapp"]}</td>
-                            <td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td>
-                        </tr>
-                        ''' for e in empresas)}
-                    </tbody>
-                </table>
-                <div class="footer">
-                    Sistema de Gestão para Gráfica Rápida | © 2025
-                </div>
-            </div>
-        </body>
-        </html>
-        '''
+        # Busca no Supabase
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            empresas = response.json()
+        else:
+            flash("Erro ao carregar empresas.")
+            empresas = []
     except Exception as e:
-        flash("Erro ao carregar empresas.")
-        return redirect(url_for('clientes'))
+        flash("Erro de conexão.")
+        empresas = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Empresas Cadastradas</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1100px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Empresas Cadastradas</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Empresa</th>
+                        <th>CNPJ</th>
+                        <th>Responsável</th>
+                        <th>WhatsApp</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'''
+                    <tr>
+                        <td>{e["id"]}</td>
+                        <td>{e["nome_empresa"]}</td>
+                        <td>{e["cnpj"]}</td>
+                        <td>{e["responsavel"]}</td>
+                        <td>{e["whatsapp"]}</td>
+                        <td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td>
+                    </tr>
+                    ''' for e in empresas)}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/empresa/<int:id>')
 def detalhes_empresa(id):
@@ -851,6 +885,9 @@ def detalhes_empresa(id):
                 text-decoration: none;
                 margin: 10px 30px;
             }}
+            .btn:hover {{
+                opacity: 0.9;
+            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
@@ -890,10 +927,323 @@ def detalhes_empresa(id):
                 <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
             </div>
             <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
+            <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
+def editar_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # Buscar empresa
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar empresa.")
+        return redirect(url_for('listar_empresas'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        responsavel = request.form.get('responsavel')
+        telefone = request.form.get('telefone')
+        whatsapp = request.form.get('whatsapp')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+        bairro = request.form.get('bairro')
+        cidade = request.form.get('cidade')
+        estado = request.form.get('estado')
+        cep = request.form.get('cep')
+        numero = request.form.get('numero')
+
+        if not nome or not cnpj:
+            flash("Nome e CNPJ são obrigatórios!")
+            return redirect(url_for('editar_empresa', id=id))
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+            dados = {
+                "nome_empresa": nome,
+                "cnpj": cnpj,
+                "responsavel": responsavel,
+                "telefone": telefone,
+                "whatsapp": whatsapp,
+                "email": email,
+                "endereco": endereco,
+                "bairro": bairro,
+                "cidade": cidade,
+                "estado": estado,
+                "cep": cep,
+                "numero": numero
+            }
+            response = requests.patch(url, json=dados, headers=headers)
+            if response.status_code == 204:
+                flash("✅ Empresa atualizada com sucesso!")
+                return redirect(url_for('detalhes_empresa', id=id))
+            else:
+                flash("❌ Erro ao atualizar empresa.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+        return redirect(url_for('editar_empresa', id=id))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Empresa - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 2fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .btn:hover {{
+                opacity: 0.9;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar {empresa['nome_empresa']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/empresa/{id}" class="back-link">← Voltar aos Detalhes</a>
+            <form method="post" class="form-container">
+                <!-- Linha 1 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome da Empresa *</label>
+                        <input type="text" name="nome" value="{empresa['nome_empresa']}" required>
+                    </div>
+                    <div>
+                        <label>CNPJ *</label>
+                        <input type="text" name="cnpj" value="{empresa['cnpj']}" required>
+                    </div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Nome do Responsável</label>
+                        <input type="text" name="responsavel" value="{empresa['responsavel']}">
+                    </div>
+                    <div>
+                        <label>WhatsApp</label>
+                        <input type="text" name="whatsapp" value="{empresa['whatsapp']}">
+                    </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="grid-2">
+                    <div>
+                        <label>Telefone</label>
+                        <input type="text" name="telefone" value="{empresa['telefone']}">
+                    </div>
+                    <div>
+                        <label>E-mail</label>
+                        <input type="email" name="email" value="{empresa['email']}">
+                    </div>
+                </div>
+
+                <!-- Linha 4 -->
+                <div class="grid-3">
+                    <div>
+                        <label>CEP</label>
+                        <input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" value="{empresa['cep']}" style="width: 150px;">
+                    </div>
+                    <div>
+                        <label>Bairro</label>
+                        <input type="text" name="bairro" id="bairro" value="{empresa['bairro']}" style="width: 150px;">
+                    </div>
+                    <div>
+                        <label>Endereço</label>
+                        <input type="text" name="endereco" id="endereco" value="{empresa['endereco']}" style="width: 100%; max-width: 350px;">
+                    </div>
+                </div>
+
+                <!-- Linha 5 -->
+                <div class="grid-3">
+                    <div>
+                        <label>Número</label>
+                        <input type="text" name="numero" value="{empresa['numero']}">
+                    </div>
+                    <div>
+                        <label>Cidade</label>
+                        <input type="text" name="cidade" id="cidade" value="{empresa['cidade']}">
+                    </div>
+                    <div>
+                        <label>Estado</label>
+                        <select name="estado" id="estado">
+                            <option value="">Selecione</option>
+                            <option value="AC" {"selected" if empresa['estado'] == "AC" else ""}>AC</option>
+                            <option value="AL" {"selected" if empresa['estado'] == "AL" else ""}>AL</option>
+                            <option value="AP" {"selected" if empresa['estado'] == "AP" else ""}>AP</option>
+                            <option value="AM" {"selected" if empresa['estado'] == "AM" else ""}>AM</option>
+                            <option value="BA" {"selected" if empresa['estado'] == "BA" else ""}>BA</option>
+                            <option value="CE" {"selected" if empresa['estado'] == "CE" else ""}>CE</option>
+                            <option value="DF" {"selected" if empresa['estado'] == "DF" else ""}>DF</option>
+                            <option value="ES" {"selected" if empresa['estado'] == "ES" else ""}>ES</option>
+                            <option value="GO" {"selected" if empresa['estado'] == "GO" else ""}>GO</option>
+                            <option value="MA" {"selected" if empresa['estado'] == "MA" else ""}>MA</option>
+                            <option value="MT" {"selected" if empresa['estado'] == "MT" else ""}>MT</option>
+                            <option value="MS" {"selected" if empresa['estado'] == "MS" else ""}>MS</option>
+                            <option value="MG" {"selected" if empresa['estado'] == "MG" else ""}>MG</option>
+                            <option value="PA" {"selected" if empresa['estado'] == "PA" else ""}>PA</option>
+                            <option value="PB" {"selected" if empresa['estado'] == "PB" else ""}>PB</option>
+                            <option value="PR" {"selected" if empresa['estado'] == "PR" else ""}>PR</option>
+                            <option value="PE" {"selected" if empresa['estado'] == "PE" else ""}>PE</option>
+                            <option value="PI" {"selected" if empresa['estado'] == "PI" else ""}>PI</option>
+                            <option value="RJ" {"selected" if empresa['estado'] == "RJ" else ""}>RJ</option>
+                            <option value="RN" {"selected" if empresa['estado'] == "RN" else ""}>RN</option>
+                            <option value="RS" {"selected" if empresa['estado'] == "RS" else ""}>RS</option>
+                            <option value="RO" {"selected" if empresa['estado'] == "RO" else ""}>RO</option>
+                            <option value="RR" {"selected" if empresa['estado'] == "RR" else ""}>RR</option>
+                            <option value="SC" {"selected" if empresa['estado'] == "SC" else ""}>SC</option>
+                            <option value="SP" {"selected" if empresa['estado'] == "SP" else ""}>SP</option>
+                            <option value="SE" {"selected" if empresa['estado'] == "SE" else ""}>SE</option>
+                            <option value="TO" {"selected" if empresa['estado'] == "TO" else ""}>TO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function buscarEnderecoPorCEP() {{
+                const cep = document.getElementById('cep').value.replace(/\D/g, '');
+                if (cep.length !== 8) {{
+                    alert('CEP inválido!');
+                    return;
+                }}
+
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+                    .then(response => response.json())
+                    .then(data => {{
+                        if (data.erro) {{
+                            alert('CEP não encontrado!');
+                            return;
+                        }}
+                        document.getElementById('endereco').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                        document.getElementById('estado').value = data.uf;
+                    }})
+                    .catch(error => {{
+                        console.error('Erro ao buscar CEP:', error);
+                        alert('Erro ao buscar CEP. Tente novamente.');
+                    }});
+            }}
+        </script>
     </body>
     </html>
     '''
