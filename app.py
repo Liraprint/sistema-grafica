@@ -164,9 +164,11 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Mensagem flash
-    mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{list(session.get_flashed_messages())[0]}</div>' if session.get_flashed_messages() else ''
-
+    # Mensagem flash segura
+    mensagem = ""
+    if session.get_flashed_messages():
+        mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{list(session.get_flashed_messages())[0]}</div>'
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
