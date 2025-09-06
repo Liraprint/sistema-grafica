@@ -615,14 +615,12 @@ def cadastrar_cliente():
                 </div>
 
             <!-- Checkbox para endereço de entrega -->
-<div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; position: relative;">
-    <div style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); margin: 0;">
-        <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin: 0;">
-    </div>
-    <div style="margin-left: 40px; font-size: 16px; line-height: 1.2; margin: 0;">
+<div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+    <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin: 0; flex-shrink: 0;">
+    <span style="font-weight: 600; font-size: 16px; line-height: 1.2; margin: 0; padding: 0;">
         Endereço de entrega diferente do endereço da empresa?
-    </div>
-</div> 
+    </span>
+</div>
 
                 <!-- Campos de Endereço de Entrega (ocultos por padrão) -->
                 <div id="campos-entrega" style="display: none;">
