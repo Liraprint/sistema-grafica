@@ -112,6 +112,19 @@ def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, 
         print("Erro de conexão:", e)
         return False
 
+def buscar_empresas():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("Erro ao buscar empresas:", response.status_code, response.text)
+            return []
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return []
+
 # ========================
 # Páginas do sistema
 # ========================
@@ -258,7 +271,7 @@ def clientes():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
-            <a href="/clientes" class="btn btn-blue">📋 Listar Empresas</a>
+            <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -351,9 +364,9 @@ def cadastrar_cliente():
             return redirect(url_for('cadastrar_cliente'))
 
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero):
-            flash("Empresa cadastrada com sucesso!")
+            flash("✅ SUCESSO! Empresa cadastrada com sucesso no banco de dados.")
         else:
-            flash("Erro ao cadastrar empresa.")
+            flash("❌ ERRO! Não foi possível salvar a empresa. Verifique os dados e tente novamente.")
 
         return redirect(url_for('clientes'))
 
@@ -606,6 +619,144 @@ def cadastrar_cliente():
     </body>
     </html>
     '''
+
+@app.route('/empresas')
+def listar_empresas():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        empresas = buscar_empresas()
+        return f'''
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Empresas Cadastradas</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #333;
+                    min-height: 100vh;
+                    padding: 0;
+                    margin: 0;
+                }}
+                .container {{
+                    max-width: 1100px;
+                    margin: 30px auto;
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                }}
+                .header {{
+                    background: #2c3e50;
+                    color: white;
+                    text-align: center;
+                    padding: 30px;
+                }}
+                h1 {{
+                    font-size: 28px;
+                    margin: 0;
+                    font-weight: 600;
+                }}
+                .user-info {{
+                    background: #34495e;
+                    color: white;
+                    padding: 15px 20px;
+                    font-size: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                }}
+                th, td {{
+                    padding: 16px 20px;
+                    text-align: left;
+                }}
+                th {{
+                    background: #ecf0f1;
+                    color: #2c3e50;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    font-size: 14px;
+                }}
+                tr:nth-child(even) {{
+                    background: #f9f9f9;
+                }}
+                tr:hover {{
+                    background: #f1f7fb;
+                }}
+                .back-link {{
+                    display: inline-block;
+                    margin: 20px 30px;
+                    color: #3498db;
+                    text-decoration: none;
+                    font-weight: 500;
+                }}
+                .back-link:hover {{
+                    text-decoration: underline;
+                }}
+                .footer {{
+                    text-align: center;
+                    padding: 20px;
+                    background: #ecf0f1;
+                    color: #7f8c8d;
+                    font-size: 13px;
+                    border-top: 1px solid #bdc3c7;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📋 Empresas Cadastradas</h1>
+                </div>
+                <div class="user-info">
+                    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                    <a href="/logout">🚪 Sair</a>
+                </div>
+                <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Empresa</th>
+                            <th>CNPJ</th>
+                            <th>Responsável</th>
+                            <th>WhatsApp</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {''.join(f'''
+                        <tr>
+                            <td>{e["id"]}</td>
+                            <td>{e["nome_empresa"]}</td>
+                            <td>{e["cnpj"]}</td>
+                            <td>{e["responsavel"]}</td>
+                            <td>{e["whatsapp"]}</td>
+                            <td><a href="/editar_empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">✏️ Editar</a></td>
+                        </tr>
+                        ''' for e in empresas)}
+                    </tbody>
+                </table>
+                <div class="footer">
+                    Sistema de Gestão para Gráfica Rápida | © 2025
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+    except Exception as e:
+        flash("Erro ao carregar empresas.")
+        return redirect(url_for('clientes'))
 
 @app.route('/abrir_ficha_servico')
 def abrir_ficha_servico():
