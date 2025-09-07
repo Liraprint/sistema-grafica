@@ -262,6 +262,7 @@ def clientes():
             {mensagem}
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
+            <a href="/materiais" class="btn btn-blue">📦 Materiais</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -1726,6 +1727,351 @@ def abrir_ficha_servico():
                 <textarea name="observacoes" rows="4"></textarea>
 
                 <button type="submit" class="btn">💾 Salvar Serviço</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/materiais')
+def listar_materiais():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            materiais = response.json()
+        else:
+            flash("Erro ao carregar materiais.")
+            materiais = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        materiais = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Materiais Cadastrados</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1100px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 10px 30px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 Materiais Cadastrados</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Denominação</th>
+                        <th>Marca</th>
+                        <th>Grupo</th>
+                        <th>Unidade</th>
+                        <th>Valor Unitário</th>
+                        <th>Fornecedor</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'''
+                    <tr>
+                        <td>{m["id"]}</td>
+                        <td>{m["denominacao"]}</td>
+                        <td>{m["marca"] or "—"}</td>
+                        <td>{m["grupo_material"] or "—"}</td>
+                        <td>{m["unidade_medida"]}</td>
+                        <td>R$ {m["valor_unitario"]:.2f}</td>
+                        <td>{m["fornecedor"] or "—"}</td>
+                        <td>{m["data_cadastro"][:10]}</td>
+                    </tr>
+                    ''' for m in materiais)}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/cadastrar_material', methods=['GET', 'POST'])
+def cadastrar_material():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        denominacao = request.form.get('denominacao')
+        marca = request.form.get('marca')
+        grupo_material = request.form.get('grupo_material')
+        unidade_medida = request.form.get('unidade_medida')
+        valor_unitario = request.form.get('valor_unitario')
+        especificacao = request.form.get('especificacao')
+        fornecedor = request.form.get('fornecedor')
+
+        if not denominacao or not unidade_medida or not valor_unitario:
+            flash("Os campos obrigatórios são: denominação, unidade e valor unitário!")
+            return redirect(url_for('cadastrar_material'))
+
+        try:
+            valor_unitario = float(valor_unitario)
+        except:
+            flash("Valor unitário deve ser um número!")
+            return redirect(url_for('cadastrar_material'))
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/materiais"
+            dados = {
+                "denominacao": denominacao,
+                "marca": marca,
+                "grupo_material": grupo_material,
+                "unidade_medida": unidade_medida,
+                "valor_unitario": valor_unitario,
+                "especificacao": especificacao,
+                "fornecedor": fornecedor
+            }
+            response = requests.post(url, json=dados, headers=headers)
+            if response.status_code == 201:
+                flash("✅ Material cadastrado com sucesso!")
+                return redirect(url_for('listar_materiais'))
+            else:
+                flash("❌ Erro ao cadastrar material.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+        return redirect(url_for('cadastrar_material'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cadastrar Material - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Cadastrar Novo Material</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/materiais" class="back-link">← Voltar à Lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Denominação *</label>
+                    <input type="text" name="denominacao" required>
+                </div>
+                <div>
+                    <label>Marca</label>
+                    <input type="text" name="marca">
+                </div>
+                <div>
+                    <label>Grupo de Material</label>
+                    <input type="text" name="grupo_material">
+                </div>
+                <div>
+                    <label>Unidade de Medida *</label>
+                    <input type="text" name="unidade_medida" required>
+                </div>
+                <div>
+                    <label>Valor Unitário *</label>
+                    <input type="number" name="valor_unitario" step="0.01" required>
+                </div>
+                <div>
+                    <label>Especificação</label>
+                    <textarea name="especificacao" rows="3"></textarea>
+                </div>
+                <div>
+                    <label>Fornecedor</label>
+                    <input type="text" name="fornecedor">
+                </div>
+                <button type="submit" class="btn">💾 Salvar Material</button>
             </form>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
