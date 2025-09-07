@@ -998,9 +998,9 @@ def detalhes_empresa(id):
                 {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
-                <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
+                <a href="/servicos" class="btn">📋 Serviços</a>
                 <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
-                <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📦 Gerar Etiqueta de Entrega</a>
+                <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             </div>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
@@ -1427,6 +1427,176 @@ def editar_empresa(id):
     </html>
     '''
 
+@app.route('/servicos')
+def listar_servicos():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # Simulando serviços cadastrados (você pode salvar no Supabase depois)
+    servicos = [
+        {
+            "id": 1,
+            "empresa": "Empresa A",
+            "data": "2025-04-05",
+            "servico": "Cartões de visita",
+            "quantidade": 500,
+            "valor": 150.00,
+            "status": "Concluído"
+        },
+        {
+            "id": 2,
+            "empresa": "Empresa B",
+            "data": "2025-04-06",
+            "servico": "Panfletos",
+            "quantidade": 1000,
+            "valor": 200.00,
+            "status": "Em Andamento"
+        }
+    ]
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Serviços Cadastrados</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1100px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 10px 30px;
+            }}
+            .btn-blue {{
+                background: #3498db;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Serviços Realizados</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/abrir_ficha_servico" class="btn">➕ Adicionar Serviço</a>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Empresa</th>
+                        <th>Data</th>
+                        <th>Serviço</th>
+                        <th>Quantidade</th>
+                        <th>Valor (R$)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'''
+                    <tr>
+                        <td>{s["id"]}</td>
+                        <td>{s["empresa"]}</td>
+                        <td>{s["data"]}</td>
+                        <td>{s["servico"]}</td>
+                        <td>{s["quantidade"]}</td>
+                        <td>{s["valor"]:.2f}</td>
+                        <td>{s["status"]}</td>
+                    </tr>
+                    ''' for s in servicos)}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
 @app.route('/abrir_ficha_servico')
 def abrir_ficha_servico():
     if 'usuario' not in session:
@@ -1438,7 +1608,7 @@ def abrir_ficha_servico():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ficha de Serviço - Sua Gráfica</title>
+        <title>Adicionar Serviço - Sua Gráfica</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -1525,13 +1695,13 @@ def abrir_ficha_servico():
     <body>
         <div class="container">
             <div class="header">
-                <h1>📋 Ficha de Serviço</h1>
+                <h1>➕ Adicionar Serviço</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/servicos" class="back-link">← Voltar aos Serviços</a>
             <form method="post" class="form-container">
                 <label>Data do Serviço *</label>
                 <input type="date" name="data" required>
@@ -1555,7 +1725,7 @@ def abrir_ficha_servico():
                 <label>Observações</label>
                 <textarea name="observacoes" rows="4"></textarea>
 
-                <button type="submit" class="btn">💾 Salvar Ficha</button>
+                <button type="submit" class="btn">💾 Salvar Serviço</button>
             </form>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
@@ -1681,7 +1851,7 @@ def gerar_etiqueta(id):
     <body>
         <div class="container">
             <div class="header">
-                <h1>📦 Etiqueta de Entrega</h1>
+                <h1>📬 Etiqueta de Postagem</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
