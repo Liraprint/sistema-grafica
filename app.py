@@ -1741,8 +1741,13 @@ def listar_materiais():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    busca = request.args.get('q', '').strip()
+
     try:
-        url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             materiais = response.json()
@@ -1802,16 +1807,12 @@ def listar_materiais():
                 padding: 20px 30px;
                 text-align: center;
             }}
-            .btn {{
-                padding: 12px 20px;
-                background: #27ae60;
-                color: white;
-                border: none;
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
                 border-radius: 8px;
                 font-size: 16px;
-                font-weight: 600;
-                text-decoration: none;
-                margin: 10px 30px;
             }}
             table {{
                 width: 100%;
@@ -1830,6 +1831,9 @@ def listar_materiais():
             }}
             tr:nth-child(even) {{
                 background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
             }}
             .back-link {{
                 display: inline-block;
@@ -1860,6 +1864,13 @@ def listar_materiais():
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
             <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
 
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -1877,7 +1888,7 @@ def listar_materiais():
                     {''.join(f'''
                     <tr>
                         <td>{m["id"]}</td>
-                        <td>{m["denominacao"]}</td>
+                        <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
                         <td>{m["marca"] or "—"}</td>
                         <td>{m["grupo_material"] or "—"}</td>
                         <td>{m["unidade_medida"]}</td>
@@ -1896,10 +1907,155 @@ def listar_materiais():
     </html>
     '''
 
-@app.route('/cadastrar_material', methods=['GET', 'POST'])
-def cadastrar_material():
+@app.route('/material/<int:id>')
+def detalhes_material(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            material = response.json()[0] if response.json() else None
+            if not material:
+                flash("Material não encontrado.")
+                return redirect(url_for('listar_materiais'))
+        else:
+            flash("Erro ao carregar material.")
+            return redirect(url_for('listar_materiais'))
+    except Exception as e:
+        flash("Erro de conexão.")
+        return redirect(url_for('listar_materiais'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{material['denominacao']} - Detalhes</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .details {{
+                padding: 30px;
+            }}
+            .details p {{
+                margin: 10px 0;
+                font-size: 16px;
+            }}
+            .details strong {{
+                color: #2c3e50;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 10px 30px;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 {material['denominacao']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/materiais" class="back-link">← Voltar à Lista</a>
+            <div class="details">
+                <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
+                <p><strong>Grupo de Material:</strong> {material['grupo_material'] or "—"}</p>
+                <p><strong>Unidade de Medida:</strong> {material['unidade_medida']}</p>
+                <p><strong>Valor Unitário:</strong> R$ {material['valor_unitario']:.2f}</p>
+                <p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p>
+                <p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p>
+                <p><strong>Data de Cadastro:</strong> {material.get("data_cadastro", "")[:10] if material.get("data_cadastro") else "—"}</p>
+            </div>
+            <div style="display: flex; gap: 15px; margin: 20px 0;">
+                <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
+                <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
+            </div>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/editar_material/<int:id>', methods=['GET', 'POST'])
+def editar_material(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Material não encontrado.")
+            return redirect(url_for('listar_materiais'))
+        material = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('listar_materiais'))
 
     if request.method == 'POST':
         denominacao = request.form.get('denominacao')
@@ -1912,16 +2068,16 @@ def cadastrar_material():
 
         if not denominacao or not unidade_medida or not valor_unitario:
             flash("Os campos obrigatórios são: denominação, unidade e valor unitário!")
-            return redirect(url_for('cadastrar_material'))
+            return redirect(url_for('editar_material', id=id))
 
         try:
             valor_unitario = float(valor_unitario)
         except:
             flash("Valor unitário deve ser um número!")
-            return redirect(url_for('cadastrar_material'))
+            return redirect(url_for('editar_material', id=id))
 
         try:
-            url = f"{SUPABASE_URL}/rest/v1/materiais"
+            url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
             dados = {
                 "denominacao": denominacao,
                 "marca": marca,
@@ -1931,16 +2087,16 @@ def cadastrar_material():
                 "especificacao": especificacao,
                 "fornecedor": fornecedor
             }
-            response = requests.post(url, json=dados, headers=headers)
-            if response.status_code == 201:
-                flash("✅ Material cadastrado com sucesso!")
-                return redirect(url_for('listar_materiais'))
+            response = requests.patch(url, json=dados, headers=headers)
+            if response.status_code == 204:
+                flash("✅ Material atualizado com sucesso!")
+                return redirect(url_for('detalhes_material', id=id))
             else:
-                flash("❌ Erro ao cadastrar material.")
+                flash("❌ Erro ao atualizar material.")
         except Exception as e:
             flash("❌ Erro de conexão.")
 
-        return redirect(url_for('cadastrar_material'))
+        return redirect(url_for('editar_material', id=id))
 
     return f'''
     <!DOCTYPE html>
@@ -1948,7 +2104,7 @@ def cadastrar_material():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cadastrar Material - Sua Gráfica</title>
+        <title>Editar Material - Sua Gráfica</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -2035,43 +2191,43 @@ def cadastrar_material():
     <body>
         <div class="container">
             <div class="header">
-                <h1>➕ Cadastrar Novo Material</h1>
+                <h1>✏️ Editar {material['denominacao']}</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/materiais" class="back-link">← Voltar à Lista</a>
+            <a href="/material/{id}" class="back-link">← Voltar aos Detalhes</a>
             <form method="post" class="form-container">
                 <div>
                     <label>Denominação *</label>
-                    <input type="text" name="denominacao" required>
+                    <input type="text" name="denominacao" value="{material['denominacao']}" required>
                 </div>
                 <div>
                     <label>Marca</label>
-                    <input type="text" name="marca">
+                    <input type="text" name="marca" value="{material['marca']}">
                 </div>
                 <div>
                     <label>Grupo de Material</label>
-                    <input type="text" name="grupo_material">
+                    <input type="text" name="grupo_material" value="{material['grupo_material']}">
                 </div>
                 <div>
                     <label>Unidade de Medida *</label>
-                    <input type="text" name="unidade_medida" required>
+                    <input type="text" name="unidade_medida" value="{material['unidade_medida']}" required>
                 </div>
                 <div>
                     <label>Valor Unitário *</label>
-                    <input type="number" name="valor_unitario" step="0.01" required>
+                    <input type="number" name="valor_unitario" step="0.01" value="{material['valor_unitario']}" required>
                 </div>
                 <div>
                     <label>Especificação</label>
-                    <textarea name="especificacao" rows="3"></textarea>
+                    <textarea name="especificacao" rows="3">{material['especificacao']}</textarea>
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <input type="text" name="fornecedor">
+                    <input type="text" name="fornecedor" value="{material['fornecedor']}">
                 </div>
-                <button type="submit" class="btn">💾 Salvar Material</button>
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
             </form>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
@@ -2080,6 +2236,23 @@ def cadastrar_material():
     </body>
     </html>
     '''
+
+@app.route('/excluir_material/<int:id>')
+def excluir_material(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            flash("🗑️ Material excluído com sucesso!")
+        else:
+            flash("❌ Erro ao excluir material.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
+
+    return redirect(url_for('listar_materiais'))
 
 @app.route('/gerar_etiqueta/<int:id>')
 def gerar_etiqueta(id):
