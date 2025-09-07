@@ -238,6 +238,7 @@ def clientes():
             }}
             .btn-green {{ background: #27ae60; }}
             .btn-blue {{ background: #3498db; }}
+            .btn-purple {{ background: #8e44ad; }}
             .btn-red {{ background: #e74c3c; }}
             .btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }}
             .footer {{
@@ -262,7 +263,8 @@ def clientes():
             {mensagem}
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-            <a href="/materiais" class="btn btn-blue">📦 Materiais</a>
+            <a href="/materiais" class="btn btn-blue">📋 Listagem de Materiais</a>
+            <a href="/controle_estoque" class="btn btn-purple">📊 Controle de Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -2762,9 +2764,254 @@ CEP: {destinatario['cep']}
     </html>
     '''
 
-# ========================
-# Iniciar o app
-# ========================
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+@app.route('/controle_estoque')
+def controle_estoque():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        # Buscar todos os materiais cadastrados
+        url_materiais = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response_materiais = requests.get(url_materiais, headers=headers)
+        if response_materiais.status_code != 200:
+            flash("Erro ao carregar materiais.")
+            materiais = []
+        else:
+            materiais = response_materiais.json()
+
+    except Exception as e:
+        flash("Erro de conexão com o banco de dados.")
+        materiais = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Controle de Estoque</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            .alert {{
+                background: #fdf3cd;
+                color: #856404;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+                font-size: 14px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📊 Controle de Estoque</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+            <div class="form-container">
+                <h2>📥 Registrar Entrada de Material</h2>
+                <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
+                    <div>
+                        <label>Material *</label>
+                        <select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required>
+                            <option value="">Selecione um material</option>
+                            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                        </select>
+                    </div>
+
+                    <!-- Dados que serão preenchidos automaticamente -->
+                    <div class="grid-2">
+                        <div>
+                            <label>Unidade de Medida</label>
+                            <input type="text" id="unidade_medida" readonly>
+                        </div>
+                        <div>
+                            <label>Valor Unitário Cadastrado</label>
+                            <input type="text" id="valor_unitario_cadastrado" readonly>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <label>Quantidade Comprada *</label>
+                            <input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="calcularValorUnitario()">
+                        </div>
+                        <div>
+                            <label>Tamanho (ex: 66x96 cm)</label>
+                            <input type="text" name="tamanho" placeholder="Opcional">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label>Valor Total Pago *</label>
+                        <input type="number" name="valor_total" id="valor_total" step="0.01" required oninput="calcularValorUnitario()">
+                    </div>
+
+                    <div>
+                        <label>Valor Unitário Calculado</label>
+                        <input type="text" id="valor_unitario_calculado" readonly>
+                    </div>
+
+                    <!-- Alerta se o valor for diferente -->
+                    <div id="alerta_valor" class="alert" style="display: none;">
+                        ⚠️ O valor unitário calculado é diferente do cadastrado. 
+                        <button type="button" onclick="atualizarValorUnitario()" style="background: #e67e22; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer;">Atualizar no cadastro</button>
+                    </div>
+
+                    <!-- Campo oculto para enviar o novo valor se atualizado -->
+                    <input type="hidden" name="novo_valor_unitario" id="novo_valor_unitario">
+
+                    <button type="submit" class="btn">➕ Registrar Entrada</button>
+                </form>
+            </div>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            let materiais = {str(materiais)};
+
+            function carregarDadosMaterial() {{
+                const select = document.getElementById('material_id');
+                const id = select.value;
+                const material = materiais.find(m => m.id == id);
+
+                if (material) {{
+                    document.getElementById('unidade_medida').value = material.unidade_medida;
+                    document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2);
+                    document.getElementById('quantidade').value = '';
+                    document.getElementById('valor_total').value = '';
+                    document.getElementById('valor_unitario_calculado').value = '';
+                    document.getElementById('alerta_valor').style.display = 'none';
+                    document.getElementById('novo_valor_unitario').value = '';
+                }}
+            }}
+
+            function calcularValorUnitario() {{
+                const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
+                const valor_total = parseFloat(document.getElementById('valor_total').value) || 0;
+
+                if (quantidade > 0 && valor_total > 0) {{
+                    const valor_calculado = (valor_total / quantidade).toFixed(2);
+                    document.getElementById('valor_unitario_calculado').value = valor_calculado;
+
+                    const valor_cadastrado = parseFloat(document.getElementById('valor_unitario_cadastrado').value);
+                    if (Math.abs(valor_calculado - valor_cadastrado) > 0.01) {{
+                        document.getElementById('alerta_valor').style.display = 'block';
+                    }} else {{
+                        document.getElementById('alerta_valor').style.display = 'none';
+                    }}
+                }} else {{
+                    document.getElementById('valor_unitario_calculado').value = '';
+                }}
+            }}
+
+            function atualizarValorUnitario() {{
+                const valor_calculado = document.getElementById('valor_unitario_calculado').value;
+                document.getElementById('novo_valor_unitario').value = valor_calculado;
+                alert('Valor unitário atualizado para uso no cadastro. Salve a entrada para confirmar.');
+            }}
+
+            function validarFormulario() {{
+                const quantidade = parseFloat(document.getElementById('quantidade').value);
+                const valor_total = parseFloat(document.getElementById('valor_total').value);
+                if (quantidade <= 0 || valor_total <= 0) {{
+                    alert('Quantidade e valor total devem ser maiores que zero.');
+                    return false;
+                }}
+                return true;
+            }}
+        </script>
+    </body>
+    </html>
+    '''
