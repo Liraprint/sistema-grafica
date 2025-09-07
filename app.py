@@ -961,18 +961,12 @@ def detalhes_empresa(id):
                 text-decoration: none;
                 margin: 10px 30px;
             }}
-            .btn:hover {{
-                opacity: 0.9;
-            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
                 color: #3498db;
                 text-decoration: none;
                 font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
             }}
             .footer {{
                 text-align: center;
@@ -1003,9 +997,11 @@ def detalhes_empresa(id):
                 <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
                 {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
             </div>
-            <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
-            <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
-            <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📦 Gerar Etiqueta de Entrega</a>
+            <div style="display: flex; gap: 15px; margin: 20px 0;">
+                <a href="/abrir_ficha_servico" class="btn">➕ Abrir Ficha de Serviço</a>
+                <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
+                <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📦 Gerar Etiqueta de Entrega</a>
+            </div>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
@@ -1744,12 +1740,12 @@ def imprimir_etiqueta(id):
 
     # Remetente (sua empresa)
     remetente = {
-        "nome": "Gráfica Rápida",
-        "endereco": "Av. Principal, 123",
-        "bairro": "Centro",
-        "cidade": "São Paulo",
+        "nome": "Liraprint",
+        "endereco": "R. Dr. Roberto Fernandes, 81",
+        "bairro": "Jardim Palmira",
+        "cidade": "Guarulhos",
         "estado": "SP",
-        "cep": "01001-000"
+        "cep": "07076-070"
     }
 
     # Destinatário
