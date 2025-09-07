@@ -1883,7 +1883,7 @@ def listar_materiais():
                         <td>{m["unidade_medida"]}</td>
                         <td>R$ {m["valor_unitario"]:.2f}</td>
                         <td>{m["fornecedor"] or "—"}</td>
-                        <td>{m["data_cadastro"][:10]}</td>
+                        <td>{m.get("data_cadastro", "")[:10] if m.get("data_cadastro") else "—"}</td>
                     </tr>
                     ''' for m in materiais)}
                 </tbody>
