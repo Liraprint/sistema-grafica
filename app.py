@@ -198,7 +198,7 @@ def clientes():
                 margin: 50px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -658,7 +658,7 @@ def cadastrar_cliente():
 
         <script>
             function buscarEnderecoPorCEP() {{
-                const cep = document.getElementById('cep').value.replace(/\D/g, '');
+                const cep = document.getElementById('cep').value.replace(/\\D/g, '');
                 if (cep.length !== 8) {{
                     alert('CEP inválido!');
                     return;
@@ -689,7 +689,7 @@ def cadastrar_cliente():
 
             // Busca CEP de entrega
             document.getElementById('entrega_cep').onblur = function() {{
-                const cep = this.value.replace(/\D/g, '');
+                const cep = this.value.replace(/\\D/g, '');
                 if (cep.length !== 8) return;
 
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
@@ -1380,7 +1380,7 @@ def editar_empresa(id):
 
         <script>
             function buscarEnderecoPorCEP() {{
-                const cep = document.getElementById('cep').value.replace(/\D/g, '');
+                const cep = document.getElementById('cep').value.replace(/\\D/g, '');
                 if (cep.length !== 8) {{
                     alert('CEP inválido!');
                     return;
@@ -1411,7 +1411,7 @@ def editar_empresa(id):
 
             // Busca CEP de entrega
             document.getElementById('entrega_cep').onblur = function() {{
-                const cep = this.value.replace(/\D/g, '');
+                const cep = this.value.replace(/\\D/g, '');
                 if (cep.length !== 8) return;
 
                 fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
@@ -3015,3 +3015,67 @@ def controle_estoque():
     </body>
     </html>
     '''
+
+@app.route('/registrar_entrada', methods=['POST'])
+def registrar_entrada():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    material_id = request.form.get('material_id')
+    quantidade = request.form.get('quantidade')
+    valor_total = request.form.get('valor_total')
+    tamanho = request.form.get('tamanho')
+    novo_valor_unitario = request.form.get('novo_valor_unitario')
+
+    if not material_id or not quantidade or not valor_total:
+        flash("Preencha todos os campos obrigatórios!")
+        return redirect(url_for('controle_estoque'))
+
+    try:
+        quantidade = float(quantidade)
+        valor_total = float(valor_total)
+        valor_unitario = valor_total / quantidade
+    except:
+        flash("Quantidade e valor devem ser números válidos.")
+        return redirect(url_for('controle_estoque'))
+
+    try:
+        # Registrar movimentação no estoque
+        url_estoque = f"{SUPABASE_URL}/rest/v1/estoque"
+        dados_estoque = {
+            "material_id": int(material_id),
+            "tipo": "entrada",
+            "quantidade": quantidade,
+            "valor_unitario": valor_unitario,
+            "valor_total": valor_total,
+            "tamanho": tamanho
+        }
+        response_estoque = requests.post(url_estoque, json=dados_estoque, headers=headers)
+
+        if response_estoque.status_code != 201:
+            flash("Erro ao registrar entrada no estoque.")
+            return redirect(url_for('controle_estoque'))
+
+        # Se o usuário quis atualizar o valor unitário no cadastro
+        if novo_valor_unitario:
+            url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
+            dados_material = {"valor_unitario": float(novo_valor_unitario)}
+            response_material = requests.patch(url_material, json=dados_material, headers=headers)
+            if response_material.status_code == 204:
+                flash("✅ Valor unitário atualizado no cadastro!")
+            else:
+                flash("⚠️ Entrada registrada, mas falha ao atualizar valor no cadastro.")
+
+        flash("✅ Entrada de material registrada com sucesso!")
+        return redirect(url_for('controle_estoque'))
+
+    except Exception as e:
+        flash("❌ Erro ao registrar entrada.")
+        return redirect(url_for('controle_estoque'))
+
+# ========================
+# Iniciar o app
+# ========================
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
