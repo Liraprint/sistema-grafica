@@ -2769,18 +2769,21 @@ def controle_estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    busca = request.args.get('q', '').strip()
+
     try:
-        # Buscar todos os materiais cadastrados
-        url_materiais = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
-        response_materiais = requests.get(url_materiais, headers=headers)
-        if response_materiais.status_code != 200:
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            materiais = response.json()
+        else:
             flash("Erro ao carregar materiais.")
             materiais = []
-        else:
-            materiais = response_materiais.json()
-
     except Exception as e:
-        flash("Erro de conexão com o banco de dados.")
+        flash("Erro de conexão.")
         materiais = []
 
     return f'''
@@ -2790,6 +2793,178 @@ def controle_estoque():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Controle de Estoque</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1100px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📊 Controle de Estoque</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
+            <a href="/registrar_entrada_form" class="btn" style="background: #f39c12;">📥 Registrar Entrada de Material</a>
+
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Denominação</th>
+                        <th>Marca</th>
+                        <th>Grupo</th>
+                        <th>Unidade</th>
+                        <th>Valor Unitário</th>
+                        <th>Fornecedor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'''
+                    <tr>
+                        <td>{m["id"]}</td>
+                        <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
+                        <td>{m["marca"] or "—"}</td>
+                        <td>{m["grupo_material"] or "—"}</td>
+                        <td>{m["unidade_medida"]}</td>
+                        <td>R$ {m["valor_unitario"]:.2f}</td>
+                        <td>{m["fornecedor"] or "—"}</td>
+                        <td>
+                            <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #f39c12; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
+                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    ''' for m in materiais)}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/registrar_entrada_form')
+def registrar_entrada_form():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    material_id = request.args.get('material_id')
+    material = None
+
+    try:
+        if material_id:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200 and response.json():
+                material = response.json()[0]
+    except:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('controle_estoque'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registrar Entrada</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -2888,30 +3063,32 @@ def controle_estoque():
     <body>
         <div class="container">
             <div class="header">
-                <h1>📊 Controle de Estoque</h1>
+                <h1>📥 Registrar Entrada de Material</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/controle_estoque" class="back-link">← Voltar ao Controle de Estoque</a>
 
             <div class="form-container">
-                <h2>📥 Registrar Entrada de Material</h2>
                 <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
+                    {f'<input type="hidden" name="material_id" value="{material["id"]}">' if material else ''}
                     <div>
                         <label>Material *</label>
                         <select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required>
                             <option value="">Selecione um material</option>
-                            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                            {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in buscar_materiais())}
                         </select>
                     </div>
 
                     <!-- Dados que serão preenchidos automaticamente -->
                     <div class="grid-2">
                         <div>
-                            <label>Unidade de Medida</label>
+                            <label>Unidade de Medida (do cadastro)</label>
                             <input type="text" id="unidade_medida" readonly>
+                            <button type="button" onclick="permitirEdicaoUnidade()" style="margin-top: 5px; font-size: 12px; padding: 5px 10px;">✏️ Alterar?</button>
+                            <input type="text" id="nova_unidade" name="nova_unidade" placeholder="Nova unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()">
                         </div>
                         <div>
                             <label>Valor Unitário Cadastrado</label>
@@ -2959,7 +3136,7 @@ def controle_estoque():
         </div>
 
         <script>
-            let materiais = {str(materiais)};
+            let materiais = {str(buscar_materiais())};
 
             function carregarDadosMaterial() {{
                 const select = document.getElementById('material_id');
@@ -2974,7 +3151,17 @@ def controle_estoque():
                     document.getElementById('valor_unitario_calculado').value = '';
                     document.getElementById('alerta_valor').style.display = 'none';
                     document.getElementById('novo_valor_unitario').value = '';
+                    document.getElementById('nova_unidade').style.display = 'none';
+                    document.getElementById('nova_unidade').value = '';
                 }}
+            }}
+
+            function permitirEdicaoUnidade() {{
+                const unidadeAtual = document.getElementById('unidade_medida').value;
+                const inputNova = document.getElementById('nova_unidade');
+                inputNova.style.display = 'block';
+                inputNova.value = unidadeAtual;
+                inputNova.focus();
             }}
 
             function calcularValorUnitario() {{
@@ -3011,10 +3198,27 @@ def controle_estoque():
                 }}
                 return true;
             }}
+
+            // Carregar dados ao abrir com material pré-selecionado
+            window.onload = function() {{
+                if ({1 if material else 0}) {{
+                    carregarDadosMaterial();
+                }}
+            }};
         </script>
     </body>
     </html>
     '''
+
+def buscar_materiais():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except:
+        return []
 
 @app.route('/registrar_entrada', methods=['POST'])
 def registrar_entrada():
@@ -3026,6 +3230,7 @@ def registrar_entrada():
     valor_total = request.form.get('valor_total')
     tamanho = request.form.get('tamanho')
     novo_valor_unitario = request.form.get('novo_valor_unitario')
+    nova_unidade = request.form.get('nova_unidade')  # Nova unidade, se alterada
 
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
@@ -3056,15 +3261,21 @@ def registrar_entrada():
             flash("Erro ao registrar entrada no estoque.")
             return redirect(url_for('controle_estoque'))
 
-        # Se o usuário quis atualizar o valor unitário no cadastro
+        # Atualizar valor unitário, se necessário
         if novo_valor_unitario:
             url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
             dados_material = {"valor_unitario": float(novo_valor_unitario)}
             response_material = requests.patch(url_material, json=dados_material, headers=headers)
             if response_material.status_code == 204:
                 flash("✅ Valor unitário atualizado no cadastro!")
-            else:
-                flash("⚠️ Entrada registrada, mas falha ao atualizar valor no cadastro.")
+
+        # Atualizar unidade de medida, se alterada
+        if nova_unidade:
+            url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
+            dados_material = {"unidade_medida": nova_unidade.strip()}
+            response_material = requests.patch(url_material, json=dados_material, headers=headers)
+            if response_material.status_code == 204:
+                flash("✅ Unidade de medida atualizada no cadastro!")
 
         flash("✅ Entrada de material registrada com sucesso!")
         return redirect(url_for('controle_estoque'))
