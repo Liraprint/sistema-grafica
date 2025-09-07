@@ -2062,19 +2062,26 @@ def editar_material(id):
         marca = request.form.get('marca')
         grupo_material = request.form.get('grupo_material')
         unidade_medida = request.form.get('unidade_medida')
+        unidade_outro = request.form.get('unidade_outro')
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
         fornecedor = request.form.get('fornecedor')
 
-        if not denominacao or not unidade_medida or not valor_unitario:
-            flash("Os campos obrigatórios são: denominação, unidade e valor unitário!")
-            return redirect(url_for('editar_material', id=id))
+        if unidade_medida == 'outro' and unidade_outro:
+            unidade_medida = unidade_outro.strip()
+        elif not unidade_medida:
+            flash("Unidade de Medida é obrigatória!")
+            return redirect(request.url)
+
+        if not denominacao or not valor_unitario:
+            flash("Denominação e Valor Unitário são obrigatórios!")
+            return redirect(request.url)
 
         try:
             valor_unitario = float(valor_unitario)
         except:
             flash("Valor unitário deve ser um número!")
-            return redirect(url_for('editar_material', id=id))
+            return redirect(request.url)
 
         try:
             url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
@@ -2096,7 +2103,7 @@ def editar_material(id):
         except Exception as e:
             flash("❌ Erro de conexão.")
 
-        return redirect(url_for('editar_material', id=id))
+        return redirect(request.url)
 
     return f'''
     <!DOCTYPE html>
@@ -2213,7 +2220,23 @@ def editar_material(id):
                 </div>
                 <div>
                     <label>Unidade de Medida *</label>
-                    <input type="text" name="unidade_medida" value="{material['unidade_medida']}" required>
+                    <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
+                        <option value="">Selecione</option>
+                        <option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ''}>folha</option>
+                        <option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ''}>metro</option>
+                        <option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ''}>centímetro</option>
+                        <option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ''}>milímetro</option>
+                        <option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ''}>grama</option>
+                        <option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ''}>quilograma</option>
+                        <option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ''}>rolo</option>
+                        <option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ''}>litro</option>
+                        <option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ''}>unidade</option>
+                        <option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ''}>conjunto</option>
+                        <option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ''}>m²</option>
+                        <option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ''}>cm²</option>
+                        <option value="outro" {"selected" if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}>Outro (especifique)</option>
+                    </select>
+                    <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}">
                 </div>
                 <div>
                     <label>Valor Unitário *</label>
@@ -2233,6 +2256,249 @@ def editar_material(id):
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
+
+        <script>
+            function toggleOutro() {{
+                const select = document.getElementById('unidade_medida');
+                const input = document.getElementById('unidade_outro');
+                if (select.value === 'outro') {{
+                    input.style.display = 'block';
+                    input.setAttribute('required', 'required');
+                }} else {{
+                    input.style.display = 'none';
+                    input.removeAttribute('required');
+                }}
+            }}
+            // Mostra o campo "outro" se necessário ao carregar
+            window.onload = function() {{
+                const select = document.getElementById('unidade_medida');
+                if (select.value === 'outro') {{
+                    document.getElementById('unidade_outro').style.display = 'block';
+                }}
+            }};
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/cadastrar_material', methods=['GET', 'POST'])
+def cadastrar_material():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        denominacao = request.form.get('denominacao')
+        marca = request.form.get('marca')
+        grupo_material = request.form.get('grupo_material')
+        unidade_medida = request.form.get('unidade_medida')
+        unidade_outro = request.form.get('unidade_outro')
+        valor_unitario = request.form.get('valor_unitario')
+        especificacao = request.form.get('especificacao')
+        fornecedor = request.form.get('fornecedor')
+
+        if unidade_medida == 'outro' and unidade_outro:
+            unidade_medida = unidade_outro.strip()
+        elif not unidade_medida:
+            flash("Unidade de Medida é obrigatória!")
+            return redirect(request.url)
+
+        if not denominacao or not valor_unitario:
+            flash("Denominação e Valor Unitário são obrigatórios!")
+            return redirect(request.url)
+
+        try:
+            valor_unitario = float(valor_unitario)
+        except:
+            flash("Valor unitário deve ser um número!")
+            return redirect(request.url)
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/materiais"
+            dados = {
+                "denominacao": denominacao,
+                "marca": marca,
+                "grupo_material": grupo_material,
+                "unidade_medida": unidade_medida,
+                "valor_unitario": valor_unitario,
+                "especificacao": especificacao,
+                "fornecedor": fornecedor
+            }
+            response = requests.post(url, json=dados, headers=headers)
+            if response.status_code == 201:
+                flash("✅ Material cadastrado com sucesso!")
+                return redirect(url_for('listar_materiais'))
+            else:
+                flash("❌ Erro ao cadastrar material.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+        return redirect(request.url)
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cadastrar Material - Sua Gráfica</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Cadastrar Novo Material</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/materiais" class="back-link">← Voltar à Lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Denominação *</label>
+                    <input type="text" name="denominacao" required>
+                </div>
+                <div>
+                    <label>Marca</label>
+                    <input type="text" name="marca">
+                </div>
+                <div>
+                    <label>Grupo de Material</label>
+                    <input type="text" name="grupo_material">
+                </div>
+                <div>
+                    <label>Unidade de Medida *</label>
+                    <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
+                        <option value="">Selecione</option>
+                        <option value="folha">folha</option>
+                        <option value="metro">metro</option>
+                        <option value="centímetro">centímetro</option>
+                        <option value="milímetro">milímetro</option>
+                        <option value="grama">grama</option>
+                        <option value="quilograma">quilograma</option>
+                        <option value="rolo">rolo</option>
+                        <option value="litro">litro</option>
+                        <option value="unidade">unidade</option>
+                        <option value="conjunto">conjunto</option>
+                        <option value="m²">m²</option>
+                        <option value="cm²">cm²</option>
+                        <option value="outro">Outro (especifique)</option>
+                    </select>
+                    <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()">
+                </div>
+                <div>
+                    <label>Valor Unitário *</label>
+                    <input type="number" name="valor_unitario" step="0.01" required>
+                </div>
+                <div>
+                    <label>Especificação</label>
+                    <textarea name="especificacao" rows="3"></textarea>
+                </div>
+                <div>
+                    <label>Fornecedor</label>
+                    <input type="text" name="fornecedor">
+                </div>
+                <button type="submit" class="btn">💾 Salvar Material</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function toggleOutro() {{
+                const select = document.getElementById('unidade_medida');
+                const input = document.getElementById('unidade_outro');
+                if (select.value === 'outro') {{
+                    input.style.display = 'block';
+                    input.setAttribute('required', 'required');
+                }} else {{
+                    input.style.display = 'none';
+                    input.removeAttribute('required');
+                }}
+            }}
+        </script>
     </body>
     </html>
     '''
