@@ -342,7 +342,7 @@ def cadastrar_cliente():
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
         responsavel = request.form.get('responsavel')
-        telefone = request.form.get('telefone')
+        telefone = request.form.get(' telefone')
         whatsapp = request.form.get('whatsapp')
         email = request.form.get('email')
         endereco = request.form.get('endereco')
