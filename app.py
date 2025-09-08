@@ -2954,17 +2954,16 @@ def estoque():
     busca_mov = request.args.get('q', '').strip()
 
     try:
-        # Materiais com saldo atual (só os que estão no estoque)
+        # Materiais com saldo atual (todos os do catálogo)
         materiais_catalogo = buscar_materiais()
         saldo = calcular_estoque_atual()
 
-        # Filtrar apenas os materiais que têm saldo > 0 ou foram movimentados
+        # Mostrar todos os materiais do catálogo, mesmo com saldo 0
         materiais_em_estoque = []
         for m in materiais_catalogo:
             qtd = saldo.get(m['id'], 0)
-            if qtd > 0 or m['id'] in saldo:
-                m['quantidade_estoque'] = qtd
-                materiais_em_estoque.append(m)
+            m['quantidade_estoque'] = qtd
+            materiais_em_estoque.append(m)
 
         # Movimentações
         movimentacoes = buscar_movimentacoes_com_materiais(busca_mov)
@@ -3104,6 +3103,14 @@ def estoque():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+            <!-- Botão para registrar entrada mesmo sem estoque -->
+            <div class="section">
+                <h2 class="section-title">Adicionar ao Estoque</h2>
+                <p style="margin: 10px 0;">
+                    <a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a>
+                </p>
+            </div>
 
             <!-- Materiais em Estoque -->
             <div class="section">
