@@ -3080,6 +3080,7 @@ def estoque():
             .btn-green {{ background: #27ae60; color: white; }}
             .btn-red {{ background: #e74c3c; color: white; }}
             .btn-delete {{ background: #95a5a6; color: white; }}
+            .btn-edit {{ background: #f39c12; color: white; }}
             .estoque-baixo {{ color: #e74c3c; font-weight: bold; }}
             .tipo-entrada {{ color: #27ae60; font-weight: bold; }}
             .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
@@ -3165,6 +3166,7 @@ def estoque():
                             <td>R$ {m["valor_unitario"]:.2f}</td>
                             <td>R$ {m["valor_total"]:.2f}</td>
                             <td>
+                                <a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
                                 {f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session["nivel"] == "administrador" else "—"}
                             </td>
                         </tr>
@@ -3709,6 +3711,217 @@ def registrar_saida():
             flash("❌ Erro ao registrar saída.")
     except Exception as e:
         flash("❌ Erro ao registrar saída.")
+
+    return redirect(url_for('estoque'))
+
+@app.route('/editar_movimentacao/<int:id>')
+def editar_movimentacao_form(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Movimentação não encontrada.")
+            return redirect(url_for('estoque'))
+        mov = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar movimentação.")
+        return redirect(url_for('estoque'))
+
+    try:
+        url_mat = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{mov['material_id']}"
+        response_mat = requests.get(url_mat, headers=headers)
+        material = response_mat.json()[0] if response_mat.status_code == 200 and response_mat.json() else None
+    except:
+        material = None
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Movimentação</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #f39c12;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar Movimentação</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
+
+            <div class="form-container">
+                <form method="post" action="/editar_movimentacao/{id}">
+                    <div>
+                        <label>Tipo</label>
+                        <select name="tipo" disabled>
+                            <option value="{mov['tipo']}" selected>{mov['tipo'].upper()}</option>
+                        </select>
+                        <small style="color: #7f8c8d;">O tipo não pode ser alterado.</small>
+                    </div>
+
+                    <div>
+                        <label>Material</label>
+                        <input type="text" value="{material['denominacao'] if material else 'Material excluído'}" readonly>
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <label>Quantidade</label>
+                            <input type="number" name="quantidade" value="{mov['quantidade']}" step="0.01" required>
+                        </div>
+                        <div>
+                            <label>Valor Unitário (R$)</label>
+                            <input type="number" name="valor_unitario" value="{mov['valor_unitario']}" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label>Motivo ou Observação</label>
+                        <textarea name="motivo" rows="3">{mov.get('motivo', '')}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn">💾 Salvar Alterações</button>
+                </form>
+            </div>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/editar_movimentacao/<int:id>', methods=['POST'])
+def editar_movimentacao(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    quantidade = request.form.get('quantidade')
+    valor_unitario = request.form.get('valor_unitario')
+    motivo = request.form.get('motivo')
+
+    if not quantidade or not valor_unitario:
+        flash("Preencha todos os campos obrigatórios!")
+        return redirect(url_for('editar_movimentacao_form', id=id))
+
+    try:
+        quantidade = float(quantidade)
+        valor_unitario = float(valor_unitario)
+        valor_total = quantidade * valor_unitario
+    except:
+        flash("Valores inválidos.")
+        return redirect(url_for('editar_movimentacao_form', id=id))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
+        dados = {
+            "quantidade": quantidade,
+            "valor_unitario": valor_unitario,
+            "valor_total": valor_total,
+            "motivo": motivo
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+
+        if response.status_code == 204:
+            flash("✅ Movimentação atualizada com sucesso!")
+        else:
+            flash("❌ Erro ao atualizar movimentação.")
+    except Exception as e:
+        flash("❌ Erro ao atualizar movimentação.")
 
     return redirect(url_for('estoque'))
 
