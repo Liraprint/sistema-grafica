@@ -356,14 +356,14 @@ def clientes():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f5f7fa;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
                 margin: 0;
             }}
             .container {{
-                max-width: 1000px;
+                max-width: 900px;
                 margin: 50px auto;
                 background: white;
                 border-radius: 16px;
@@ -374,58 +374,60 @@ def clientes():
                 background: #2c3e50;
                 color: white;
                 text-align: center;
-                padding: 30px;
+                padding: 25px;
             }}
             h1 {{
-                font-size: 28px;
+                font-size: 26px;
                 margin: 0;
                 font-weight: 600;
             }}
             .user-info {{
                 background: #34495e;
                 color: white;
-                padding: 15px 20px;
-                font-size: 15px;
+                padding: 12px 20px;
+                font-size: 14px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }}
             .btn-grid {{
                 display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                padding: 30px;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 12px;
+                padding: 20px;
             }}
-            @media (min-width: 768px) {{
+            @media (max-width: 768px) {{
                 .btn-grid {{
-                    grid-template-columns: 1fr 1fr 1fr;
+                    grid-template-columns: 1fr;
                 }}
             }}
             .btn {{
                 display: block;
                 width: 100%;
-                padding: 16px 20px;
-                font-size: 18px;
+                padding: 10px 15px;
+                font-size: 14px;
                 font-weight: 600;
                 text-align: center;
                 text-decoration: none;
-                border-radius: 10px;
+                border-radius: 8px;
                 color: white;
                 transition: all 0.3s ease;
                 border: none;
                 cursor: pointer;
+                max-width: 250px;
+                margin: 0 auto;
             }}
             .btn-green {{ background: #27ae60; }}
             .btn-blue {{ background: #3498db; }}
             .btn-purple {{ background: #8e44ad; }}
             .btn-red {{ background: #e74c3c; }}
-            .btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }}
+            .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
             .footer {{
                 text-align: center;
-                padding: 20px;
+                padding: 15px;
                 background: #ecf0f1;
                 color: #7f8c8d;
-                font-size: 13px;
+                font-size: 12px;
                 border-top: 1px solid #bdc3c7;
             }}
         </style>
@@ -437,7 +439,7 @@ def clientes():
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout" style="color: white; text-decoration: none;">🚪 Sair</a>
+                <a href="/logout">🚪 Sair</a>
             </div>
             <div class="btn-grid">
                 <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
