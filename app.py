@@ -132,6 +132,16 @@ def buscar_empresas():
         print("Erro de conexão:", e)
         return []
 
+def buscar_materiais():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except:
+        return []
+
 # ========================
 # Páginas do sistema
 # ========================
@@ -159,7 +169,80 @@ def login():
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
     
-    return render_template('login.html')
+    return '''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login - Gráfica</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                text-align: center;
+                min-height: 100vh;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .login-box {
+                background: white;
+                color: #333;
+                padding: 40px;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                width: 350px;
+            }
+            h1 { font-size: 24px; margin-bottom: 20px; color: #2c3e50; }
+            input {
+                width: 100%;
+                padding: 12px;
+                margin: 10px 0;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 14px;
+            }
+            button {
+                background: #27ae60;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                width: 100%;
+            }
+            .flash {
+                color: #e74c3c;
+                font-weight: 600;
+                margin: 10px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h1>🔐 Login</h1>
+            <form method="post">
+                <input type="text" name="username" placeholder="Usuário" required><br>
+                <input type="password" name="password" placeholder="Senha" required><br>
+                <button type="submit">Entrar</button>
+            </form>
+            <div class="flash">
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    {% for message in messages %}
+                      {{ message }}
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/logout')
 def logout():
@@ -170,11 +253,6 @@ def logout():
 def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
-    mensagem = ""
-    if hasattr(session, 'flashes') and session.flashes:
-        msg = session.flashes[0]
-        mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{msg}</div>'
     
     return f'''
     <!DOCTYPE html>
@@ -260,11 +338,10 @@ def clientes():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            {mensagem}
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-            <a href="/materiais" class="btn btn-blue">📋 Listagem de Materiais</a>
-            <a href="/estoque" class="btn btn-purple">📊 Controle de Estoque</a>
+            <a href="/materiais" class="btn btn-blue">📦 Listagem de Materiais</a>
+            <a href="/controle_estoque" class="btn btn-purple">📊 Controle de Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -272,7 +349,7 @@ def clientes():
         </div>
     </body>
     </html>
-    '''
+    '''  
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
@@ -815,9 +892,6 @@ def listar_empresas():
                 text-decoration: none;
                 font-weight: 500;
             }}
-            .back-link:hover {{
-                text-decoration: underline;
-            }}
             .footer {{
                 text-align: center;
                 padding: 20px;
@@ -1002,7 +1076,7 @@ def detalhes_empresa(id):
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
                 <a href="/servicos" class="btn">📋 Serviços</a>
-                <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
+                <a href="/editar_empresa/{empresa["id"]}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
                 <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             </div>
             <div class="footer">
@@ -1883,7 +1957,7 @@ def listar_materiais():
                         <th>Unidade</th>
                         <th>Valor Unitário</th>
                         <th>Fornecedor</th>
-                        <th>Ações</th>
+                        <th>Data</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1896,10 +1970,7 @@ def listar_materiais():
                         <td>{m["unidade_medida"]}</td>
                         <td>R$ {m["valor_unitario"]:.2f}</td>
                         <td>{m["fornecedor"] or "—"}</td>
-                        <td>
-                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
-                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-                        </td>
+                        <td>{m.get("data_cadastro", "")[:10] if m.get("data_cadastro") else "—"}</td>
                     </tr>
                     ''' for m in materiais)}
                 </tbody>
@@ -2026,17 +2097,18 @@ def detalhes_material(id):
             </div>
             <a href="/materiais" class="back-link">← Voltar à Lista</a>
             <div class="details">
-                <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
-                <p><strong>Grupo de Material:</strong> {material['grupo_material'] or "—"}</p>
+                <p><strong>Denominação:</strong> {material['denominacao']}</p>
+                <p><strong>Marca:</strong> {material.get('marca', '—')}</p>
+                <p><strong>Grupo de Material:</strong> {material.get('grupo_material', '—')}</p>
                 <p><strong>Unidade de Medida:</strong> {material['unidade_medida']}</p>
                 <p><strong>Valor Unitário:</strong> R$ {material['valor_unitario']:.2f}</p>
-                <p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p>
-                <p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p>
-                <p><strong>Data de Cadastro:</strong> {material.get("data_cadastro", "")[:10] if material.get("data_cadastro") else "—"}</p>
+                <p><strong>Especificação:</strong> {material.get('especificacao', '—')}</p>
+                <p><strong>Fornecedor:</strong> {material.get('fornecedor', '—')}</p>
+                <p><strong>Data de Cadastro:</strong> {material.get('data_cadastro', '')[:10]}</p>
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
-                <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
-                <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
+                <a href="/editar_material/{material['id']}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
+                <a href="/excluir_material/{material['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
             </div>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
@@ -2767,50 +2839,27 @@ CEP: {destinatario['cep']}
     </html>
     '''
 
-@app.route('/estoque')
-def listar_estoque():
+@app.route('/controle_estoque')
+def controle_estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     busca = request.args.get('q', '').strip()
 
     try:
-        # Buscar todos os materiais
-        url_materiais = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
-        response_materiais = requests.get(url_materiais, headers=headers)
-        if response_materiais.status_code != 200:
-            flash("Erro ao carregar materiais.")
-            return redirect(url_for('clientes'))
-        materiais = response_materiais.json()
-
-        # Buscar todas as entradas de estoque
-        url_estoque = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
-        response_estoque = requests.get(url_estoque, headers=headers)
-        if response_estoque.status_code != 200:
-            flash("Erro ao carregar estoque.")
-            return redirect(url_for('clientes'))
-        entradas = response_estoque.json()
-
-        # Calcular quantidade por material
-        quantidades = {}
-        for entrada in entradas:
-            quantidades[entrada['material_id']] = quantidades.get(entrada['material_id'], 0) + entrada['quantidade']
-
-        # Filtrar materiais com estoque
-        materiais_com_estoque = []
-        for material in materiais:
-            id_material = material['id']
-            if id_material in quantidades:
-                material['quantidade_estoque'] = quantidades[id_material]
-                materiais_com_estoque.append(material)
-
-        # Filtro de busca
+        # Agora puxa da tabela 'estoque', não da 'materiais'
+        url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao)&order=data_cadastro.desc"
         if busca:
-            materiais_com_estoque = [m for m in materiais_com_estoque if busca.lower() in m['denominacao'].lower()]
-
+            url += f"&materiais.denominacao=ilike.*{busca}*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            movimentacoes = response.json()
+        else:
+            flash("Erro ao carregar movimentações.")
+            movimentacoes = []
     except Exception as e:
         flash("Erro de conexão.")
-        materiais_com_estoque = []
+        movimentacoes = []
 
     return f'''
     <!DOCTYPE html>
@@ -2916,10 +2965,11 @@ def listar_estoque():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/registrar_entrada_form" class="btn" style="background: #f39c12;">📥 Registrar Entrada de Material</a>
 
             <div class="search-box">
                 <form method="get" style="display: inline;">
-                    <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
+                    <input type="text" name="q" placeholder="Pesquisar por material..." value="{busca}">
                     <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
                 </form>
             </div>
@@ -2927,30 +2977,25 @@ def listar_estoque():
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Denominação</th>
-                        <th>Marca</th>
-                        <th>Grupo</th>
-                        <th>Unidade</th>
-                        <th>Quantidade em Estoque</th>
-                        <th>Ações</th>
+                        <th>Data</th>
+                        <th>Material</th>
+                        <th>Quantidade</th>
+                        <th>Valor Unitário</th>
+                        <th>Valor Total</th>
+                        <th>Tamanho</th>
                     </tr>
                 </thead>
                 <tbody>
                     {''.join(f'''
                     <tr>
-                        <td>{m["id"]}</td>
-                        <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
-                        <td>{m["marca"] or "—"}</td>
-                        <td>{m["grupo_material"] or "—"}</td>
-                        <td>{m["unidade_medida"]}</td>
-                        <td>{m["quantidade_estoque"]}</td>
-                        <td>
-                            <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #f39c12; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
-                            <a href="/ver_movimentacoes/{m["id"]}" style="color: #3498db; text-decoration: none;">📋 Movimentações</a>
-                        </td>
+                        <td>{m["data_cadastro"][:10]}</td>
+                        <td>{m["materiais"]["denominacao"]}</td>
+                        <td>{m["quantidade"]}</td>
+                        <td>R$ {m["valor_unitario"]:.2f}</td>
+                        <td>R$ {m["valor_total"]:.2f}</td>
+                        <td>{m["tamanho"] or "—"}</td>
                     </tr>
-                    ''' for m in materiais_com_estoque)}
+                    ''' for m in movimentacoes)}
                 </tbody>
             </table>
             <div class="footer">
@@ -2977,7 +3022,7 @@ def registrar_entrada_form():
                 material = response.json()[0]
     except:
         flash("Erro ao carregar material.")
-        return redirect(url_for('listar_estoque'))
+        return redirect(url_for('controle_estoque'))
 
     return f'''
     <!DOCTYPE html>
@@ -3090,7 +3135,7 @@ def registrar_entrada_form():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/estoque" class="back-link">← Voltar ao Controle de Estoque</a>
+            <a href="/controle_estoque" class="back-link">← Voltar ao Controle de Estoque</a>
 
             <div class="form-container">
                 <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
@@ -3231,16 +3276,6 @@ def registrar_entrada_form():
     </html>
     '''
 
-def buscar_materiais():
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        return []
-    except:
-        return []
-
 @app.route('/registrar_entrada', methods=['POST'])
 def registrar_entrada():
     if 'usuario' not in session:
@@ -3255,7 +3290,7 @@ def registrar_entrada():
 
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('listar_estoque'))
+        return redirect(url_for('controle_estoque'))
 
     try:
         quantidade = float(quantidade)
@@ -3263,7 +3298,7 @@ def registrar_entrada():
         valor_unitario = valor_total / quantidade
     except:
         flash("Quantidade e valor devem ser números válidos.")
-        return redirect(url_for('listar_estoque'))
+        return redirect(url_for('controle_estoque'))
 
     try:
         # Registrar movimentação no estoque
@@ -3280,7 +3315,7 @@ def registrar_entrada():
 
         if response_estoque.status_code != 201:
             flash("Erro ao registrar entrada no estoque.")
-            return redirect(url_for('listar_estoque'))
+            return redirect(url_for('controle_estoque'))
 
         # Atualizar valor unitário, se necessário
         if novo_valor_unitario:
@@ -3299,11 +3334,11 @@ def registrar_entrada():
                 flash("✅ Unidade de medida atualizada no cadastro!")
 
         flash("✅ Entrada de material registrada com sucesso!")
-        return redirect(url_for('listar_estoque'))
+        return redirect(url_for('controle_estoque'))
 
     except Exception as e:
         flash("❌ Erro ao registrar entrada.")
-        return redirect(url_for('listar_estoque'))
+        return redirect(url_for('controle_estoque'))
 
 # ========================
 # Iniciar o app
