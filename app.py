@@ -2976,8 +2976,7 @@ def listar_estoque():
                         <td>{m["id"]}</td>
                         <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
                         <td>{m["unidade_medida"]}</td>
-                        <td class="{'estoque-baixo" if m["quantidade_estoque"] < 5 else ''}">{m["quantidade_estoque"]}</td>
-                        <td>
+                        <td class="{ 'estoque-baixo' if m['quantidade_estoque'] < 5 else '' }">{m['quantidade_estoque']}</td>                        <td>
                             <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #27ae60; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
                             <a href="/registrar_saida_form?material_id={m["id"]}" style="color: #e74c3c; text-decoration: none;">📤 Saída</a>
                         </td>
