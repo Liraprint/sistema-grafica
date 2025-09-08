@@ -308,6 +308,7 @@ def clientes():
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
             <a href="/materiais" class="btn btn-blue">📦 Cadastrar Materiais</a>
             <a href="/estoque" class="btn btn-purple">📊 Controle de Estoque</a>
+            <a href="/movimentacoes" class="btn btn-blue">📋 Movimentações do Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -334,7 +335,7 @@ def gerenciar_usuarios():
 def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
-        return redirect(url_for('clientes'))
+        return redirect(url_for('gerenciar_usuarios'))
     
     username = request.form.get('username')
     password = request.form.get('password')
@@ -2976,7 +2977,8 @@ def listar_estoque():
                         <td>{m["id"]}</td>
                         <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
                         <td>{m["unidade_medida"]}</td>
-                        <td class="{ 'estoque-baixo' if m['quantidade_estoque'] < 5 else '' }">{m['quantidade_estoque']}</td>                        <td>
+                        <td class="{'estoque-baixo" if m["quantidade_estoque"] < 5 else ""}">{m["quantidade_estoque"]}</td>
+                        <td>
                             <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #27ae60; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
                             <a href="/registrar_saida_form?material_id={m["id"]}" style="color: #e74c3c; text-decoration: none;">📤 Saída</a>
                         </td>
@@ -3583,6 +3585,222 @@ def registrar_saida():
         flash("❌ Erro ao registrar saída.")
 
     return redirect(url_for('listar_estoque'))
+
+@app.route('/movimentacoes')
+def listar_movimentacoes():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    busca = request.args.get('q', '').strip()
+
+    try:
+        # Buscar todas as movimentações
+        url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data.desc"
+        if busca:
+            url += f"&materiais.denominacao=ilike.*{busca}*"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            flash("Erro ao carregar movimentações.")
+            return redirect(url_for('clientes'))
+        movimentacoes = response.json()
+
+        # Buscar materiais para preencher nome, se não veio com o join
+        for m in movimentacoes:
+            if 'materiais' not in m or not m['materiais']:
+                try:
+                    resp = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{m['material_id']}", headers=headers)
+                    if resp.status_code == 200 and resp.json():
+                        mat = resp.json()[0]
+                        m['materiais'] = {
+                            'denominacao': mat['denominacao'],
+                            'unidade_medida': mat['unidade_medida']
+                        }
+                except:
+                    m['materiais'] = {'denominacao': 'Material excluído', 'unidade_medida': '?'}
+
+    except Exception as e:
+        flash("Erro de conexão.")
+        movimentacoes = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Movimentações do Estoque</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1200px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .btn {{
+                padding: 8px 12px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                cursor: pointer;
+                text-decoration: none;
+                margin-right: 5px;
+            }}
+            .btn-edit {{ background: #f39c12; color: white; }}
+            .btn-delete {{ background: #e74c3c; color: white; }}
+            .tipo-entrada {{ color: #27ae60; font-weight: bold; }}
+            .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Movimentações do Estoque</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por material..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Material</th>
+                        <th>Tipo</th>
+                        <th>Quantidade</th>
+                        <th>Valor Unit.</th>
+                        <th>Valor Total</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f'''
+                    <tr>
+                        <td>{m["data"][:16].replace("T", " ")}</td>
+                        <td>{m["materiais"]["denominacao"]}</td>
+                        <td class="{"tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida"}">{m["tipo"].upper()}</td>
+                        <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
+                        <td>R$ {m["valor_unitario"]:.2f}</td>
+                        <td>R$ {m["valor_total"]:.2f}</td>
+                        <td>
+                            <a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
+                            <a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    ''' for m in movimentacoes)}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/excluir_movimentacao/<int:id>')
+def excluir_movimentacao(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            flash("🗑️ Movimentação excluída com sucesso!")
+        else:
+            flash("❌ Erro ao excluir movimentação.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
+
+    return redirect(url_for('listar_movimentacoes'))
 
 # ========================
 # Iniciar o app
