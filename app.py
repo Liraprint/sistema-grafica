@@ -137,7 +137,7 @@ def buscar_empresas():
 # ========================
 
 def calcular_estoque_atual():
-    """Calcula o saldo atual de estoque (entradas - saídas) por material"""
+    """Calcula o saldo atual de estoque (entradas - saídas) por material_id"""
     try:
         # Entradas
         url_entradas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
@@ -165,7 +165,7 @@ def calcular_estoque_atual():
         return {}
 
 def buscar_materiais():
-    """Busca todos os materiais cadastrados"""
+    """Busca todos os materiais cadastrados (catálogo)"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
@@ -186,7 +186,6 @@ def buscar_movimentacoes_com_materiais(busca=None):
             return []
         movimentacoes = response.json()
 
-        # Preencher materiais caso não venha com join
         for m in movimentacoes:
             if 'materiais' not in m or not m['materiais']:
                 try:
@@ -442,8 +441,8 @@ def clientes():
             </div>
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-            <a href="/materiais" class="btn btn-blue">📦 Cadastrar Materiais</a>
-            <a href="/estoque" class="btn btn-purple">📊 Controle de Estoque</a>
+            <a href="/materiais" class="btn btn-blue">📦 Catálogo de Materiais</a>
+            <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -1142,6 +1141,9 @@ def detalhes_empresa(id):
                 font-weight: 600;
                 text-decoration: none;
                 margin: 10px 30px;
+            }}
+            .btn-blue {{
+                background: #3498db;
             }}
             .back-link {{
                 display: inline-block;
@@ -2952,18 +2954,24 @@ def estoque():
     busca_mov = request.args.get('q', '').strip()
 
     try:
-        # Materiais com saldo atual
-        materiais = buscar_materiais()
+        # Materiais com saldo atual (só os que estão no estoque)
+        materiais_catalogo = buscar_materiais()
         saldo = calcular_estoque_atual()
-        for m in materiais:
-            m['quantidade_estoque'] = saldo.get(m['id'], 0)
+
+        # Filtrar apenas os materiais que têm saldo > 0 ou foram movimentados
+        materiais_em_estoque = []
+        for m in materiais_catalogo:
+            qtd = saldo.get(m['id'], 0)
+            if qtd > 0 or m['id'] in saldo:
+                m['quantidade_estoque'] = qtd
+                materiais_em_estoque.append(m)
 
         # Movimentações
         movimentacoes = buscar_movimentacoes_com_materiais(busca_mov)
 
     except Exception as e:
         flash("Erro de conexão.")
-        materiais = []
+        materiais_em_estoque = []
         movimentacoes = []
 
     return f'''
@@ -2972,7 +2980,7 @@ def estoque():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Controle de Estoque</title>
+        <title>Meu Estoque</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -3088,7 +3096,7 @@ def estoque():
     <body>
         <div class="container">
             <div class="header">
-                <h1>📊 Controle de Estoque</h1>
+                <h1>📊 Meu Estoque</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
@@ -3096,9 +3104,9 @@ def estoque():
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
 
-            <!-- Saldo de Materiais -->
+            <!-- Materiais em Estoque -->
             <div class="section">
-                <h2 class="section-title">Saldo Atual de Materiais</h2>
+                <h2 class="section-title">Itens em Estoque</h2>
                 <table>
                     <thead>
                         <tr>
@@ -3113,7 +3121,7 @@ def estoque():
                         {''.join(f'''
                         <tr>
                             <td>{m["id"]}</td>
-                            <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
+                            <td>{m["denominacao"]}</td>
                             <td>{m["unidade_medida"]}</td>
                             <td class="{"estoque-baixo" if m["quantidade_estoque"] < 5 else ""}">{m["quantidade_estoque"]}</td>
                             <td>
@@ -3121,7 +3129,7 @@ def estoque():
                                 <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>
                             </td>
                         </tr>
-                        ''' for m in materiais)}
+                        ''' for m in materiais_em_estoque)}
                     </tbody>
                 </table>
             </div>
@@ -3306,12 +3314,11 @@ def registrar_entrada_form():
 
             <div class="form-container">
                 <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
-                    {f'<input type="hidden" name="material_id" value="{material["id"]}">' if material else ''}
                     <div>
                         <label>Material *</label>
                         <select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required>
                             <option value="">Selecione um material</option>
-                            {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in buscar_materiais())}
+                            {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in buscar_materiais())}
                         </select>
                     </div>
 
@@ -3320,8 +3327,6 @@ def registrar_entrada_form():
                         <div>
                             <label>Unidade de Medida (do cadastro)</label>
                             <input type="text" id="unidade_medida" readonly>
-                            <button type="button" onclick="permitirEdicaoUnidade()" style="margin-top: 5px; font-size: 12px; padding: 5px 10px;">✏️ Alterar?</button>
-                            <input type="text" id="nova_unidade" name="nova_unidade" placeholder="Nova unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()">
                         </div>
                         <div>
                             <label>Valor Unitário Cadastrado</label>
@@ -3350,15 +3355,6 @@ def registrar_entrada_form():
                         <input type="text" id="valor_unitario_calculado" readonly>
                     </div>
 
-                    <!-- Alerta se o valor for diferente -->
-                    <div id="alerta_valor" class="alert" style="display: none;">
-                        ⚠️ O valor unitário calculado é diferente do cadastrado. 
-                        <button type="button" onclick="atualizarValorUnitario()" style="background: #e67e22; border: none; padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer;">Atualizar no cadastro</button>
-                    </div>
-
-                    <!-- Campo oculto para enviar o novo valor se atualizado -->
-                    <input type="hidden" name="novo_valor_unitario" id="novo_valor_unitario">
-
                     <button type="submit" class="btn">➕ Registrar Entrada</button>
                 </form>
             </div>
@@ -3382,19 +3378,7 @@ def registrar_entrada_form():
                     document.getElementById('quantidade').value = '';
                     document.getElementById('valor_total').value = '';
                     document.getElementById('valor_unitario_calculado').value = '';
-                    document.getElementById('alerta_valor').style.display = 'none';
-                    document.getElementById('novo_valor_unitario').value = '';
-                    document.getElementById('nova_unidade').style.display = 'none';
-                    document.getElementById('nova_unidade').value = '';
                 }}
-            }}
-
-            function permitirEdicaoUnidade() {{
-                const unidadeAtual = document.getElementById('unidade_medida').value;
-                const inputNova = document.getElementById('nova_unidade');
-                inputNova.style.display = 'block';
-                inputNova.value = unidadeAtual;
-                inputNova.focus();
             }}
 
             function calcularValorUnitario() {{
@@ -3404,22 +3388,9 @@ def registrar_entrada_form():
                 if (quantidade > 0 && valor_total > 0) {{
                     const valor_calculado = (valor_total / quantidade).toFixed(2);
                     document.getElementById('valor_unitario_calculado').value = valor_calculado;
-
-                    const valor_cadastrado = parseFloat(document.getElementById('valor_unitario_cadastrado').value);
-                    if (Math.abs(valor_calculado - valor_cadastrado) > 0.01) {{
-                        document.getElementById('alerta_valor').style.display = 'block';
-                    }} else {{
-                        document.getElementById('alerta_valor').style.display = 'none';
-                    }}
                 }} else {{
                     document.getElementById('valor_unitario_calculado').value = '';
                 }}
-            }}
-
-            function atualizarValorUnitario() {{
-                const valor_calculado = document.getElementById('valor_unitario_calculado').value;
-                document.getElementById('novo_valor_unitario').value = valor_calculado;
-                alert('Valor unitário atualizado para uso no cadastro. Salve a entrada para confirmar.');
             }}
 
             function validarFormulario() {{
@@ -3452,8 +3423,6 @@ def registrar_entrada():
     quantidade = request.form.get('quantidade')
     valor_total = request.form.get('valor_total')
     tamanho = request.form.get('tamanho')
-    novo_valor_unitario = request.form.get('novo_valor_unitario')
-    nova_unidade = request.form.get('nova_unidade')
 
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
@@ -3468,9 +3437,8 @@ def registrar_entrada():
         return redirect(url_for('estoque'))
 
     try:
-        # Registrar entrada
-        url_estoque = f"{SUPABASE_URL}/rest/v1/estoque"
-        dados_estoque = {
+        url = f"{SUPABASE_URL}/rest/v1/estoque"
+        dados = {
             "material_id": int(material_id),
             "tipo": "entrada",
             "quantidade": quantidade,
@@ -3478,34 +3446,16 @@ def registrar_entrada():
             "valor_total": valor_total,
             "tamanho": tamanho
         }
-        response_estoque = requests.post(url_estoque, json=dados_estoque, headers=headers)
+        response = requests.post(url, json=dados, headers=headers)
 
-        if response_estoque.status_code != 201:
-            flash("Erro ao registrar entrada no estoque.")
-            return redirect(url_for('estoque'))
-
-        # Atualizar valor unitário
-        if novo_valor_unitario:
-            url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
-            dados_material = {"valor_unitario": float(novo_valor_unitario)}
-            response_material = requests.patch(url_material, json=dados_material, headers=headers)
-            if response_material.status_code == 204:
-                flash("✅ Valor unitário atualizado no cadastro!")
-
-        # Atualizar unidade
-        if nova_unidade:
-            url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
-            dados_material = {"unidade_medida": nova_unidade.strip()}
-            response_material = requests.patch(url_material, json=dados_material, headers=headers)
-            if response_material.status_code == 204:
-                flash("✅ Unidade de medida atualizada no cadastro!")
-
-        flash("✅ Entrada de material registrada com sucesso!")
-        return redirect(url_for('estoque'))
-
+        if response.status_code == 201:
+            flash("✅ Entrada registrada com sucesso!")
+        else:
+            flash("❌ Erro ao registrar entrada.")
     except Exception as e:
         flash("❌ Erro ao registrar entrada.")
-        return redirect(url_for('estoque'))
+
+    return redirect(url_for('estoque'))
 
 @app.route('/registrar_saida_form')
 def registrar_saida_form():
@@ -3523,7 +3473,6 @@ def registrar_saida_form():
             if response.status_code == 200 and response.json():
                 material = response.json()[0]
 
-            # Calcular saldo
             saldo = calcular_estoque_atual()
             saldo_atual = saldo.get(int(material_id), 0)
     except:
@@ -3738,7 +3687,6 @@ def registrar_saida():
         return redirect(url_for('estoque'))
 
     try:
-        # Verificar saldo
         saldo = calcular_estoque_atual()
         saldo_atual = saldo.get(int(material_id), 0)
 
@@ -3746,7 +3694,6 @@ def registrar_saida():
             if not confirm("A quantidade é maior que o saldo. Deseja continuar?"):
                 return redirect(url_for('registrar_saida_form', material_id=material_id))
 
-        # Registrar saída
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
             "material_id": int(material_id),
