@@ -5,6 +5,7 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from io import BytesIO
+import json
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
@@ -3205,14 +3206,16 @@ def registrar_entrada_form():
     material = None
 
     try:
+        materiais = buscar_materiais()
         if material_id:
-            url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200 and response.json():
-                material = response.json()[0]
+            material = next((m for m in materiais if m['id'] == int(material_id)), None)
     except:
         flash("Erro ao carregar material.")
         return redirect(url_for('estoque'))
+
+    # Converter para JSON válido
+    import json
+    materiais_js = json.dumps(materiais, ensure_ascii=False)
 
     return f'''
     <!DOCTYPE html>
@@ -3333,7 +3336,7 @@ def registrar_entrada_form():
                         <label>Material *</label>
                         <select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required>
                             <option value="">Selecione um material</option>
-                            {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in buscar_materiais())}
+                            {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in materiais)}
                         </select>
                     </div>
 
@@ -3380,7 +3383,7 @@ def registrar_entrada_form():
         </div>
 
         <script>
-            let materiais = {str(buscar_materiais())};
+            const materiais = {materiais_js};
 
             function carregarDadosMaterial() {{
                 const select = document.getElementById('material_id');
@@ -3393,6 +3396,9 @@ def registrar_entrada_form():
                     document.getElementById('quantidade').value = '';
                     document.getElementById('valor_total').value = '';
                     document.getElementById('valor_unitario_calculado').value = '';
+                }} else {{
+                    document.getElementById('unidade_medida').value = '';
+                    document.getElementById('valor_unitario_cadastrado').value = '';
                 }}
             }}
 
@@ -3420,7 +3426,7 @@ def registrar_entrada_form():
 
             // Carregar dados ao abrir com material pré-selecionado
             window.onload = function() {{
-                if ({1 if material else 0}) {{
+                if ('{material_id}') {{
                     carregarDadosMaterial();
                 }}
             }};
