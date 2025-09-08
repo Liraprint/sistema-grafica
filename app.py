@@ -356,28 +356,28 @@ def clientes():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
                 margin: 0;
             }}
             .container {{
-                max-width: 600px;
+                max-width: 1000px;
                 margin: 50px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
                 overflow: hidden;
             }}
             .header {{
                 background: #2c3e50;
                 color: white;
                 text-align: center;
-                padding: 40px 20px;
+                padding: 30px;
             }}
             h1 {{
-                font-size: 32px;
+                font-size: 28px;
                 margin: 0;
                 font-weight: 600;
             }}
@@ -390,10 +390,20 @@ def clientes():
                 justify-content: space-between;
                 align-items: center;
             }}
+            .btn-grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                padding: 30px;
+            }}
+            @media (min-width: 768px) {{
+                .btn-grid {{
+                    grid-template-columns: 1fr 1fr 1fr;
+                }}
+            }}
             .btn {{
                 display: block;
-                width: 90%;
-                margin: 25px auto;
+                width: 100%;
                 padding: 16px 20px;
                 font-size: 18px;
                 font-weight: 600;
@@ -427,17 +437,19 @@ def clientes():
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
+                <a href="/logout" style="color: white; text-decoration: none;">🚪 Sair</a>
             </div>
-            <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
-            <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-            <a href="/materiais" class="btn btn-blue">📦 Catálogo de Materiais</a>
-            <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
-            {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
-            {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
-            {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
+            <div class="btn-grid">
+                <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
+                <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
+                <a href="/materiais" class="btn btn-blue">📦 Catálogo de Materiais</a>
+                <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
+                {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
+                {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
+            </div>
             <div class="footer">
-                Sistema de Gestão © 2025
+                Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
     </body>
@@ -912,7 +924,7 @@ def listar_empresas():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -1079,7 +1091,7 @@ def detalhes_empresa(id):
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -1272,7 +1284,7 @@ def editar_empresa(id):
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -1641,7 +1653,7 @@ def listar_servicos():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -1789,7 +1801,7 @@ def abrir_ficha_servico():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -1944,7 +1956,7 @@ def listar_materiais():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -2114,7 +2126,7 @@ def detalhes_material(id):
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -2292,7 +2304,7 @@ def editar_material(id):
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -2521,7 +2533,7 @@ def cadastrar_material():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -2976,7 +2988,7 @@ def estoque():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -3211,7 +3223,7 @@ def registrar_entrada_form():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -3491,7 +3503,7 @@ def registrar_saida_form():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -3747,7 +3759,7 @@ def editar_movimentacao_form(id):
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
