@@ -264,7 +264,7 @@ def clientes():
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
             <a href="/materiais" class="btn btn-blue">📋 Listagem de Materiais</a>
-            <a href="/controle_estoque" class="btn btn-purple">📊 Controle de Estoque</a>
+            <a href="/estoque" class="btn btn-purple">📊 Controle de Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -342,7 +342,7 @@ def cadastrar_cliente():
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
         responsavel = request.form.get('responsavel')
-        telefone = request.form.get(' telefone')
+        telefone = request.form.get('telefone')
         whatsapp = request.form.get('whatsapp')
         email = request.form.get('email')
         endereco = request.form.get('endereco')
@@ -1883,7 +1883,7 @@ def listar_materiais():
                         <th>Unidade</th>
                         <th>Valor Unitário</th>
                         <th>Fornecedor</th>
-                        <th>Data</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1896,7 +1896,10 @@ def listar_materiais():
                         <td>{m["unidade_medida"]}</td>
                         <td>R$ {m["valor_unitario"]:.2f}</td>
                         <td>{m["fornecedor"] or "—"}</td>
-                        <td>{m.get("data_cadastro", "")[:10] if m.get("data_cadastro") else "—"}</td>
+                        <td>
+                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                        </td>
                     </tr>
                     ''' for m in materiais)}
                 </tbody>
@@ -2764,27 +2767,50 @@ CEP: {destinatario['cep']}
     </html>
     '''
 
-@app.route('/controle_estoque')
-def controle_estoque():
+@app.route('/estoque')
+def listar_estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     busca = request.args.get('q', '').strip()
 
     try:
-        if busca:
-            url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*"
-        else:
-            url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            materiais = response.json()
-        else:
+        # Buscar todos os materiais
+        url_materiais = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response_materiais = requests.get(url_materiais, headers=headers)
+        if response_materiais.status_code != 200:
             flash("Erro ao carregar materiais.")
-            materiais = []
+            return redirect(url_for('clientes'))
+        materiais = response_materiais.json()
+
+        # Buscar todas as entradas de estoque
+        url_estoque = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
+        response_estoque = requests.get(url_estoque, headers=headers)
+        if response_estoque.status_code != 200:
+            flash("Erro ao carregar estoque.")
+            return redirect(url_for('clientes'))
+        entradas = response_estoque.json()
+
+        # Calcular quantidade por material
+        quantidades = {}
+        for entrada in entradas:
+            quantidades[entrada['material_id']] = quantidades.get(entrada['material_id'], 0) + entrada['quantidade']
+
+        # Filtrar materiais com estoque
+        materiais_com_estoque = []
+        for material in materiais:
+            id_material = material['id']
+            if id_material in quantidades:
+                material['quantidade_estoque'] = quantidades[id_material]
+                materiais_com_estoque.append(material)
+
+        # Filtro de busca
+        if busca:
+            materiais_com_estoque = [m for m in materiais_com_estoque if busca.lower() in m['denominacao'].lower()]
+
     except Exception as e:
         flash("Erro de conexão.")
-        materiais = []
+        materiais_com_estoque = []
 
     return f'''
     <!DOCTYPE html>
@@ -2890,8 +2916,6 @@ def controle_estoque():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-            <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
-            <a href="/registrar_entrada_form" class="btn" style="background: #f39c12;">📥 Registrar Entrada de Material</a>
 
             <div class="search-box">
                 <form method="get" style="display: inline;">
@@ -2908,8 +2932,7 @@ def controle_estoque():
                         <th>Marca</th>
                         <th>Grupo</th>
                         <th>Unidade</th>
-                        <th>Valor Unitário</th>
-                        <th>Fornecedor</th>
+                        <th>Quantidade em Estoque</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -2921,15 +2944,13 @@ def controle_estoque():
                         <td>{m["marca"] or "—"}</td>
                         <td>{m["grupo_material"] or "—"}</td>
                         <td>{m["unidade_medida"]}</td>
-                        <td>R$ {m["valor_unitario"]:.2f}</td>
-                        <td>{m["fornecedor"] or "—"}</td>
+                        <td>{m["quantidade_estoque"]}</td>
                         <td>
                             <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #f39c12; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
-                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
-                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                            <a href="/ver_movimentacoes/{m["id"]}" style="color: #3498db; text-decoration: none;">📋 Movimentações</a>
                         </td>
                     </tr>
-                    ''' for m in materiais)}
+                    ''' for m in materiais_com_estoque)}
                 </tbody>
             </table>
             <div class="footer">
@@ -2956,7 +2977,7 @@ def registrar_entrada_form():
                 material = response.json()[0]
     except:
         flash("Erro ao carregar material.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     return f'''
     <!DOCTYPE html>
@@ -3069,7 +3090,7 @@ def registrar_entrada_form():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/controle_estoque" class="back-link">← Voltar ao Controle de Estoque</a>
+            <a href="/estoque" class="back-link">← Voltar ao Controle de Estoque</a>
 
             <div class="form-container">
                 <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
@@ -3234,7 +3255,7 @@ def registrar_entrada():
 
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     try:
         quantidade = float(quantidade)
@@ -3242,7 +3263,7 @@ def registrar_entrada():
         valor_unitario = valor_total / quantidade
     except:
         flash("Quantidade e valor devem ser números válidos.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     try:
         # Registrar movimentação no estoque
@@ -3259,7 +3280,7 @@ def registrar_entrada():
 
         if response_estoque.status_code != 201:
             flash("Erro ao registrar entrada no estoque.")
-            return redirect(url_for('controle_estoque'))
+            return redirect(url_for('listar_estoque'))
 
         # Atualizar valor unitário, se necessário
         if novo_valor_unitario:
@@ -3278,11 +3299,11 @@ def registrar_entrada():
                 flash("✅ Unidade de medida atualizada no cadastro!")
 
         flash("✅ Entrada de material registrada com sucesso!")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     except Exception as e:
         flash("❌ Erro ao registrar entrada.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
 # ========================
 # Iniciar o app
