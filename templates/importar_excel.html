@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Importar Excel</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            padding: 40px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .log {
+            background: #f1f1f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-line;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .btn {
+            padding: 12px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 Importar Dados do Excel</h1>
+        <p>Envie um arquivo Excel com as abas: <strong>Empresas, Materiais, Estoque</strong></p>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="arquivo" accept=".xlsx" required>
+            <button type="submit" class="btn">Importar</button>
+        </form>
+        <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+        {% if log %}
+        <div class="log">
+            <h3>📝 Log de Importação:</h3>
+            {% for item in log %}
+                {{ item }}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

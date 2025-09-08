@@ -1,12 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 import requests
 import os
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
 
 # ========================
-# Dados do Supabase (API) - Usando Service Role Key
+# Dados do Supabase (API)
 # ========================
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
@@ -132,40 +136,7 @@ def buscar_empresas():
         print("Erro de conexão:", e)
         return []
 
-# ========================
-# Funções para controle de estoque
-# ========================
-
-def calcular_estoque_atual():
-    """Calcula o saldo atual de estoque (entradas - saídas) por material_id"""
-    try:
-        # Entradas
-        url_entradas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
-        response_entradas = requests.get(url_entradas, headers=headers)
-        if response_entradas.status_code != 200:
-            return {}
-        entradas = response_entradas.json()
-
-        # Saídas
-        url_saidas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.saida&select=material_id,quantidade"
-        response_saidas = requests.get(url_saidas, headers=headers)
-        if response_saidas.status_code != 200:
-            return {}
-        saidas = response_saidas.json()
-
-        saldo = {}
-        for e in entradas:
-            saldo[e['material_id']] = saldo.get(e['material_id'], 0) + e['quantidade']
-        for s in saidas:
-            saldo[s['material_id']] = saldo.get(s['material_id'], 0) - s['quantidade']
-
-        return saldo
-    except Exception as e:
-        print("Erro ao calcular estoque:", e)
-        return {}
-
 def buscar_materiais():
-    """Busca todos os materiais cadastrados (catálogo)"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
@@ -175,8 +146,27 @@ def buscar_materiais():
     except:
         return []
 
+def calcular_estoque_atual():
+    try:
+        url_entradas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
+        response_entradas = requests.get(url_entradas, headers=headers)
+        entradas = response_entradas.json() if response_entradas.status_code == 200 else []
+
+        url_saidas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.saida&select=material_id,quantidade"
+        response_saidas = requests.get(url_saidas, headers=headers)
+        saidas = response_saidas.json() if response_saidas.status_code == 200 else []
+
+        saldo = {}
+        for e in entradas:
+            saldo[e['material_id']] = saldo.get(e['material_id'], 0) + e['quantidade']
+        for s in saidas:
+            saldo[s['material_id']] = saldo.get(s['material_id'], 0) - s['quantidade']
+        return saldo
+    except Exception as e:
+        print("Erro ao calcular estoque:", e)
+        return {}
+
 def buscar_movimentacoes_com_materiais(busca=None):
-    """Busca movimentações com nome do material"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data.desc"
         if busca:
@@ -444,6 +434,8 @@ def clientes():
             <a href="/materiais" class="btn btn-blue">📦 Catálogo de Materiais</a>
             <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
+            {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
+            {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
             </div>
@@ -3944,6 +3936,224 @@ def excluir_movimentacao(id):
         flash("❌ Erro ao excluir movimentação.")
 
     return redirect(url_for('estoque'))
+
+@app.route('/exportar_excel')
+def exportar_excel():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    output = BytesIO()
+    wb = Workbook()
+
+    # === Empresas ===
+    ws_empresas = wb.active
+    ws_empresas.title = "Empresas"
+    empresas = buscar_empresas()
+    ws_empresas.append(["ID", "Nome da Empresa", "CNPJ", "Responsável", "WhatsApp", "Email", "Endereço", "Bairro", "Cidade", "Estado", "CEP", "Número"])
+    for e in empresas:
+        ws_empresas.append([
+            e.get("id"),
+            e.get("nome_empresa", ""),
+            e.get("cnpj", ""),
+            e.get("responsavel", ""),
+            e.get("whatsapp", ""),
+            e.get("email", ""),
+            e.get("endereco", ""),
+            e.get("bairro", ""),
+            e.get("cidade", ""),
+            e.get("estado", ""),
+            e.get("cep", ""),
+            e.get("numero", "")
+        ])
+    for cell in ws_empresas[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # === Materiais ===
+    ws_materiais = wb.create_sheet("Materiais")
+    materiais = buscar_materiais()
+    ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor"])
+    for m in materiais:
+        ws_materiais.append([
+            m.get("id"),
+            m.get("denominacao", ""),
+            m.get("marca", ""),
+            m.get("grupo_material", ""),
+            m.get("unidade_medida", ""),
+            m.get("valor_unitario", 0),
+            m.get("fornecedor", "")
+        ])
+    for cell in ws_materiais[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # === Estoque ===
+    ws_estoque = wb.create_sheet("Estoque")
+    movimentacoes = buscar_movimentacoes_com_materiais()
+    ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo"])
+    for m in movimentacoes:
+        material_nome = m["materiais"]["denominacao"] if m.get("materiais") else "Excluído"
+        ws_estoque.append([
+            m.get("id"),
+            material_nome,
+            m.get("tipo", "").upper(),
+            m.get("quantidade", 0),
+            m.get("valor_unitario", 0),
+            m.get("valor_total", 0),
+            m.get("data", "")[:16].replace("T", " "),
+            m.get("motivo", "")
+        ])
+    for cell in ws_estoque[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # === Usuários ===
+    ws_usuarios = wb.create_sheet("Usuários")
+    usuarios = buscar_usuarios()
+    ws_usuarios.append(["ID", "Nome de Usuário", "Nível"])
+    for u in usuarios:
+        ws_usuarios.append([
+            u.get("id"),
+            u.get("nome de usuario", ""),
+            u.get("NÍVEL", "").upper()
+        ])
+    for cell in ws_usuarios[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # Ajustar largura
+    for ws in wb.worksheets:
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column].width = adjusted_width
+
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="backup_sistema_grafica.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route('/importar_excel', methods=['GET', 'POST'])
+def importar_excel():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    if request.method == 'POST':
+        if 'arquivo' not in request.files:
+            flash("Nenhum arquivo enviado.")
+            return redirect(request.url)
+
+        arquivo = request.files['arquivo']
+        if arquivo.filename == '':
+            flash("Nenhum arquivo selecionado.")
+            return redirect(request.url)
+
+        if not arquivo.filename.endswith(('.xlsx', '.xls')):
+            flash("Apenas arquivos Excel (.xlsx) são permitidos.")
+            return redirect(request.url)
+
+        try:
+            df = pd.read_excel(arquivo, sheet_name=None)
+            log = []
+
+            # === Empresas ===
+            if 'Empresas' in df:
+                for _, row in df['Empresas'].iterrows():
+                    try:
+                        criar_empresa(
+                            nome=row['Nome da Empresa'],
+                            cnpj=row.get('CNPJ', ''),
+                            responsavel=row.get('Responsável', ''),
+                            telefone=row.get('Telefone', ''),
+                            whatsapp=row.get('WhatsApp', ''),
+                            email=row.get('Email', ''),
+                            endereco=row.get('Endereço', ''),
+                            bairro=row.get('Bairro', ''),
+                            cidade=row.get('Cidade', ''),
+                            estado=row.get('Estado', ''),
+                            cep=row.get('CEP', ''),
+                            numero=row.get('Número', ''),
+                            entrega_endereco=row.get('Entrega Endereço', ''),
+                            entrega_numero=row.get('Entrega Número', ''),
+                            entrega_bairro=row.get('Entrega Bairro', ''),
+                            entrega_cidade=row.get('Entrega Cidade', ''),
+                            entrega_estado=row.get('Entrega Estado', ''),
+                            entrega_cep=row.get('Entrega CEP', '')
+                        )
+                        log.append(f"✅ Empresa '{row['Nome da Empresa']}' importada.")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao importar empresa: {str(e)}")
+
+            # === Materiais ===
+            if 'Materiais' in df:
+                for _, row in df['Materiais'].iterrows():
+                    try:
+                        url = f"{SUPABASE_URL}/rest/v1/materiais"
+                        dados = {
+                            "denominacao": row['Denominação'],
+                            "marca": row.get('Marca', ''),
+                            "grupo_material": row.get('Grupo', ''),
+                            "unidade_medida": row.get('Unidade', 'unidade'),
+                            "valor_unitario": float(row.get('Valor Unitário', 0)),
+                            "fornecedor": row.get('Fornecedor', '')
+                        }
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201:
+                            log.append(f"✅ Material '{row['Denominação']}' cadastrado.")
+                        else:
+                            log.append(f"❌ Erro ao cadastrar material: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar material: {str(e)}")
+
+            # === Estoque ===
+            if 'Estoque' in df:
+                for _, row in df['Estoque'].iterrows():
+                    try:
+                        nome_material = row['Material']
+                        resp = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?denominacao=eq.{nome_material}", headers=headers)
+                        if resp.status_code != 200 or not resp.json():
+                            log.append(f"⚠️ Material '{nome_material}' não encontrado. Pulando...")
+                            continue
+                        material_id = resp.json()[0]['id']
+
+                        url = f"{SUPABASE_URL}/rest/v1/estoque"
+                        dados = {
+                            "material_id": material_id,
+                            "tipo": row['Tipo'].lower(),
+                            "quantidade": float(row['Quantidade']),
+                            "valor_unitario": float(row['Valor Unit.']),
+                            "valor_total": float(row['Valor Total']),
+                            "motivo": row.get('Motivo', '')
+                        }
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201:
+                            log.append(f"✅ Movimentação de '{nome_material}' registrada.")
+                        else:
+                            log.append(f"❌ Erro ao registrar movimentação: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao importar movimentação: {str(e)}")
+
+            return render_template('importar_excel.html', log=log)
+
+        except Exception as e:
+            flash(f"❌ Erro ao ler o arquivo: {str(e)}")
+            return redirect(request.url)
+
+    return render_template('importar_excel.html', log=None)
 
 # ========================
 # Iniciar o app
