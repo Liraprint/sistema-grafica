@@ -132,7 +132,40 @@ def buscar_empresas():
         print("Erro de conexão:", e)
         return []
 
+# ========================
+# Funções para controle de estoque
+# ========================
+
+def calcular_estoque_atual():
+    """Calcula o saldo atual de estoque (entradas - saídas) por material"""
+    try:
+        # Entradas
+        url_entradas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
+        response_entradas = requests.get(url_entradas, headers=headers)
+        if response_entradas.status_code != 200:
+            return {}
+        entradas = response_entradas.json()
+
+        # Saídas
+        url_saidas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.saida&select=material_id,quantidade"
+        response_saidas = requests.get(url_saidas, headers=headers)
+        if response_saidas.status_code != 200:
+            return {}
+        saidas = response_saidas.json()
+
+        saldo = {}
+        for e in entradas:
+            saldo[e['material_id']] = saldo.get(e['material_id'], 0) + e['quantidade']
+        for s in saidas:
+            saldo[s['material_id']] = saldo.get(s['material_id'], 0) - s['quantidade']
+
+        return saldo
+    except Exception as e:
+        print("Erro ao calcular estoque:", e)
+        return {}
+
 def buscar_materiais():
+    """Busca todos os materiais cadastrados"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
@@ -169,80 +202,7 @@ def login():
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
     
-    return '''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login - Gráfica</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-                min-height: 100vh;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .login-box {
-                background: white;
-                color: #333;
-                padding: 40px;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-                width: 350px;
-            }
-            h1 { font-size: 24px; margin-bottom: 20px; color: #2c3e50; }
-            input {
-                width: 100%;
-                padding: 12px;
-                margin: 10px 0;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                font-size: 14px;
-            }
-            button {
-                background: #27ae60;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 16px;
-                width: 100%;
-            }
-            .flash {
-                color: #e74c3c;
-                font-weight: 600;
-                margin: 10px 0;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="login-box">
-            <h1>🔐 Login</h1>
-            <form method="post">
-                <input type="text" name="username" placeholder="Usuário" required><br>
-                <input type="password" name="password" placeholder="Senha" required><br>
-                <button type="submit">Entrar</button>
-            </form>
-            <div class="flash">
-                {% with messages = get_flashed_messages() %}
-                  {% if messages %}
-                    {% for message in messages %}
-                      {{ message }}
-                    {% endfor %}
-                  {% endif %}
-                {% endwith %}
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
@@ -253,6 +213,11 @@ def logout():
 def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    mensagem = ""
+    if hasattr(session, 'flashes') and session.flashes:
+        msg = session.flashes[0]
+        mensagem = f'<div style="color: green; font-weight: 600; margin: 10px;">{msg}</div>'
     
     return f'''
     <!DOCTYPE html>
@@ -338,10 +303,11 @@ def clientes():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
+            {mensagem}
             <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
             <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-            <a href="/materiais" class="btn btn-blue">📦 Listagem de Materiais</a>
-            <a href="/controle_estoque" class="btn btn-purple">📊 Controle de Estoque</a>
+            <a href="/materiais" class="btn btn-blue">📦 Cadastrar Materiais</a>
+            <a href="/estoque" class="btn btn-purple">📊 Controle de Estoque</a>
             {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
             <div class="footer">
                 Sistema de Gestão © 2025
@@ -349,7 +315,7 @@ def clientes():
         </div>
     </body>
     </html>
-    '''  
+    '''
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
@@ -892,6 +858,9 @@ def listar_empresas():
                 text-decoration: none;
                 font-weight: 500;
             }}
+            .back-link:hover {{
+                text-decoration: underline;
+            }}
             .footer {{
                 text-align: center;
                 padding: 20px;
@@ -1076,7 +1045,7 @@ def detalhes_empresa(id):
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
                 <a href="/servicos" class="btn">📋 Serviços</a>
-                <a href="/editar_empresa/{empresa["id"]}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
+                <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
                 <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             </div>
             <div class="footer">
@@ -1509,7 +1478,7 @@ def listar_servicos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # Simulando serviços cadastrados (você pode salvar no Supabase depois)
+    # Simulando serviços cadastrados
     servicos = [
         {
             "id": 1,
@@ -1955,9 +1924,8 @@ def listar_materiais():
                         <th>Marca</th>
                         <th>Grupo</th>
                         <th>Unidade</th>
-                        <th>Valor Unitário</th>
                         <th>Fornecedor</th>
-                        <th>Data</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1968,9 +1936,11 @@ def listar_materiais():
                         <td>{m["marca"] or "—"}</td>
                         <td>{m["grupo_material"] or "—"}</td>
                         <td>{m["unidade_medida"]}</td>
-                        <td>R$ {m["valor_unitario"]:.2f}</td>
                         <td>{m["fornecedor"] or "—"}</td>
-                        <td>{m.get("data_cadastro", "")[:10] if m.get("data_cadastro") else "—"}</td>
+                        <td>
+                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                        </td>
                     </tr>
                     ''' for m in materiais)}
                 </tbody>
@@ -2097,18 +2067,17 @@ def detalhes_material(id):
             </div>
             <a href="/materiais" class="back-link">← Voltar à Lista</a>
             <div class="details">
-                <p><strong>Denominação:</strong> {material['denominacao']}</p>
-                <p><strong>Marca:</strong> {material.get('marca', '—')}</p>
-                <p><strong>Grupo de Material:</strong> {material.get('grupo_material', '—')}</p>
+                <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
+                <p><strong>Grupo de Material:</strong> {material['grupo_material'] or "—"}</p>
                 <p><strong>Unidade de Medida:</strong> {material['unidade_medida']}</p>
                 <p><strong>Valor Unitário:</strong> R$ {material['valor_unitario']:.2f}</p>
-                <p><strong>Especificação:</strong> {material.get('especificacao', '—')}</p>
-                <p><strong>Fornecedor:</strong> {material.get('fornecedor', '—')}</p>
-                <p><strong>Data de Cadastro:</strong> {material.get('data_cadastro', '')[:10]}</p>
+                <p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p>
+                <p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p>
+                <p><strong>Data de Cadastro:</strong> {material.get("data_cadastro", "")[:10] if material.get("data_cadastro") else "—"}</p>
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
-                <a href="/editar_material/{material['id']}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
-                <a href="/excluir_material/{material['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
+                <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
             </div>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
@@ -2839,27 +2808,41 @@ CEP: {destinatario['cep']}
     </html>
     '''
 
-@app.route('/controle_estoque')
-def controle_estoque():
+@app.route('/estoque')
+def listar_estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     busca = request.args.get('q', '').strip()
 
     try:
-        # Agora puxa da tabela 'estoque', não da 'materiais'
-        url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao)&order=data_cadastro.desc"
+        # Buscar materiais
+        url_materiais = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        response_materiais = requests.get(url_materiais, headers=headers)
+        if response_materiais.status_code != 200:
+            flash("Erro ao carregar materiais.")
+            return redirect(url_for('clientes'))
+        materiais = response_materiais.json()
+
+        # Calcular saldo
+        saldo = calcular_estoque_atual()
+
+        # Filtrar materiais que têm saldo > 0 ou foram movimentados
+        materiais_com_estoque = []
+        for m in materiais:
+            id_m = m['id']
+            qtd = saldo.get(id_m, 0)
+            m['quantidade_estoque'] = qtd
+            if qtd > 0 or id_m in saldo:
+                materiais_com_estoque.append(m)
+
+        # Filtro
         if busca:
-            url += f"&materiais.denominacao=ilike.*{busca}*"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            movimentacoes = response.json()
-        else:
-            flash("Erro ao carregar movimentações.")
-            movimentacoes = []
+            materiais_com_estoque = [m for m in materiais_com_estoque if busca.lower() in m['denominacao'].lower()]
+
     except Exception as e:
         flash("Erro de conexão.")
-        movimentacoes = []
+        materiais_com_estoque = []
 
     return f'''
     <!DOCTYPE html>
@@ -2953,6 +2936,10 @@ def controle_estoque():
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
             }}
+            .estoque-baixo {{
+                color: #e74c3c;
+                font-weight: bold;
+            }}
         </style>
     </head>
     <body>
@@ -2965,11 +2952,10 @@ def controle_estoque():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-            <a href="/registrar_entrada_form" class="btn" style="background: #f39c12;">📥 Registrar Entrada de Material</a>
 
             <div class="search-box">
                 <form method="get" style="display: inline;">
-                    <input type="text" name="q" placeholder="Pesquisar por material..." value="{busca}">
+                    <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
                     <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
                 </form>
             </div>
@@ -2977,25 +2963,26 @@ def controle_estoque():
             <table>
                 <thead>
                     <tr>
-                        <th>Data</th>
-                        <th>Material</th>
-                        <th>Quantidade</th>
-                        <th>Valor Unitário</th>
-                        <th>Valor Total</th>
-                        <th>Tamanho</th>
+                        <th>ID</th>
+                        <th>Denominação</th>
+                        <th>Unidade</th>
+                        <th>Qtd. em Estoque</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     {''.join(f'''
                     <tr>
-                        <td>{m["data_cadastro"][:10]}</td>
-                        <td>{m["materiais"]["denominacao"]}</td>
-                        <td>{m["quantidade"]}</td>
-                        <td>R$ {m["valor_unitario"]:.2f}</td>
-                        <td>R$ {m["valor_total"]:.2f}</td>
-                        <td>{m["tamanho"] or "—"}</td>
+                        <td>{m["id"]}</td>
+                        <td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td>
+                        <td>{m["unidade_medida"]}</td>
+                        <td class="{'estoque-baixo" if m["quantidade_estoque"] < 5 else ''}">{m["quantidade_estoque"]}</td>
+                        <td>
+                            <a href="/registrar_entrada_form?material_id={m["id"]}" style="color: #27ae60; text-decoration: none; margin-right: 10px;">📥 Entrada</a>
+                            <a href="/registrar_saida_form?material_id={m["id"]}" style="color: #e74c3c; text-decoration: none;">📤 Saída</a>
+                        </td>
                     </tr>
-                    ''' for m in movimentacoes)}
+                    ''' for m in materiais_com_estoque)}
                 </tbody>
             </table>
             <div class="footer">
@@ -3022,7 +3009,7 @@ def registrar_entrada_form():
                 material = response.json()[0]
     except:
         flash("Erro ao carregar material.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     return f'''
     <!DOCTYPE html>
@@ -3135,7 +3122,7 @@ def registrar_entrada_form():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/controle_estoque" class="back-link">← Voltar ao Controle de Estoque</a>
+            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
 
             <div class="form-container">
                 <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
@@ -3286,11 +3273,11 @@ def registrar_entrada():
     valor_total = request.form.get('valor_total')
     tamanho = request.form.get('tamanho')
     novo_valor_unitario = request.form.get('novo_valor_unitario')
-    nova_unidade = request.form.get('nova_unidade')  # Nova unidade, se alterada
+    nova_unidade = request.form.get('nova_unidade')
 
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     try:
         quantidade = float(quantidade)
@@ -3298,10 +3285,10 @@ def registrar_entrada():
         valor_unitario = valor_total / quantidade
     except:
         flash("Quantidade e valor devem ser números válidos.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     try:
-        # Registrar movimentação no estoque
+        # Registrar entrada
         url_estoque = f"{SUPABASE_URL}/rest/v1/estoque"
         dados_estoque = {
             "material_id": int(material_id),
@@ -3315,9 +3302,9 @@ def registrar_entrada():
 
         if response_estoque.status_code != 201:
             flash("Erro ao registrar entrada no estoque.")
-            return redirect(url_for('controle_estoque'))
+            return redirect(url_for('listar_estoque'))
 
-        # Atualizar valor unitário, se necessário
+        # Atualizar valor unitário
         if novo_valor_unitario:
             url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
             dados_material = {"valor_unitario": float(novo_valor_unitario)}
@@ -3325,7 +3312,7 @@ def registrar_entrada():
             if response_material.status_code == 204:
                 flash("✅ Valor unitário atualizado no cadastro!")
 
-        # Atualizar unidade de medida, se alterada
+        # Atualizar unidade
         if nova_unidade:
             url_material = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
             dados_material = {"unidade_medida": nova_unidade.strip()}
@@ -3334,11 +3321,269 @@ def registrar_entrada():
                 flash("✅ Unidade de medida atualizada no cadastro!")
 
         flash("✅ Entrada de material registrada com sucesso!")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
 
     except Exception as e:
         flash("❌ Erro ao registrar entrada.")
-        return redirect(url_for('controle_estoque'))
+        return redirect(url_for('listar_estoque'))
+
+@app.route('/registrar_saida_form')
+def registrar_saida_form():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    material_id = request.args.get('material_id')
+    material = None
+    saldo_atual = 0
+
+    try:
+        if material_id:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200 and response.json():
+                material = response.json()[0]
+
+            # Calcular saldo
+            saldo = calcular_estoque_atual()
+            saldo_atual = saldo.get(int(material_id), 0)
+    except:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('listar_estoque'))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registrar Saída</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            .alert {{
+                background: #fdf3cd;
+                color: #856404;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+                font-size: 14px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📤 Registrar Saída de Material</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
+
+            <div class="form-container">
+                <form method="post" action="/registrar_saida" onsubmit="return validarSaida()">
+                    <input type="hidden" name="material_id" value="{material['id']}">
+
+                    <div>
+                        <label>Material</label>
+                        <input type="text" value="{material['denominacao']}" readonly>
+                    </div>
+
+                    <div>
+                        <label>Unidade de Medida</label>
+                        <input type="text" value="{material['unidade_medida']}" readonly>
+                    </div>
+
+                    <div>
+                        <label>Saldo Atual em Estoque</label>
+                        <input type="text" id="saldo_atual" value="{saldo_atual}" readonly style="font-weight: bold;">
+                    </div>
+
+                    <div>
+                        <label>Quantidade a Retirar *</label>
+                        <input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="verificarSaldo()">
+                    </div>
+
+                    <div>
+                        <label>Motivo da Saída *</label>
+                        <textarea name="motivo" rows="3" required></textarea>
+                    </div>
+
+                    <div id="alerta_saldo" class="alert" style="display: none;">
+                        ⚠️ A quantidade retirada é maior que o saldo em estoque!
+                    </div>
+
+                    <button type="submit" class="btn">📤 Registrar Saída</button>
+                </form>
+            </div>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function verificarSaldo() {{
+                const saldo = parseFloat(document.getElementById('saldo_atual').value);
+                const qtd = parseFloat(document.getElementById('quantidade').value) || 0;
+                const alerta = document.getElementById('alerta_saldo');
+                
+                if (qtd > saldo) {{
+                    alerta.style.display = 'block';
+                }} else {{
+                    alerta.style.display = 'none';
+                }}
+            }}
+
+            function validarSaida() {{
+                const saldo = parseFloat(document.getElementById('saldo_atual').value);
+                const qtd = parseFloat(document.getElementById('quantidade').value) || 0;
+                
+                if (qtd <= 0) {{
+                    alert('A quantidade deve ser maior que zero.');
+                    return false;
+                }}
+                
+                if (qtd > saldo) {{
+                    if (!confirm('⚠️ A quantidade é maior que o saldo. Deseja continuar mesmo assim?')) {{
+                        return false;
+                    }}
+                }}
+                return true;
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/registrar_saida', methods=['POST'])
+def registrar_saida():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    material_id = request.form.get('material_id')
+    quantidade = request.form.get('quantidade')
+    motivo = request.form.get('motivo')
+
+    if not material_id or not quantidade or not motivo:
+        flash("Preencha todos os campos!")
+        return redirect(url_for('listar_estoque'))
+
+    try:
+        quantidade = float(quantidade)
+        if quantidade <= 0:
+            flash("Quantidade deve ser maior que zero.")
+            return redirect(url_for('listar_estoque'))
+    except:
+        flash("Quantidade inválida.")
+        return redirect(url_for('listar_estoque'))
+
+    try:
+        # Verificar saldo
+        saldo = calcular_estoque_atual()
+        saldo_atual = saldo.get(int(material_id), 0)
+
+        if quantidade > saldo_atual:
+            if not confirm("A quantidade é maior que o saldo. Deseja continuar?"):
+                return redirect(url_for('registrar_saida_form', material_id=material_id))
+
+        # Registrar saída
+        url = f"{SUPABASE_URL}/rest/v1/estoque"
+        dados = {
+            "material_id": int(material_id),
+            "tipo": "saida",
+            "quantidade": quantidade,
+            "motivo": motivo
+        }
+        response = requests.post(url, json=dados, headers=headers)
+
+        if response.status_code == 201:
+            flash("📤 Saída registrada com sucesso!")
+        else:
+            flash("❌ Erro ao registrar saída.")
+    except Exception as e:
+        flash("❌ Erro ao registrar saída.")
+
+    return redirect(url_for('listar_estoque'))
 
 # ========================
 # Iniciar o app
