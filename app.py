@@ -149,22 +149,35 @@ def buscar_materiais():
 
 def calcular_estoque_atual():
     try:
-        url_entradas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.entrada&select=material_id,quantidade"
-        response_entradas = requests.get(url_entradas, headers=headers)
-        entradas = response_entradas.json() if response_entradas.status_code == 200 else []
+        # Busca TODAS as movimentações, ordenadas pela data (mais antigas primeiro)
+        url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data.asc"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print("Erro ao buscar movimentações:", response.status_code, response.text)
+            return {}
 
-        url_saidas = f"{SUPABASE_URL}/rest/v1/estoque?tipo=eq.saida&select=material_id,quantidade"
-        response_saidas = requests.get(url_saidas, headers=headers)
-        saidas = response_saidas.json() if response_saidas.status_code == 200 else []
-
+        movimentacoes = response.json()
         saldo = {}
-        for e in entradas:
-            saldo[e['material_id']] = saldo.get(e['material_id'], 0) + e['quantidade']
-        for s in saidas:
-            saldo[s['material_id']] = saldo.get(s['material_id'], 0) - s['quantidade']
+
+        for mov in movimentacoes:
+            material_id = mov['material_id']
+            quantidade = float(mov['quantidade'])
+            tipo = mov['tipo'].lower().strip()
+
+            if tipo == 'entrada':
+                saldo[material_id] = saldo.get(material_id, 0) + quantidade
+            elif tipo == 'saida':
+                saldo[material_id] = saldo.get(material_id, 0) - quantidade
+
+        # Garante que não há valores negativos (opcional)
+        # saldo[material_id] = max(0, saldo.get(material_id, 0) - quantidade)
+
+        print("📊 Movimentações carregadas:", movimentacoes)  # Log para debug
+        print("💼 Saldo final calculado:", saldo)  # Log para debug
+
         return saldo
     except Exception as e:
-        print("Erro ao calcular estoque:", e)
+        print("❌ Erro ao calcular estoque:", str(e))
         return {}
 
 def buscar_movimentacoes_com_materiais(busca=None):
