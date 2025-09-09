@@ -149,41 +149,59 @@ def buscar_materiais():
 
 def calcular_estoque_atual():
     try:
-        # Busca TODAS as movimentações, ordenadas pela data (mais antigas primeiro)
+        # Busca TODAS as movimentações, ordenadas pela data_movimentacao (mais antigas primeiro)
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data_movimentacao.asc"
         response = requests.get(url, headers=headers)
+        
         if response.status_code != 200:
-            print("Erro ao buscar movimentações:", response.status_code, response.text)
+            print("❌ Erro ao buscar movimentações:", response.status_code, response.text)
             return {}
 
-        movimentacoes = response.json()
+        try:
+            movimentacoes = response.json()
+        except:
+            print("❌ Falha ao decodificar JSON da resposta")
+            return {}
+
         saldo = {}
 
         for mov in movimentacoes:
-            material_id = mov['material_id']
-            quantidade = float(mov['quantidade'])
-            tipo = mov['tipo'].lower().strip()
+            # Validação completa dos campos
+            if not all(k in mov for k in ['material_id', 'quantidade', 'tipo']):
+                print("⚠️ Registro incompleto ignorado:", mov)
+                continue
 
-            if tipo == 'entrada':
-                saldo[material_id] = saldo.get(material_id, 0) + quantidade
-            elif tipo == 'saida':
-                saldo[material_id] = saldo.get(material_id, 0) - quantidade
+            try:
+                material_id = int(mov['material_id'])
+                quantidade = float(mov['quantidade'])
+                tipo = str(mov['tipo']).strip().lower()
 
-        # Garante que não há valores negativos
+                # Normaliza o tipo
+                if tipo == 'entrada':
+                    saldo[material_id] = saldo.get(material_id, 0) + quantidade
+                    print(f"📥 Entrada: +{quantidade} → Saldo {material_id}: {saldo[material_id]}")
+                elif tipo == 'saida':
+                    saldo[material_id] = saldo.get(material_id, 0) - quantidade
+                    print(f"📤 Saída: -{quantidade} → Saldo {material_id}: {saldo[material_id]}")
+                else:
+                    print(f"⚠️ Tipo desconhecido ignorado: {tipo}")
+            except (ValueError, TypeError) as e:
+                print("⚠️ Dado inválido ignorado:", mov, e)
+
+        # Garante que não há negativos
         for mat_id in saldo:
             saldo[mat_id] = max(0, saldo[mat_id])
 
-        print("📊 Movimentações carregadas:", movimentacoes)
-        print("💼 Saldo final calculado:", saldo)
-
+        print("✅ Saldo final calculado:", saldo)
         return saldo
+
     except Exception as e:
-        print("❌ Erro ao calcular estoque:", str(e))
+        print("❌ Erro CRÍTICO ao calcular estoque:", str(e))
         return {}
 
 def buscar_movimentacoes_com_materiais(busca=None):
     try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data.desc"
+        url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data_movimentacao.desc"
         if busca:
             url += f"&materiais.denominacao=ilike.*{busca}*"
         response = requests.get(url, headers=headers)
@@ -3187,7 +3205,7 @@ def estoque():
                     <tbody>
                         {''.join(f'''
                         <tr>
-                            <td>{m["data"][:16].replace("T", " ")}</td>
+                            <td>{m["data_movimentacao"][:16].replace("T", " ")}</td>
                             <td>{m["materiais"]["denominacao"]}</td>
                             <td class="{"tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida"}">{m["tipo"].upper()}</td>
                             <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
@@ -3482,7 +3500,8 @@ def registrar_entrada():
             "quantidade": quantidade,
             "valor_unitario": valor_unitario,
             "valor_total": valor_total,
-            "tamanho": tamanho
+            "tamanho": tamanho,
+            "data_movimentacao": "2025-04-05T10:00:00"
         }
         response = requests.post(url, json=dados, headers=headers)
 
@@ -3739,7 +3758,8 @@ def registrar_saida():
             "material_id": int(material_id),
             "tipo": "saida",
             "quantidade": quantidade,
-            "motivo": motivo
+            "motivo": motivo,
+            "data_movimentacao": "2025-04-05T10:00:00"
         }
         response = requests.post(url, json=dados, headers=headers)
 
@@ -4040,7 +4060,7 @@ def exportar_excel():
             m.get("quantidade", 0),
             m.get("valor_unitario", 0),
             m.get("valor_total", 0),
-            m.get("data", "")[:16].replace("T", " "),
+            m.get("data_movimentacao", "")[:16].replace("T", " "),
             m.get("motivo", "")
         ])
     for cell in ws_estoque[1]:
