@@ -170,10 +170,11 @@ def calcular_estoque_atual():
                 saldo[material_id] = saldo.get(material_id, 0) - quantidade
 
         # Garante que não há valores negativos (opcional)
-        # saldo[material_id] = max(0, saldo.get(material_id, 0) - quantidade)
+        for mat_id in saldo:
+            saldo[mat_id] = max(0, saldo[mat_id])
 
-        print("📊 Movimentações carregadas:", movimentacoes)  # Log para debug
-        print("💼 Saldo final calculado:", saldo)  # Log para debug
+        print("📊 Movimentações carregadas:", movimentacoes)
+        print("💼 Saldo final calculado:", saldo)
 
         return saldo
     except Exception as e:
@@ -2549,7 +2550,7 @@ def cadastrar_material():
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f5f7fa;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
