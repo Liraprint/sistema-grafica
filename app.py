@@ -173,8 +173,8 @@ def calcular_estoque_atual():
         for mat_id in saldo:
             saldo[mat_id] = max(0, saldo[mat_id])
 
-        print("📊 Movimentações carregadas:", movimentacoes)
-        print("💼 Saldo final calculado:", saldo)
+        print("📊 Movimentações carregadas:", movimentacoes)  # Log para debug
+        print("💼 Saldo final calculado:", saldo)  # Log para debug
 
         return saldo
     except Exception as e:
