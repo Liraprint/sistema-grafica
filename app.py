@@ -3452,7 +3452,10 @@ def registrar_entrada():
     try:
         quantidade = float(quantidade)
         valor_total = float(valor_total)
-        valor_unitario = valor_total / quantidade
+        if quantidade <= 0 or valor_total <= 0:
+            flash("Quantidade e valor total devem ser maiores que zero.")
+            return redirect(url_for('estoque'))
+        valor_unitario = round(valor_total / quantidade, 2)
     except:
         flash("Quantidade e valor devem ser números válidos.")
         return redirect(url_for('estoque'))
@@ -3472,9 +3475,11 @@ def registrar_entrada():
         if response.status_code == 201:
             flash("✅ Entrada registrada com sucesso!")
         else:
-            flash("❌ Erro ao registrar entrada.")
+            print("❌ Erro ao registrar entrada:", response.status_code, response.text)
+            flash("❌ Erro ao registrar entrada. Verifique os dados.")
     except Exception as e:
-        flash("❌ Erro ao registrar entrada.")
+        print("❌ Erro de conexão:", str(e))
+        flash("❌ Erro ao conectar ao banco de dados.")
 
     return redirect(url_for('estoque'))
 
