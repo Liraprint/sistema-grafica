@@ -150,7 +150,7 @@ def buscar_materiais():
 def calcular_estoque_atual():
     try:
         # Busca TODAS as movimentações, ordenadas pela data (mais antigas primeiro)
-        url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data.asc"
+        url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data_movimentacao.asc"
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print("Erro ao buscar movimentações:", response.status_code, response.text)
@@ -169,12 +169,12 @@ def calcular_estoque_atual():
             elif tipo == 'saida':
                 saldo[material_id] = saldo.get(material_id, 0) - quantidade
 
-        # Garante que não há valores negativos (opcional)
+        # Garante que não há valores negativos
         for mat_id in saldo:
             saldo[mat_id] = max(0, saldo[mat_id])
 
-        print("📊 Movimentações carregadas:", movimentacoes)  # Log para debug
-        print("💼 Saldo final calculado:", saldo)  # Log para debug
+        print("📊 Movimentações carregadas:", movimentacoes)
+        print("💼 Saldo final calculado:", saldo)
 
         return saldo
     except Exception as e:
