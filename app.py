@@ -5,7 +5,6 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from io import BytesIO
-import json
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
@@ -149,7 +148,7 @@ def buscar_materiais():
 
 def calcular_estoque_atual():
     try:
-        # Busca TODAS as movimentações, ordenadas pela data_movimentacao (mais antigas primeiro)
+        # Usa data_movimentacao para ordenar corretamente
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data_movimentacao.asc"
         response = requests.get(url, headers=headers)
         
@@ -157,36 +156,20 @@ def calcular_estoque_atual():
             print("❌ Erro ao buscar movimentações:", response.status_code, response.text)
             return {}
 
-        try:
-            movimentacoes = response.json()
-        except:
-            print("❌ Falha ao decodificar JSON da resposta")
-            return {}
-
+        movimentacoes = response.json()
         saldo = {}
 
         for mov in movimentacoes:
-            # Validação completa dos campos
-            if not all(k in mov for k in ['material_id', 'quantidade', 'tipo']):
-                print("⚠️ Registro incompleto ignorado:", mov)
-                continue
+            material_id = mov['material_id']
+            quantidade = float(mov['quantidade'])
+            tipo = str(mov['tipo']).strip().lower()
 
-            try:
-                material_id = int(mov['material_id'])
-                quantidade = float(mov['quantidade'])
-                tipo = str(mov['tipo']).strip().lower()
-
-                # Normaliza o tipo
-                if tipo == 'entrada':
-                    saldo[material_id] = saldo.get(material_id, 0) + quantidade
-                    print(f"📥 Entrada: +{quantidade} → Saldo {material_id}: {saldo[material_id]}")
-                elif tipo == 'saida':
-                    saldo[material_id] = saldo.get(material_id, 0) - quantidade
-                    print(f"📤 Saída: -{quantidade} → Saldo {material_id}: {saldo[material_id]}")
-                else:
-                    print(f"⚠️ Tipo desconhecido ignorado: {tipo}")
-            except (ValueError, TypeError) as e:
-                print("⚠️ Dado inválido ignorado:", mov, e)
+            if tipo == 'entrada':
+                saldo[material_id] = saldo.get(material_id, 0) + quantidade
+            elif tipo == 'saida':
+                saldo[material_id] = saldo.get(material_id, 0) - quantidade
+            else:
+                print(f"⚠️ Tipo desconhecido: {tipo}")
 
         # Garante que não há negativos
         for mat_id in saldo:
@@ -196,32 +179,19 @@ def calcular_estoque_atual():
         return saldo
 
     except Exception as e:
-        print("❌ Erro CRÍTICO ao calcular estoque:", str(e))
+        print("❌ Erro ao calcular estoque:", str(e))
         return {}
 
 def buscar_movimentacoes_com_materiais(busca=None):
     try:
+        # Usa data_movimentacao.desc para ordem correta
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data_movimentacao.desc"
         if busca:
             url += f"&materiais.denominacao=ilike.*{busca}*"
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             return []
-        movimentacoes = response.json()
-
-        for m in movimentacoes:
-            if 'materiais' not in m or not m['materiais']:
-                try:
-                    resp = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{m['material_id']}", headers=headers)
-                    if resp.status_code == 200 and resp.json():
-                        mat = resp.json()[0]
-                        m['materiais'] = {
-                            'denominacao': mat['denominacao'],
-                            'unidade_medida': mat['unidade_medida']
-                        }
-                except:
-                    m['materiais'] = {'denominacao': 'Material excluído', 'unidade_medida': '?'}
-        return movimentacoes
+        return response.json()
     except Exception as e:
         print("Erro ao buscar movimentações:", e)
         return []
@@ -3759,7 +3729,7 @@ def registrar_saida():
             "tipo": "saida",
             "quantidade": quantidade,
             "motivo": motivo,
-            "data_movimentacao": "2025-04-05T10:00:00"
+            "data_movimentacao": "2025-04-05T11:00:00"
         }
         response = requests.post(url, json=dados, headers=headers)
 
