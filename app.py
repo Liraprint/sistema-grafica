@@ -205,6 +205,15 @@ def excluir_movimentacao_db(id):
         return False
 
 # ========================
+# Função auxiliar para formatar data
+# ========================
+
+def format_data(data_str):
+    if data_str is None or not data_str:
+        return ''
+    return data_str[:16].replace("T", " ")
+
+# ========================
 # Páginas do sistema
 # ========================
 
@@ -2982,11 +2991,11 @@ def estoque():
         materiais_em_estoque = []
         movimentacoes = []
 
-    # Correção do erro de .join(f''' -> uso de lista
+    # Geração segura do HTML
     movimentacoes_html = ''.join([
         f'''
         <tr>
-            <td>{m["data_movimentacao"][:16].replace("T", " ")}</td>
+            <td>{format_data(m.get("data_movimentacao"))}</td>
             <td>{m["materiais"]["denominacao"]}</td>
             <td class="{"tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida"}">{m["tipo"].upper()}</td>
             <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
