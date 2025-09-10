@@ -590,7 +590,7 @@ def cadastrar_cliente():
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -2558,7 +2558,7 @@ def cadastrar_material():
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -2991,38 +2991,52 @@ def estoque():
         materiais_em_estoque = []
         movimentacoes = []
 
-    # Geração segura do HTML
-    movimentacoes_html = ''.join([
-        f'''
-        <tr>
-            <td>{format_data(m.get("data_movimentacao"))}</td>
-            <td>{m["materiais"]["denominacao"]}</td>
-            <td class="{"tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida"}">{m["tipo"].upper()}</td>
-            <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
-            <td>R$ {m["valor_unitario"]:.2f}</td>
-            <td>R$ {m["valor_total"]:.2f}</td>
-            <td>
-                <a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
-                {f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session["nivel"] == "administrador" else "—"}
-            </td>
-        </tr>
-        ''' for m in movimentacoes
-    ])
+    # Geração segura do HTML — SEM .join(f'''...''') — evita erro no Render
+    movimentacoes_html = ""
+    for m in movimentacoes:
+        data = format_data(m.get("data_movimentacao"))
+        tipo = m["tipo"]
+        classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
+        valor_unitario = m["valor_unitario"]
+        valor_total = m["valor_total"]
+        material = m["materiais"]["denominacao"]
+        unidade = m["materiais"]["unidade_medida"]
+        qtd = m["quantidade"]
 
-    materiais_html = ''.join([
-        f'''
+        # Botão de exclusão condicional
+        acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
+        if session["nivel"] == "administrador":
+            acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
+        else:
+            acoes += "—"
+
+        movimentacoes_html += f'''
+        <tr>
+            <td>{data}</td>
+            <td>{material}</td>
+            <td class="{classe_tipo}">{tipo.upper()}</td>
+            <td>{qtd} {unidade}</td>
+            <td>R$ {valor_unitario:.2f}</td>
+            <td>R$ {valor_total:.2f}</td>
+            <td>{acoes}</td>
+        </tr>
+        '''
+
+    materiais_html = ""
+    for m in materiais_em_estoque:
+        classe_estoque = "estoque-baixo" if m["quantidade_estoque"] < 5 else ""
+        materiais_html += f'''
         <tr>
             <td>{m["id"]}</td>
             <td>{m["denominacao"]}</td>
             <td>{m["unidade_medida"]}</td>
-            <td class="{"estoque-baixo" if m["quantidade_estoque"] < 5 else ""}">{m["quantidade_estoque"]}</td>
+            <td class="{classe_estoque}">{m["quantidade_estoque"]}</td>
             <td>
                 <a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>
                 <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>
             </td>
         </tr>
-        ''' for m in materiais_em_estoque
-    ])
+        '''
 
     return f'''
     <!DOCTYPE html>
@@ -3288,6 +3302,11 @@ def registrar_entrada_form():
             .grid-2 {{
                 display: grid;
                 grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 2fr;
                 gap: 15px;
             }}
             .form-container label {{
