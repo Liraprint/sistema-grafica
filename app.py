@@ -3173,20 +3173,22 @@ def estoque():
                         </tr>
                     </thead>
                     <tbody>
-                        {''.join(f'''
-                        <tr>
-                            <td>{m["data_movimentacao"][:16].replace("T", " ")}</td>
-                            <td>{m["materiais"]["denominacao"]}</td>
-                            <td class="{"tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida"}">{m["tipo"].upper()}</td>
-                            <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
-                            <td>R$ {m["valor_unitario"]:.2f}</td>
-                            <td>R$ {m["valor_total"]:.2f}</td>
-                            <td>
-                                <a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
-                                {f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session["nivel"] == "administrador" else "—"}
-                            </td>
-                        </tr>
-                        ''' for m in movimentacoes)}
+                   ''.join([
+                      f'''
+                     <tr>
+                   <td>{m["id"]}</td>
+                   <td>{m["materiais"]["denominacao"]}</td>
+                     <td class="tipo-entrada" if m["tipo"] == "entrada" else "tipo-saida">{m["tipo"].upper()}</td>
+                     <td>{m["quantidade"]} {m["materiais"]["unidade_medida"]}</td>
+                     <td>R$ {m["valor_unitário"]:.2f}</td>
+                     <td>R$ {m["valor_total"]:.2f}</td>
+                     <td>{m["data_movimentacao"][:16].replace("T", " ")}</td>
+                      <td>
+                     <a href="/editarmovimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
+                      {f'<a href="/excluirmovimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session["nivel"] == "administrador" else "—"}
+                     </td>
+                    </tr>
+    ''' for m in movimentacoes])
                     </tbody>
                 </table>
             </div>
