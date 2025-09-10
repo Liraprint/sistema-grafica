@@ -2992,42 +2992,42 @@ def estoque():
         movimentacoes = []
 
     # Geração segura do HTML — SEM .join(f'''...''') — evita erro no Render
-movimentacoes_html = ""
-for m in movimentacoes:
-    data = format_data(m.get("data_movimentacao"))
-    tipo = m["tipo"]
-    classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
-    valor_unitario = m["valor_unitario"]
-    valor_total = m["valor_total"]
-    qtd = m["quantidade"]
+    movimentacoes_html = ""
+    for m in movimentacoes:
+        data = format_data(m.get("data_movimentacao"))
+        tipo = m["tipo"]
+        classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
+        valor_unitario = m["valor_unitario"]
+        valor_total = m["valor_total"]
+        qtd = m["quantidade"]
 
-    # ✅ Proteção contra materiais None
-    material_info = m.get("materiais")
-    if material_info is None:
-        nome_material = "<em>Material excluído</em>"
-        unidade = ""
-    else:
-        nome_material = material_info.get("denominacao", "Desconhecido")
-        unidade = material_info.get("unidade_medida", "")
+        # ✅ Proteção contra materiais None
+        material_info = m.get("materiais")
+        if material_info is None:
+            nome_material = "<em>Material excluído</em>"
+            unidade = ""
+        else:
+            nome_material = material_info.get("denominacao", "Desconhecido")
+            unidade = material_info.get("unidade_medida", "")
 
-    # Botão de exclusão condicional
-    acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
-    if session["nivel"] == "administrador":
-        acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
-    else:
-        acoes += "—"
+        # Botão de exclusão condicional
+        acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
+        if session["nivel"] == "administrador":
+            acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
+        else:
+            acoes += "—"
 
-    movimentacoes_html += f'''
-    <tr>
-        <td>{data}</td>
-        <td>{nome_material}</td>
-        <td class="{classe_tipo}">{tipo.upper()}</td>
-        <td>{qtd} {unidade}</td>
-        <td>R$ {valor_unitario:.2f}</td>
-        <td>R$ {valor_total:.2f}</td>
-        <td>{acoes}</td>
-    </tr>
-    '''
+        movimentacoes_html += f'''
+        <tr>
+            <td>{data}</td>
+            <td>{nome_material}</td>
+            <td class="{classe_tipo}">{tipo.upper()}</td>
+            <td>{qtd} {unidade}</td>
+            <td>R$ {valor_unitario:.2f}</td>
+            <td>R$ {valor_total:.2f}</td>
+            <td>{acoes}</td>
+        </tr>
+        '''
 
     materiais_html = ""
     for m in materiais_em_estoque:
@@ -3515,7 +3515,8 @@ def registrar_entrada():
             "valor_unitario": valor_unitario,
             "valor_total": valor_total,
             "tamanho": tamanho,
-            "data_movimentacao": "2025-04-05T10:00:00"
+            "data_movimentacao": "2025-04-05T10:00:00",
+            "motivo": None  # ✅ Adicionado para evitar erro no Supabase
         }
         response = requests.post(url, json=dados, headers=headers)
 
