@@ -161,8 +161,8 @@ def calcular_estoque_atual():
 
         for mov in movimentacoes:
             material_id = mov['material_id']
-            quantidade = float(mov['quantidade'])
-            tipo = str(mov['tipo']).strip().lower()
+            quantidade = float(mov.get('quantidade', 0) or 0)
+            tipo = str(mov.get('tipo', '')).strip().lower()
 
             if tipo == 'entrada':
                 saldo[material_id] = saldo.get(material_id, 0) + quantidade
@@ -2997,10 +2997,7 @@ def estoque():
         data = format_data(m.get("data_movimentacao"))
         tipo = m["tipo"]
         classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
-        valor_unitario = m["valor_unitario"]
-        valor_total = m["valor_total"]
-        qtd = m["quantidade"]
-
+        
         # ✅ Proteção contra materiais None
         material_info = m.get("materiais")
         if material_info is None:
@@ -3009,6 +3006,11 @@ def estoque():
         else:
             nome_material = material_info.get("denominacao", "Desconhecido")
             unidade = material_info.get("unidade_medida", "")
+
+        # ✅ Proteção contra valores None
+        valor_unitario = m.get("valor_unitario", 0.0) or 0.0
+        valor_total = m.get("valor_total", 0.0) or 0.0
+        qtd = m.get("quantidade", 0) or 0
 
         # Botão de exclusão condicional
         acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
@@ -3516,7 +3518,7 @@ def registrar_entrada():
             "valor_total": valor_total,
             "tamanho": tamanho,
             "data_movimentacao": "2025-04-05T10:00:00",
-            "motivo": None  # ✅ Adicionado para evitar erro no Supabase
+            "motivo": None
         }
         response = requests.post(url, json=dados, headers=headers)
 
