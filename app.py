@@ -397,7 +397,7 @@ def clientes():
                 background: #34495e;
                 color: white;
                 padding: 12px 20px;
-                font-size: 14px;
+                font-size: 15px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -1634,27 +1634,63 @@ def listar_servicos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # Simulando serviços cadastrados
-    servicos = [
-        {
-            "id": 1,
-            "empresa": "Empresa A",
-            "data": "2025-04-05",
-            "servico": "Cartões de visita",
-            "quantidade": 500,
-            "valor": 150.00,
-            "status": "Concluído"
-        },
-        {
-            "id": 2,
-            "empresa": "Empresa B",
-            "data": "2025-04-06",
-            "servico": "Panfletos",
-            "quantidade": 1000,
-            "valor": 200.00,
-            "status": "Em Andamento"
-        }
-    ]
+    busca = request.args.get('q', '').strip()
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc"
+        if busca:
+            url += f"&titulo=ilike.*{busca}*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            servicos = response.json()
+        else:
+            flash("Erro ao carregar serviços.")
+            servicos = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        servicos = []
+
+    def calcular_custo(servico_id):
+        try:
+            url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{servico_id}"
+            resp = requests.get(url_mat, headers=headers)
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
+            return 0.0
+        except:
+            return 0.0
+
+    html_servicos = ""
+    for s in servicos:
+        empresa_nome = s['empresas']['nome_empresa'] if s.get('empresas') else "Sem cliente"
+        custo_materiais = calcular_custo(s['id'])
+        valor_cobrado = float(s.get('valor_cobrado', 0) or 0)
+        lucro = valor_cobrado - custo_materiais
+        status_class = {
+            'Pendente': 'status-pendente',
+            'Em Produção': 'status-producao',
+            'Concluído': 'status-concluido',
+            'Entregue': 'status-entregue'
+        }.get(s.get('status', ''), 'status-pendente')
+
+        html_servicos += f'''
+        <tr>
+            <td>{s['codigo_servico']}</td>
+            <td>{s['titulo']}</td>
+            <td>{empresa_nome}</td>
+            <td>{s.get('quantidade', '-')}</td>
+            <td>{s.get('dimensao', '-')}</td>
+            <td>R$ {custo_materiais:.2f}</td>
+            <td>R$ {valor_cobrado:.2f}</td>
+            <td>R$ {lucro:.2f}</td>
+            <td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td>
+            <td>
+                <a href="/editar_servico/{s['id']}" class="btn btn-edit">✏️ Editar</a>
+                <a href="/excluir_servico/{s['id']}" class="btn btn-delete" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+            </td>
+        </tr>
+        '''
 
     return f'''
     <!DOCTYPE html>
@@ -1662,7 +1698,7 @@ def listar_servicos():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Serviços Cadastrados</title>
+        <title>Serviços / Ordens de Serviço</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -1674,11 +1710,11 @@ def listar_servicos():
                 margin: 0;
             }}
             .container {{
-                max-width: 1100px;
+                max-width: 1400px;
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -1701,41 +1737,53 @@ def listar_servicos():
                 justify-content: space-between;
                 align-items: center;
             }}
+            .btn-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                padding: 20px;
+            }}
+            .btn {{
+                display: block;
+                width: 100%;
+                padding: 10px 15px;
+                font-size: 14px;
+                font-weight: 600;
+                text-align: center;
+                text-decoration: none;
+                border-radius: 8px;
+                color: white;
+                transition: all 0.3s ease;
+                border: none;
+                cursor: pointer;
+                max-width: 250px;
+                margin: 0 auto;
+            }}
+            .btn-green {{ background: #27ae60; }}
+            .btn-blue {{ background: #3498db; }}
+            .btn-purple {{ background: #8e44ad; }}
+            .btn-red {{ background: #e74c3c; }}
+            .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
             }}
             th, td {{
-                padding: 16px 20px;
+                padding: 12px 15px;
                 text-align: left;
             }}
             th {{
                 background: #ecf0f1;
                 color: #2c3e50;
                 font-weight: 600;
-                text-transform: uppercase;
-                font-size: 14px;
             }}
             tr:nth-child(even) {{
                 background: #f9f9f9;
             }}
-            tr:hover {{
-                background: #f1f7fb;
-            }}
-            .btn {{
-                padding: 12px 20px;
-                background: #27ae60;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                text-decoration: none;
-                margin: 10px 30px;
-            }}
-            .btn-blue {{
-                background: #3498db;
-            }}
+            .status-pendente {{ color: #e67e22; font-weight: bold; }}
+            .status-producao {{ color: #3498db; font-weight: bold; }}
+            .status-concluido {{ color: #27ae60; font-weight: bold; }}
+            .status-entregue {{ color: #2c3e50; font-weight: bold; }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
@@ -1756,61 +1804,147 @@ def listar_servicos():
     <body>
         <div class="container">
             <div class="header">
-                <h1>📋 Serviços Realizados</h1>
+                <h1>📋 Serviços / Ordens de Serviço</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
-            <a href="/abrir_ficha_servico" class="btn">➕ Adicionar Serviço</a>
+            <a href="/adicionar_servico" class="btn btn-green">➕ Adicionar Novo Serviço</a>
+
+            <div class="search-box" style="text-align: center; padding: 20px;">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 12px; width: 300px; border: 1px solid #ddd; border-radius: 8px;">
+                    <button type="submit" style="padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Empresa</th>
-                        <th>Data</th>
-                        <th>Serviço</th>
-                        <th>Quantidade</th>
-                        <th>Valor (R$)</th>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Cliente</th>
+                        <th>Qtd</th>
+                        <th>Dimensão</th>
+                        <th>Custo Mat.</th>
+                        <th>Valor Cobrado</th>
+                        <th>Lucro</th>
                         <th>Status</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {''.join(f'''
-                    <tr>
-                        <td>{s["id"]}</td>
-                        <td>{s["empresa"]}</td>
-                        <td>{s["data"]}</td>
-                        <td>{s["servico"]}</td>
-                        <td>{s["quantidade"]}</td>
-                        <td>{s["valor"]:.2f}</td>
-                        <td>{s["status"]}</td>
-                    </tr>
-                    ''' for s in servicos)}
+                    {html_servicos}
                 </tbody>
             </table>
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
-            </div>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
         </div>
     </body>
     </html>
     '''
 
-@app.route('/abrir_ficha_servico')
-def abrir_ficha_servico():
+@app.route('/adicionar_servico', methods=['GET', 'POST'])
+def adicionar_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
+
+    if request.method == 'POST':
+        titulo = request.form.get('titulo')
+        empresa_id = request.form.get('empresa_id')
+        tipo = request.form.get('tipo')
+        quantidade = request.form.get('quantidade')
+        dimensao = request.form.get('dimensao')
+        numero_cores = request.form.get('numero_cores')
+        aplicacao = request.form.get('aplicacao')
+        status = request.form.get('status') or 'Pendente'
+        data_abertura = request.form.get('data_abertura')
+        previsao_entrega = request.form.get('previsao_entrega')
+        valor_cobrado = request.form.get('valor_cobrado') or 0.0
+        observacoes = request.form.get('observacoes')
+
+        if not titulo or not empresa_id:
+            flash("Título e Cliente são obrigatórios!")
+            return redirect(url_for('adicionar_servico'))
+
+        try:
+            valor_cobrado = float(valor_cobrado)
+        except:
+            valor_cobrado = 0.0
+
+        try:
+            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
+            response = requests.get(url_seq, headers=headers)
+            if response.status_code == 200 and response.json():
+                ultimo = response.json()[0]['codigo_servico']
+                numero = int(ultimo.split('-')[1]) + 1
+            else:
+                numero = 1
+            codigo_servico = f"OS-{numero:03d}"
+        except:
+            codigo_servico = "OS-001"
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/servicos"
+            dados = {
+                "codigo_servico": codigo_servico,
+                "titulo": titulo,
+                "empresa_id": int(empresa_id),
+                "tipo": tipo,
+                "quantidade": quantidade,
+                "dimensao": dimensao,
+                "numero_cores": numero_cores,
+                "aplicacao": aplicacao,
+                "status": status,
+                "data_abertura": data_abertura,
+                "previsao_entrega": previsao_entrega,
+                "valor_cobrado": valor_cobrado,
+                "observacoes": observacoes
+            }
+            response = requests.post(url, json=dados, headers=headers)
+
+            if response.status_code == 201:
+                servico_id = response.json()['id']
+                flash("✅ Serviço criado com sucesso!")
+
+                materiais_ids = request.form.getlist('material_id[]')
+                quantidades = request.form.getlist('quantidade_usada[]')
+                valores_unitarios = request.form.getlist('valor_unitario[]')
+
+                for i in range(len(materiais_ids)):
+                    try:
+                        material_id = int(materiais_ids[i])
+                        qtd = float(quantidades[i])
+                        vlr = float(valores_unitarios[i])
+                        total = qtd * vlr
+                        dados_mat = {
+                            "servico_id": servico_id,
+                            "material_id": material_id,
+                            "quantidade_usada": qtd,
+                            "valor_unitario": vlr,
+                            "valor_total": total
+                        }
+                        requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
+                    except:
+                        continue
+
+                return redirect(url_for('listar_servicos'))
+            else:
+                flash("❌ Erro ao salvar serviço.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+    empresas = buscar_empresas()
+    materiais = buscar_materiais()
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Adicionar Serviço - Sua Gráfica</title>
+        <title>Adicionar Serviço</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -1822,11 +1956,11 @@ def abrir_ficha_servico():
                 margin: 0;
             }}
             .container {{
-                max-width: 800px;
+                max-width: 1000px;
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
                 overflow: hidden;
             }}
             .header {{
@@ -1851,6 +1985,16 @@ def abrir_ficha_servico():
             }}
             .form-container {{
                 padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 2fr;
+                gap: 15px;
             }}
             .form-container label {{
                 display: block;
@@ -1897,45 +2041,461 @@ def abrir_ficha_servico():
     <body>
         <div class="container">
             <div class="header">
-                <h1>➕ Adicionar Serviço</h1>
+                <h1>➕ Adicionar Novo Serviço</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/servicos" class="back-link">← Voltar aos Serviços</a>
+            <a href="/servicos" class="back-link">← Voltar à lista</a>
             <form method="post" class="form-container">
-                <label>Data do Serviço *</label>
-                <input type="date" name="data" required>
+                <label>Código do Serviço (OS)</label>
+                <input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
 
-                <label>Serviço Realizado *</label>
-                <input type="text" name="servico" required>
+                <label>Título do Serviço *</label>
+                <input type="text" name="titulo" required>
 
-                <label>Quantidade</label>
-                <input type="number" name="quantidade">
-
-                <label>Valor Total (R$)</label>
-                <input type="number" name="valor" step="0.01">
-
-                <label>Status</label>
-                <select name="status">
-                    <option value="pendente">Pendente</option>
-                    <option value="em_andamento">Em Andamento</option>
-                    <option value="concluido">Concluído</option>
+                <label>Cliente *</label>
+                <select name="empresa_id" required>
+                    <option value="">Selecione uma empresa</option>
+                    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
                 </select>
 
+                <div class="grid-2">
+                    <div>
+                        <label>Tipo</label>
+                        <select name="tipo">
+                            <option value="">Selecione</option>
+                            <option value="Orçamento">Orçamento</option>
+                            <option value="Produção">Produção</option>
+                            <option value="Equipamento">Equipamento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="Pendente">Pendente</option>
+                            <option value="Em Produção">Em Produção</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Entregue">Entregue</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Quantidade / Lote</label>
+                        <input type="number" name="quantidade" step="1">
+                    </div>
+                    <div>
+                        <label>Nº de Cores</label>
+                        <input type="number" name="numero_cores" step="1">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Dimensão (ex: 60x90 cm)</label>
+                        <input type="text" name="dimensao">
+                    </div>
+                    <div>
+                        <label>Valor Cobrado (R$)</label>
+                        <input type="number" name="valor_cobrado" step="0.01">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Data de Abertura</label>
+                        <input type="date" name="data_abertura">
+                    </div>
+                    <div>
+                        <label>Previsão de Entrega</label>
+                        <input type="date" name="previsao_entrega">
+                    </div>
+                </div>
+
+                <label>Aplicação / Uso / Ambiente</label>
+                <textarea name="aplicacao" rows="3"></textarea>
+
                 <label>Observações</label>
-                <textarea name="observacoes" rows="4"></textarea>
+                <textarea name="observacoes" rows="3"></textarea>
+
+                <h3>Materiais Usados</h3>
+                <div id="materiais-lista">
+                    <div class="grid-3">
+                        <div>
+                            <label>Material</label>
+                            <select name="material_id[]" required>
+                                <option value="">Selecione</option>
+                                {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Qtd Usada</label>
+                            <input type="number" name="quantidade_usada[]" step="0.01" required>
+                        </div>
+                        <div>
+                            <label>Valor Unitário (R$)</label>
+                            <input type="number" name="valor_unitario[]" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
 
                 <button type="submit" class="btn">💾 Salvar Serviço</button>
             </form>
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        </div>
+
+        <script>
+            function adicionarMaterial() {{
+                const container = document.getElementById('materiais-lista');
+                const div = document.createElement('div');
+                div.className = 'grid-3';
+                div.innerHTML = `
+                    <div>
+                        <label>Material</label>
+                        <select name="material_id[]" required>
+                            <option value="">Selecione</option>
+                            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Qtd Usada</label>
+                        <input type="number" name="quantidade_usada[]" step="0.01" required>
+                    </div>
+                    <div>
+                        <label>Valor Unitário (R$)</label>
+                        <input type="number" name="valor_unitario[]" step="0.01" required>
+                    </div>
+                `;
+                container.appendChild(div);
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
+def editar_servico(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Serviço não encontrado.")
+            return redirect(url_for('listar_servicos'))
+        servico = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar serviço.")
+        return redirect(url_for('listar_servicos'))
+
+    try:
+        url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
+        response_mats = requests.get(url_mats, headers=headers)
+        materiais_usados = response_mats.json() if response_mats.status_code == 200 else []
+    except:
+        materiais_usados = []
+
+    if request.method == 'POST':
+        titulo = request.form.get('titulo')
+        empresa_id = request.form.get('empresa_id')
+        tipo = request.form.get('tipo')
+        quantidade = request.form.get('quantidade')
+        dimensao = request.form.get('dimensao')
+        numero_cores = request.form.get('numero_cores')
+        aplicacao = request.form.get('aplicacao')
+        status = request.form.get('status')
+        data_abertura = request.form.get('data_abertura')
+        previsao_entrega = request.form.get('previsao_entrega')
+        valor_cobrado = request.form.get('valor_cobrado') or 0.0
+        observacoes = request.form.get('observacoes')
+
+        if not titulo or not empresa_id:
+            flash("Título e Cliente são obrigatórios!")
+            return redirect(request.url)
+
+        try:
+            valor_cobrado = float(valor_cobrado)
+        except:
+            valor_cobrado = 0.0
+
+        try:
+            dados = {
+                "titulo": titulo,
+                "empresa_id": int(empresa_id),
+                "tipo": tipo,
+                "quantidade": quantidade,
+                "dimensao": dimensao,
+                "numero_cores": numero_cores,
+                "aplicacao": aplicacao,
+                "status": status,
+                "data_abertura": data_abertura,
+                "previsao_entrega": previsao_entrega,
+                "valor_cobrado": valor_cobrado,
+                "observacoes": observacoes
+            }
+            response = requests.patch(url, json=dados, headers=headers)
+            if response.status_code == 204:
+                flash("✅ Serviço atualizado com sucesso!")
+
+                ids_materiais = request.form.getlist('material_usado_id[]')
+                for i in range(len(ids_materiais)):
+                    try:
+                        mat_id = ids_materiais[i]
+                        qtd = float(request.form[f'quantidade_usada_{mat_id}'])
+                        vlr = float(request.form[f'valor_unitario_{mat_id}'])
+                        total = qtd * vlr
+                        dados_mat = {
+                            "quantidade_usada": qtd,
+                            "valor_unitario": vlr,
+                            "valor_total": total
+                        }
+                        requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json=dados_mat, headers=headers)
+                    except:
+                        continue
+
+                return redirect(url_for('listar_servicos'))
+            else:
+                flash("❌ Erro ao atualizar serviço.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+        return redirect(request.url)
+
+    empresas = buscar_empresas()
+    materiais = buscar_materiais()
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Serviço</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1000px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .grid-3 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr 2fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #f39c12;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1>
             </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/servicos" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <label>Título do Serviço *</label>
+                <input type="text" name="titulo" value="{servico['titulo']}" required>
+
+                <label>Cliente *</label>
+                <select name="empresa_id" required>
+                    <option value="">Selecione uma empresa</option>
+                    {''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}
+                </select>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Tipo</label>
+                        <select name="tipo">
+                            <option value="">Selecione</option>
+                            <option value="Orçamento" {"selected" if servico["tipo"] == "Orçamento" else ""}>Orçamento</option>
+                            <option value="Produção" {"selected" if servico["tipo"] == "Produção" else ""}>Produção</option>
+                            <option value="Equipamento" {"selected" if servico["tipo"] == "Equipamento" else ""}>Equipamento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="Pendente" {"selected" if servico["status"] == "Pendente" else ""}>Pendente</option>
+                            <option value="Em Produção" {"selected" if servico["status"] == "Em Produção" else ""}>Em Produção</option>
+                            <option value="Concluído" {"selected" if servico["status"] == "Concluído" else ""}>Concluído</option>
+                            <option value="Entregue" {"selected" if servico["status"] == "Entregue" else ""}>Entregue</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Quantidade / Lote</label>
+                        <input type="number" name="quantidade" value="{servico.get('quantidade', '')}" step="1">
+                    </div>
+                    <div>
+                        <label>Nº de Cores</label>
+                        <input type="number" name="numero_cores" value="{servico.get('numero_cores', '')}" step="1">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Dimensão (ex: 60x90 cm)</label>
+                        <input type="text" name="dimensao" value="{servico.get('dimensao', '')}">
+                    </div>
+                    <div>
+                        <label>Valor Cobrado (R$)</label>
+                        <input type="number" name="valor_cobrado" value="{servico.get('valor_cobrado', 0)}" step="0.01">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Data de Abertura</label>
+                        <input type="date" name="data_abertura" value="{servico.get('data_abertura', '')[:10] if servico.get('data_abertura') else ''}">
+                    </div>
+                    <div>
+                        <label>Previsão de Entrega</label>
+                        <input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}">
+                    </div>
+                </div>
+
+                <label>Aplicação / Uso / Ambiente</label>
+                <textarea name="aplicacao" rows="3">{servico.get('aplicacao', '')}</textarea>
+
+                <label>Observações</label>
+                <textarea name="observacoes" rows="3">{servico.get('observacoes', '')}</textarea>
+
+                <h3>Materiais Usados</h3>
+                {''.join(f'''
+                <input type="hidden" name="material_usado_id[]" value="{m['id']}">
+                <div class="grid-3">
+                    <div>
+                        <label>Material</label>
+                        <input type="text" value="{m['materiais']['denominacao']} ({m['materiais']['unidade_medida']})" readonly>
+                    </div>
+                    <div>
+                        <label>Qtd Usada</label>
+                        <input type="number" name="quantidade_usada_{m['id']}" value="{m['quantidade_usada']}" step="0.01" required>
+                    </div>
+                    <div>
+                        <label>Valor Unitário (R$)</label>
+                        <input type="number" name="valor_unitario_{m['id']}" value="{m['valor_unitario']}" step="0.01" required>
+                    </div>
+                </div>
+                ''' for m in materiais_usados)}
+
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
         </div>
     </body>
     </html>
     '''
+
+@app.route('/excluir_servico/<int:id>')
+def excluir_servico(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('servicos'))
+
+    try:
+        url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
+        requests.delete(url_mats, headers=headers)
+
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            flash("🗑️ Serviço excluído com sucesso!")
+        else:
+            flash("❌ Erro ao excluir serviço.")
+    except Exception as e:
+        flash("❌ Erro ao excluir serviço.")
+
+    return redirect(url_for('servicos'))
 
 @app.route('/materiais')
 def listar_materiais():
@@ -2895,7 +3455,6 @@ def imprimir_etiqueta(id):
 
     tipo = request.form.get('tipo_endereco')
 
-    # Remetente (sua empresa)
     remetente = {
         "nome": "Liraprint",
         "endereco": "R. Dr. Roberto Fernandes, 81",
@@ -2905,7 +3464,6 @@ def imprimir_etiqueta(id):
         "cep": "07076-070"
     }
 
-    # Destinatário
     if tipo == "entrega":
         destinatario = {
             "nome": empresa['nome_empresa'],
@@ -2925,7 +3483,6 @@ def imprimir_etiqueta(id):
             "cep": empresa['cep']
         }
 
-    # Gerar etiqueta
     etiqueta = f"""
 REMETENTE:
 {remetente['nome']}
@@ -2972,18 +3529,15 @@ def estoque():
     busca_mov = request.args.get('q', '').strip()
 
     try:
-        # Materiais com saldo atual (todos os do catálogo)
         materiais_catalogo = buscar_materiais()
         saldo = calcular_estoque_atual()
 
-        # Mostrar todos os materiais do catálogo, mesmo com saldo 0
         materiais_em_estoque = []
         for m in materiais_catalogo:
             qtd = saldo.get(m['id'], 0)
             m['quantidade_estoque'] = qtd
             materiais_em_estoque.append(m)
 
-        # Movimentações
         movimentacoes = buscar_movimentacoes_com_materiais(busca_mov)
 
     except Exception as e:
@@ -2991,14 +3545,12 @@ def estoque():
         materiais_em_estoque = []
         movimentacoes = []
 
-    # Geração segura do HTML — SEM .join(f'''...''') — evita erro no Render
     movimentacoes_html = ""
     for m in movimentacoes:
         data = format_data(m.get("data_movimentacao"))
         tipo = m["tipo"]
         classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
-        
-        # ✅ Proteção contra materiais None
+
         material_info = m.get("materiais")
         if material_info is None:
             nome_material = "<em>Material excluído</em>"
@@ -3007,12 +3559,10 @@ def estoque():
             nome_material = material_info.get("denominacao", "Desconhecido")
             unidade = material_info.get("unidade_medida", "")
 
-        # ✅ Proteção contra valores None
         valor_unitario = m.get("valor_unitario", 0.0) or 0.0
         valor_total = m.get("valor_total", 0.0) or 0.0
         qtd = m.get("quantidade", 0) or 0
 
-        # Botão de exclusão condicional
         acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
         if session["nivel"] == "administrador":
             acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
@@ -3178,7 +3728,6 @@ def estoque():
             </div>
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
 
-            <!-- Botão para registrar entrada mesmo sem estoque -->
             <div class="section">
                 <h2 class="section-title">Adicionar ao Estoque</h2>
                 <p style="margin: 10px 0;">
@@ -3186,7 +3735,6 @@ def estoque():
                 </p>
             </div>
 
-            <!-- Materiais em Estoque -->
             <div class="section">
                 <h2 class="section-title">Itens em Estoque</h2>
                 <table>
@@ -3205,7 +3753,6 @@ def estoque():
                 </table>
             </div>
 
-            <!-- Últimas Movimentações -->
             <div class="section">
                 <h2 class="section-title">Últimas Movimentações</h2>
                 <div class="search-box">
@@ -3256,7 +3803,6 @@ def registrar_entrada_form():
         flash("Erro ao carregar material.")
         return redirect(url_for('estoque'))
 
-    # Converter para JSON válido
     import json
     materiais_js = json.dumps(materiais, ensure_ascii=False)
 
@@ -3388,7 +3934,6 @@ def registrar_entrada_form():
                         </select>
                     </div>
 
-                    <!-- Dados que serão preenchidos automaticamente -->
                     <div class="grid-2">
                         <div>
                             <label>Unidade de Medida (do cadastro)</label>
@@ -3472,7 +4017,6 @@ def registrar_entrada_form():
                 return true;
             }}
 
-            // Carregar dados ao abrir com material pré-selecionado
             window.onload = function() {{
                 if ('{material_id}') {{
                     carregarDadosMaterial();
@@ -4022,7 +4566,6 @@ def exportar_excel():
     output = BytesIO()
     wb = Workbook()
 
-    # === Empresas ===
     ws_empresas = wb.active
     ws_empresas.title = "Empresas"
     empresas = buscar_empresas()
@@ -4046,7 +4589,6 @@ def exportar_excel():
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
-    # === Materiais ===
     ws_materiais = wb.create_sheet("Materiais")
     materiais = buscar_materiais()
     ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor"])
@@ -4064,7 +4606,6 @@ def exportar_excel():
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
-    # === Estoque ===
     ws_estoque = wb.create_sheet("Estoque")
     movimentacoes = buscar_movimentacoes_com_materiais()
     ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo"])
@@ -4084,7 +4625,6 @@ def exportar_excel():
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
-    # === Usuários ===
     ws_usuarios = wb.create_sheet("Usuários")
     usuarios = buscar_usuarios()
     ws_usuarios.append(["ID", "Nome de Usuário", "Nível"])
@@ -4098,7 +4638,6 @@ def exportar_excel():
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
-    # Ajustar largura
     for ws in wb.worksheets:
         for col in ws.columns:
             max_length = 0
@@ -4146,7 +4685,6 @@ def importar_excel():
             df = pd.read_excel(arquivo, sheet_name=None)
             log = []
 
-            # === Empresas ===
             if 'Empresas' in df:
                 for _, row in df['Empresas'].iterrows():
                     try:
@@ -4174,7 +4712,6 @@ def importar_excel():
                     except Exception as e:
                         log.append(f"❌ Erro ao importar empresa: {str(e)}")
 
-            # === Materiais ===
             if 'Materiais' in df:
                 for _, row in df['Materiais'].iterrows():
                     try:
@@ -4195,7 +4732,6 @@ def importar_excel():
                     except Exception as e:
                         log.append(f"❌ Erro ao processar material: {str(e)}")
 
-            # === Estoque ===
             if 'Estoque' in df:
                 for _, row in df['Estoque'].iterrows():
                     try:
