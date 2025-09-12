@@ -5,6 +5,7 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from io import BytesIO
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
@@ -148,7 +149,6 @@ def buscar_materiais():
 
 def calcular_estoque_atual():
     try:
-        # Usa data_movimentacao para ordenar corretamente
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=material_id,quantidade,tipo&order=data_movimentacao.asc"
         response = requests.get(url, headers=headers)
         
@@ -171,7 +171,6 @@ def calcular_estoque_atual():
             else:
                 print(f"⚠️ Tipo desconhecido: {tipo}")
 
-        # Garante que não há negativos
         for mat_id in saldo:
             saldo[mat_id] = max(0, saldo[mat_id])
 
@@ -184,7 +183,6 @@ def calcular_estoque_atual():
 
 def buscar_movimentacoes_com_materiais(busca=None):
     try:
-        # Usa data_movimentacao.desc para ordem correta
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data_movimentacao.desc"
         if busca:
             url += f"&materiais.denominacao=ilike.*{busca}*"
@@ -204,14 +202,58 @@ def excluir_movimentacao_db(id):
     except:
         return False
 
-# ========================
-# Função auxiliar para formatar data
-# ========================
-
 def format_data(data_str):
     if data_str is None or not data_str:
         return ''
     return data_str[:16].replace("T", " ")
+
+# ========================
+# Configurações do sistema (remetente)
+# ========================
+
+def buscar_configuracoes():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/configuracoes?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200 and response.json():
+            return response.json()[0]
+        else:
+            # Retorna padrão se não existir
+            return {
+                "nome_remetente": "Liraprint",
+                "endereco_remetente": "R. Dr. Roberto Fernandes, 81",
+                "bairro_remetente": "Jardim Palmira",
+                "cidade_remetente": "Guarulhos",
+                "estado_remetente": "SP",
+                "cep_remetente": "07076-070"
+            }
+    except:
+        return {
+            "nome_remetente": "Liraprint",
+            "endereco_remetente": "R. Dr. Roberto Fernandes, 81",
+            "bairro_remetente": "Jardim Palmira",
+            "cidade_remetente": "Guarulhos",
+            "estado_remetente": "SP",
+            "cep_remetente": "07076-070"
+        }
+
+def salvar_configuracoes(config):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/configuracoes"
+        # Primeiro verifica se já existe
+        response_check = requests.get(url, headers=headers)
+        if response_check.status_code == 200 and response_check.json():
+            # Atualiza
+            id = response_check.json()[0]['id']
+            response = requests.patch(f"{url}?id=eq.{id}", json=config, headers=headers)
+            return response.status_code == 204
+        else:
+            # Cria novo
+            response = requests.post(url, json=config, headers=headers)
+            return response.status_code == 201
+    except Exception as e:
+        print("Erro ao salvar configurações:", e)
+        return False
 
 # ========================
 # Páginas do sistema
@@ -457,6 +499,7 @@ def clientes():
                 <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
@@ -1665,6 +1708,24 @@ def listar_servicos():
         except:
             return 0.0
 
+    def calcular_prazo_restante(previsao):
+        if not previsao:
+            return {"dias": 0, "cor": "#95a5a6", "texto": "Sem prazo"}
+        try:
+            data_prev = datetime.strptime(previsao.split("T")[0], "%Y-%m-%d")
+            hoje = datetime.now().date()
+            dias = (data_prev.date() - hoje).days
+            if dias < 0:
+                return {"dias": abs(dias), "cor": "#e74c3c", "texto": f"Atrasado há {abs(dias)} dia(s)"}
+            elif dias <= 3:
+                return {"dias": dias, "cor": "#e67e22", "texto": f"Faltam {dias} dias"}
+            elif dias <= 5:
+                return {"dias": dias, "cor": "#f39c12", "texto": f"Faltam {dias} dias"}
+            else:
+                return {"dias": dias, "cor": "#27ae60", "texto": f"Faltam {dias} dias"}
+        except:
+            return {"dias": 0, "cor": "#95a5a6", "texto": "Erro"}
+
     html_todos = ""
     html_andamento = ""
 
@@ -1673,12 +1734,15 @@ def listar_servicos():
         custo_materiais = calcular_custo(s['id'])
         valor_cobrado = float(s.get('valor_cobrado', 0) or 0)
         lucro = valor_cobrado - custo_materiais
+        
         status_class = {
             'Pendente': 'status-pendente',
             'Em Produção': 'status-producao',
             'Concluído': 'status-concluido',
             'Entregue': 'status-entregue'
         }.get(s.get('status', ''), 'status-pendente')
+
+        prazo = calcular_prazo_restante(s.get('previsao_entrega'))
 
         linha = f'''
         <tr>
@@ -1691,7 +1755,9 @@ def listar_servicos():
             <td>R$ {valor_cobrado:.2f}</td>
             <td>R$ {lucro:.2f}</td>
             <td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td>
+            <td><span style="color: {prazo['cor']}; font-weight: bold;">{prazo['texto']}</span></td>
             <td>
+                <a href="/os/{s['id']}" class="btn btn-blue">📄 OS</a>
                 <a href="/editar_servico/{s['id']}" class="btn btn-edit">✏️ Editar</a>
                 <a href="/excluir_servico/{s['id']}" class="btn btn-delete" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
             </td>
@@ -1866,6 +1932,7 @@ def listar_servicos():
                         <th>Valor Cobrado</th>
                         <th>Lucro</th>
                         <th>Status</th>
+                        <th>Prazo Restante</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -2717,6 +2784,332 @@ def excluir_servico(id):
 
     return redirect(url_for('servicos'))
 
+@app.route('/os/<int:id>')
+def imprimir_os(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))"
+        response = requests.get(url_serv, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Serviço não encontrado.")
+            return redirect(url_for('listar_servicos'))
+        servico = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar serviço.")
+        return redirect(url_for('listar_servicos'))
+
+    def calcular_custo():
+        try:
+            url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
+            resp = requests.get(url_mat, headers=headers)
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
+            return 0.0
+        except:
+            return 0.0
+
+    custo_materiais = calcular_custo()
+    valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
+    lucro = valor_cobrado - custo_materiais
+
+    empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
+
+    html = f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OS {servico['codigo_servico']} - Impressão</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                padding: 40px;
+                color: #333;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #2c3e50;
+                padding-bottom: 15px;
+            }}
+            .header h1 {{
+                margin: 0;
+                color: #2c3e50;
+                font-size: 24px;
+            }}
+            .info-grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }}
+            .info-item strong {{
+                display: block;
+                font-size: 14px;
+                color: #555;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }}
+            th, td {{
+                border: 1px solid #ccc;
+                padding: 8px;
+                text-align: left;
+            }}
+            th {{
+                background-color: #ecf0f1;
+                color: #2c3e50;
+            }}
+            .total-box {{
+                text-align: right;
+                font-size: 16px;
+                margin-top: 20px;
+            }}
+            .status {{
+                font-weight: bold;
+                color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'};
+            }}
+            @media print {{
+                .no-print {{ display: none; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>ORDEM DE SERVIÇO</h1>
+            <p><strong>Código:</strong> {servico['codigo_servico']}</p>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Cliente:</strong> {empresa_nome}
+            </div>
+            <div class="info-item">
+                <strong>Status:</strong> <span class="status">{servico['status']}</span>
+            </div>
+            <div class="info-item">
+                <strong>Título:</strong> {servico['titulo']}
+            </div>
+            <div class="info-item">
+                <strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}
+            </div>
+            <div class="info-item">
+                <strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}
+            </div>
+            <div class="info-item">
+                <strong>Quantidade:</strong> {servico.get('quantidade', '-')}
+            </div>
+        </div>
+
+        <h3>Materiais Utilizados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Unidade</th>
+                    <th>Qtd Usada</th>
+                    <th>Valor Unit.</th>
+                    <th>Valor Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {''.join(f'''
+                <tr>
+                    <td>{m['materiais']['denominacao']}</td>
+                    <td>{m['materiais']['unidade_medida']}</td>
+                    <td>{m['quantidade_usada']}</td>
+                    <td>R$ {m['valor_unitario']:.2f}</td>
+                    <td>R$ {m['valor_total']:.2f}</td>
+                </tr>
+                ''' for m in servico.get('materiais_usados', []) if m.get('materiais'))}
+            </tbody>
+        </table>
+
+        <div class="total-box">
+            <p><strong>Custo com Materiais:</strong> R$ {custo_materiais:.2f}</p>
+            <p><strong>Valor Cobrado:</strong> R$ {valor_cobrado:.2f}</p>
+            <p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center;">
+            <button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button>
+            <a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a>
+        </div>
+    </body>
+    </html>
+    '''
+    return html
+
+@app.route('/configuracoes')
+def configuracoes():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    config = buscar_configuracoes()
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Configurações do Sistema</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>⚙️ Configurações do Sistema</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <form method="post" action="/salvar_configuracoes" class="form-container">
+                <h3>Remetente (Etiquetas)</h3>
+                <div>
+                    <label>Nome do Remetente</label>
+                    <input type="text" name="nome_remetente" value="{config['nome_remetente']}" required>
+                </div>
+                <div>
+                    <label>Endereço Completo</label>
+                    <input type="text" name="endereco_remetente" value="{config['endereco_remetente']}" required>
+                </div>
+                <div>
+                    <label>Bairro</label>
+                    <input type="text" name="bairro_remetente" value="{config['bairro_remetente']}" required>
+                </div>
+                <div>
+                    <label>Cidade</label>
+                    <input type="text" name="cidade_remetente" value="{config['cidade_remetente']}" required>
+                </div>
+                <div>
+                    <label>Estado</label>
+                    <input type="text" name="estado_remetente" value="{config['estado_remetente']}" required maxlength="2">
+                </div>
+                <div>
+                    <label>CEP</label>
+                    <input type="text" name="cep_remetente" value="{config['cep_remetente']}" required>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Configurações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/salvar_configuracoes', methods=['POST'])
+def salvar_configuracoes_view():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    config = {
+        "nome_remetente": request.form.get('nome_remetente'),
+        "endereco_remetente": request.form.get('endereco_remetente'),
+        "bairro_remetente": request.form.get('bairro_remetente'),
+        "cidade_remetente": request.form.get('cidade_remetente'),
+        "estado_remetente": request.form.get('estado_remetente'),
+        "cep_remetente": request.form.get('cep_remetente')
+    }
+
+    if salvar_configuracoes(config):
+        flash("✅ Configurações salvas com sucesso!")
+    else:
+        flash("❌ Erro ao salvar configurações.")
+
+    return redirect(url_for('configuracoes'))
+
 @app.route('/materiais')
 def listar_materiais():
     if 'usuario' not in session:
@@ -2897,16 +3290,15 @@ def detalhes_material(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
         response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            material = response.json()[0] if response.json() else None
-            if not material:
-                flash("Material não encontrado.")
-                return redirect(url_for('listar_materiais'))
-        else:
-            flash("Erro ao carregar material.")
+        if response.status_code != 200 or not response.json():
+            flash("Material não encontrado.")
+            return redirect(url_for('listar_materiais'))
+        material = response.json()[0] if response.json() else None
+        if not material:
+            flash("Material não encontrado.")
             return redirect(url_for('listar_materiais'))
     except Exception as e:
-        flash("Erro de conexão.")
+        flash("Erro ao carregar material.")
         return redirect(url_for('listar_materiais'))
 
     return f'''
@@ -3518,6 +3910,8 @@ def gerar_etiqueta(id):
         flash("Erro ao carregar empresa.")
         return redirect(url_for('listar_empresas'))
 
+    config = buscar_configuracoes()
+
     tem_entrega = bool(empresa.get("entrega_endereco"))
 
     return f'''
@@ -3673,15 +4067,17 @@ def imprimir_etiqueta(id):
         flash("Erro ao carregar empresa.")
         return redirect(url_for('listar_empresas'))
 
+    config = buscar_configuracoes()
+
     tipo = request.form.get('tipo_endereco')
 
     remetente = {
-        "nome": "Liraprint",
-        "endereco": "R. Dr. Roberto Fernandes, 81",
-        "bairro": "Jardim Palmira",
-        "cidade": "Guarulhos",
-        "estado": "SP",
-        "cep": "07076-070"
+        "nome": config['nome_remetente'],
+        "endereco": config['endereco_remetente'],
+        "bairro": config['bairro_remetente'],
+        "cidade": config['cidade_remetente'],
+        "estado": config['estado_remetente'],
+        "cep": config['cep_remetente']
     }
 
     if tipo == "entrega":
