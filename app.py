@@ -454,9 +454,8 @@ def clientes():
                 <a href="/logout">🚪 Sair</a>
             </div>
             <div class="btn-grid">
-                <a href="/cadastrar_cliente" class="btn btn-green">➕ Cadastrar Nova Empresa</a>
-                <a href="/empresas" class="btn btn-blue">📋 Listar Empresas</a>
-                <a href="/materiais" class="btn btn-blue">📦 Catálogo de Materiais</a>
+                <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
+                <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
@@ -566,7 +565,7 @@ def cadastrar_cliente():
         else:
             flash("❌ Erro ao cadastrar empresa.")
 
-        return redirect(url_for('clientes'))
+        return redirect(url_for('empresas'))
 
     return f'''
     <!DOCTYPE html>
@@ -676,7 +675,7 @@ def cadastrar_cliente():
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/empresas" class="back-link">← Voltar à lista</a>
             <form method="post" class="form-container">
                 <!-- Linha 1 -->
                 <div class="grid-2">
@@ -1066,6 +1065,11 @@ def listar_empresas():
                     ''' for e in empresas)}
                 </tbody>
             </table>
+
+            <div style="text-align: center; padding: 20px;">
+                <a href="/cadastrar_cliente" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">➕ Cadastrar Nova Empresa</a>
+            </div>
+
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
@@ -1200,7 +1204,7 @@ def detalhes_empresa(id):
                 {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
             </div>
             <div style="display: flex; gap: 15px; margin: 20px 0;">
-                <a href="/servicos" class="btn">📋 Serviços</a>
+                <a href="/servicos_empresa/{id}" class="btn">📋 Serviços desta empresa</a>
                 <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
                 <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             </div>
@@ -1661,7 +1665,9 @@ def listar_servicos():
         except:
             return 0.0
 
-    html_servicos = ""
+    html_todos = ""
+    html_andamento = ""
+
     for s in servicos:
         empresa_nome = s['empresas']['nome_empresa'] if s.get('empresas') else "Sem cliente"
         custo_materiais = calcular_custo(s['id'])
@@ -1674,7 +1680,7 @@ def listar_servicos():
             'Entregue': 'status-entregue'
         }.get(s.get('status', ''), 'status-pendente')
 
-        html_servicos += f'''
+        linha = f'''
         <tr>
             <td>{s['codigo_servico']}</td>
             <td>{s['titulo']}</td>
@@ -1691,6 +1697,11 @@ def listar_servicos():
             </td>
         </tr>
         '''
+
+        html_todos += linha
+
+        if s.get('status') in ['Pendente', 'Em Produção']:
+            html_andamento += linha
 
     return f'''
     <!DOCTYPE html>
@@ -1764,6 +1775,22 @@ def listar_servicos():
             .btn-purple {{ background: #8e44ad; }}
             .btn-red {{ background: #e74c3c; }}
             .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
+            .tabs {{
+                display: flex;
+                margin: 0 30px;
+                border-bottom: 1px solid #ddd;
+            }}
+            .tab {{
+                padding: 15px 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                cursor: pointer;
+                font-weight: 600;
+            }}
+            .tab.active {{
+                background: #3498db;
+                color: white;
+            }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
@@ -1799,12 +1826,14 @@ def listar_servicos():
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
             }}
+            .tab-content {{ display: none; }}
+            .tab-content.active {{ display: table-row-group; }}
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>📋 Serviços / Ordens de Serviço</h1>
+                <h1>📋 Todos os Serviços</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
@@ -1820,12 +1849,203 @@ def listar_servicos():
                 </form>
             </div>
 
+            <div class="tabs">
+                <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
+                <div class="tab" onclick="mostrarTab('andamento')">Em Andamento</div>
+            </div>
+
             <table>
                 <thead>
                     <tr>
                         <th>Código</th>
                         <th>Título</th>
                         <th>Cliente</th>
+                        <th>Qtd</th>
+                        <th>Dimensão</th>
+                        <th>Custo Mat.</th>
+                        <th>Valor Cobrado</th>
+                        <th>Lucro</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tab-todos" class="tab-content active">
+                    {html_todos}
+                </tbody>
+                <tbody id="tab-andamento" class="tab-content">
+                    {html_andamento}
+                </tbody>
+            </table>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        </div>
+
+        <script>
+            function mostrarTab(nome) {{
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+                document.getElementById('tab-' + nome).classList.add('active');
+                document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active');
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/servicos_empresa/<int:id>')
+def servicos_por_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url_emp = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response_emp = requests.get(url_emp, headers=headers)
+        if response_emp.status_code != 200 or not response_emp.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response_emp.json()[0]
+
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=*,materiais_usados(*,materiais(denominacao))&empresa_id=eq.{id}&order=codigo_servico.desc"
+        response_serv = requests.get(url_serv, headers=headers)
+        servicos = response_serv.json() if response_serv.status_code == 200 else []
+    except Exception as e:
+        flash("Erro ao carregar serviços.")
+        servicos = []
+
+    def calcular_custo(servico_id):
+        try:
+            url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{servico_id}"
+            resp = requests.get(url_mat, headers=headers)
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
+            return 0.0
+        except:
+            return 0.0
+
+    html_servicos = ""
+    for s in servicos:
+        custo_materiais = calcular_custo(s['id'])
+        valor_cobrado = float(s.get('valor_cobrado', 0) or 0)
+        lucro = valor_cobrado - custo_materiais
+        status_class = {
+            'Pendente': 'status-pendente',
+            'Em Produção': 'status-producao',
+            'Concluído': 'status-concluido',
+            'Entregue': 'status-entregue'
+        }.get(s.get('status', ''), 'status-pendente')
+
+        html_servicos += f'''
+        <tr>
+            <td>{s['codigo_servico']}</td>
+            <td>{s['titulo']}</td>
+            <td>{s.get('quantidade', '-')}</td>
+            <td>{s.get('dimensao', '-')}</td>
+            <td>R$ {custo_materiais:.2f}</td>
+            <td>R$ {valor_cobrado:.2f}</td>
+            <td>R$ {lucro:.2f}</td>
+            <td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td>
+            <td>
+                <a href="/editar_servico/{s['id']}" class="btn btn-edit">✏️ Editar</a>
+            </td>
+        </tr>
+        '''
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Serviços - {empresa['nome_empresa']}</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1200px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .status-pendente {{ color: #e67e22; font-weight: bold; }}
+            .status-producao {{ color: #3498db; font-weight: bold; }}
+            .status-concluido {{ color: #27ae60; font-weight: bold; }}
+            .status-entregue {{ color: #2c3e50; font-weight: bold; }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Serviços - {empresa['nome_empresa']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/empresa/{id}" class="back-link">← Voltar à empresa</a>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
                         <th>Qtd</th>
                         <th>Dimensão</th>
                         <th>Custo Mat.</th>
