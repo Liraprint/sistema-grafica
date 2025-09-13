@@ -224,6 +224,74 @@ def format_data(data_str):
 
 
 # ========================
+# Funções para Fornecedores
+# ========================
+
+def buscar_fornecedores():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("Erro ao buscar fornecedores:", response.status_code, response.text)
+            return []
+    except Exception as e:
+        print("Erro de conexão ao buscar fornecedores:", e)
+        return []
+
+
+def criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores"
+        dados = {
+            "nome": nome,
+            "cnpj": cnpj,
+            "contato": contato,
+            "telefone": telefone,
+            "email": email,
+            "endereco": endereco
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        if response.status_code == 201:
+            return True
+        else:
+            print("❌ Erro ao criar fornecedor:", response.status_code, response.text)
+            return False
+    except Exception as e:
+        print("Erro de conexão ao criar fornecedor:", e)
+        return False
+
+
+def atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        dados = {
+            "nome": nome,
+            "cnpj": cnpj,
+            "contato": contato,
+            "telefone": telefone,
+            "email": email,
+            "endereco": endereco
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro de conexão ao atualizar fornecedor:", e)
+        return False
+
+
+def excluir_fornecedor(id):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro de conexão ao excluir fornecedor:", e)
+        return False
+
+
+# ========================
 # Configurações do sistema (remetente)
 # ========================
 
@@ -498,6 +566,7 @@ def clientes():
             .btn-blue {{ background: #3498db; }}
             .btn-purple {{ background: #8e44ad; }}
             .btn-red {{ background: #e74c3c; }}
+            .btn-orange {{ background: #e67e22; }}
             .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
             .footer {{
                 text-align: center;
@@ -522,6 +591,7 @@ def clientes():
                 <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
@@ -5001,6 +5071,525 @@ def excluir_movimentacao(id):
         flash("❌ Erro ao excluir movimentação.")
 
     return redirect(url_for('estoque'))
+
+
+# ========================
+# Rotas para Fornecedores
+# ========================
+
+@app.route('/fornecedores')
+def listar_fornecedores():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    busca = request.args.get('q', '').strip()
+
+    try:
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/fornecedores?or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            fornecedores = response.json()
+        else:
+            flash("Erro ao carregar fornecedores.")
+            fornecedores = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        fornecedores = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Fornecedores Cadastrados</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1100px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Fornecedores Cadastrados</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
+
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>CNPJ</th>
+                        <th>Contato</th>
+                        <th>Telefone</th>
+                        <th>E-mail</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{f["id"]}</td>
+                        <td>{f["nome"]}</td>
+                        <td>{f["cnpj"]}</td>
+                        <td>{f.get("contato", "—")}</td>
+                        <td>{f.get("telefone", "—")}</td>
+                        <td>{f.get("email", "—")}</td>
+                        <td>
+                            <a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                            <a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    """ for f in fornecedores)}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/cadastrar_fornecedor', methods=['GET', 'POST'])
+def cadastrar_fornecedor():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+
+        if criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor cadastrado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
+        else:
+            flash("❌ Erro ao cadastrar fornecedor.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cadastrar Fornecedor</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Cadastrar Novo Fornecedor</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Nome *</label>
+                    <input type="text" name="nome" required>
+                </div>
+                <div>
+                    <label>CNPJ</label>
+                    <input type="text" name="cnpj">
+                </div>
+                <div>
+                    <label>Contato</label>
+                    <input type="text" name="contato">
+                </div>
+                <div>
+                    <label>Telefone</label>
+                    <input type="text" name="telefone">
+                </div>
+                <div>
+                    <label>E-mail</label>
+                    <input type="email" name="email">
+                </div>
+                <div>
+                    <label>Endereço</label>
+                    <textarea name="endereco" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Fornecedor</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/editar_fornecedor/<int:id>', methods=['GET', 'POST'])
+def editar_fornecedor(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Fornecedor não encontrado.")
+            return redirect(url_for('listar_fornecedores'))
+        fornecedor = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar fornecedor.")
+        return redirect(url_for('listar_fornecedores'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+
+        if atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor atualizado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
+        else:
+            flash("❌ Erro ao atualizar fornecedor.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Fornecedor</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #f39c12;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Nome *</label>
+                    <input type="text" name="nome" value="{fornecedor['nome']}" required>
+                </div>
+                <div>
+                    <label>CNPJ</label>
+                    <input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}">
+                </div>
+                <div>
+                    <label>Contato</label>
+                    <input type="text" name="contato" value="{fornecedor.get('contato', '')}">
+                </div>
+                <div>
+                    <label>Telefone</label>
+                    <input type="text" name="telefone" value="{fornecedor.get('telefone', '')}">
+                </div>
+                <div>
+                    <label>E-mail</label>
+                    <input type="email" name="email" value="{fornecedor.get('email', '')}">
+                </div>
+                <div>
+                    <label>Endereço</label>
+                    <textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/excluir_fornecedor/<int:id>')
+def excluir_fornecedor_view(id):
+    if 'usuario' not in session:
+        flash("Acesso negado!")
+        return redirect(url_for('login'))
+
+    if excluir_fornecedor(id):
+        flash("🗑️ Fornecedor excluído com sucesso!")
+    else:
+        flash("❌ Erro ao excluir fornecedor.")
+
+    return redirect(url_for('listar_fornecedores'))
 
 
 @app.route('/exportar_excel')
