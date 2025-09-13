@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 import requests
 import os
 import pandas as pd
@@ -4224,20 +4224,16 @@ def estoque():
         valor_total = m.get("valor_total", 0.0) or 0.0
         qtd = m.get("quantidade", 0) or 0
 
-        acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
-        if session["nivel"] == "administrador":
-            acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
-        else:
-            acoes += "—"
+        acoes = f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
 
         movimentacoes_html += f'''
-        <tr>
+        <tr data-id="{m["id"]}">
             <td>{data}</td>
             <td>{nome_material}</td>
             <td class="{classe_tipo}">{tipo.upper()}</td>
-            <td>{qtd} {unidade}</td>
-            <td>R$ {valor_unitario:.2f}</td>
-            <td>R$ {valor_total:.2f}</td>
+            <td contenteditable="true" data-field="quantidade">{qtd} {unidade}</td>
+            <td contenteditable="true" data-field="valor_unitario">R$ {valor_unitario:.2f}</td>
+            <td data-field="valor_total">R$ {valor_total:.2f}</td>
             <td>{acoes}</td>
         </tr>
         '''
@@ -4265,6 +4261,7 @@ def estoque():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Meu Estoque</title>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -4345,6 +4342,10 @@ def estoque():
             tr:hover {{
                 background: #f1f7fb;
             }}
+            td[contenteditable="true"] {{
+                background-color: #fff9e6; /* Destaque para células editáveis */
+                cursor: pointer;
+            }}
             .back-link {{
                 display: inline-block;
                 margin: 20px 30px;
@@ -4422,7 +4423,7 @@ def estoque():
                         <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
                     </form>
                 </div>
-                <table>
+                <table id="tabela-movimentacoes">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -4444,6 +4445,45 @@ def estoque():
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
         </div>
+        
+        <script>
+        $(document).ready(function() {{
+            $('#tabela-movimentacoes').on('blur', 'td[contenteditable="true"]', function() {{
+                var cell = $(this);
+                var row = cell.closest('tr');
+                var movId = row.data('id');
+                var field = cell.data('field');
+                var originalValue = cell.text();
+                
+                // Limpa o valor para garantir que é um número
+                var value = originalValue.replace('R$', '').replace(',', '.').trim();
+
+                $.ajax({{
+                    url: '/atualizar_movimentacao_inline',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({{
+                        id: movId,
+                        field: field,
+                        value: value
+                    }}),
+                    success: function(response) {{
+                        if(response.success) {{
+                            // Atualiza a página para refletir todas as mudanças, incluindo estoque
+                            location.reload(); 
+                        }} else {{
+                            alert('Erro: ' + response.message);
+                            cell.text(originalValue); // Reverte a alteração
+                        }}
+                    }},
+                    error: function() {{
+                        alert('Erro de comunicação com o servidor.');
+                        cell.text(originalValue); // Reverte a alteração
+                    }}
+                }});
+            }});
+        }});
+        </script>
     </body>
     </html>
     '''
@@ -4723,7 +4763,7 @@ def registrar_entrada():
             "valor_unitario": valor_unitario,
             "valor_total": valor_total,
             "tamanho": tamanho,
-            "data_movimentacao": "2025-04-05T10:00:00",
+            "data_movimentacao": datetime.now().isoformat(),
             "motivo": None
         }
         response = requests.post(url, json=dados, headers=headers)
@@ -4971,20 +5011,13 @@ def registrar_saida():
         return redirect(url_for('estoque'))
 
     try:
-        saldo = calcular_estoque_atual()
-        saldo_atual = saldo.get(int(material_id), 0)
-
-        if quantidade > saldo_atual:
-            if not confirm("A quantidade é maior que o saldo. Deseja continuar?"):
-                return redirect(url_for('registrar_saida_form', material_id=material_id))
-
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
             "material_id": int(material_id),
             "tipo": "saida",
             "quantidade": quantidade,
             "motivo": motivo,
-            "data_movimentacao": "2025-04-05T11:00:00"
+            "data_movimentacao": datetime.now().isoformat()
         }
         response = requests.post(url, json=dados, headers=headers)
 
@@ -4994,219 +5027,6 @@ def registrar_saida():
             flash("❌ Erro ao registrar saída.")
     except Exception as e:
         flash("❌ Erro ao registrar saída.")
-
-    return redirect(url_for('estoque'))
-
-
-@app.route('/editar_movimentacao/<int:id>')
-def editar_movimentacao_form(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200 or not response.json():
-            flash("Movimentação não encontrada.")
-            return redirect(url_for('estoque'))
-        mov = response.json()[0]
-    except Exception as e:
-        flash("Erro ao carregar movimentação.")
-        return redirect(url_for('estoque'))
-
-    try:
-        url_mat = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{mov['material_id']}"
-        response_mat = requests.get(url_mat, headers=headers)
-        material = response_mat.json()[0] if response_mat.status_code == 200 and response_mat.json() else None
-    except:
-        material = None
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Editar Movimentação</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f5f7fa;
-                color: #333;
-                min-height: 100vh;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                max-width: 900px;
-                margin: 30px auto;
-                background: white;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-            }}
-            .header {{
-                background: #2c3e50;
-                color: white;
-                text-align: center;
-                padding: 30px;
-            }}
-            h1 {{
-                font-size: 28px;
-                margin: 0;
-                font-weight: 600;
-            }}
-            .user-info {{
-                background: #34495e;
-                color: white;
-                padding: 15px 20px;
-                font-size: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .form-container {{
-                padding: 30px;
-            }}
-            .grid-2 {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }}
-            .form-container label {{
-                display: block;
-                margin: 10px 0 5px 0;
-                font-weight: 600;
-                color: #2c3e50;
-            }}
-            .form-container input,
-            .form-container select {{
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                font-size: 14px;
-            }}
-            .btn {{
-                padding: 12px 20px;
-                background: #f39c12;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-            }}
-            .back-link {{
-                display: inline-block;
-                margin: 20px 30px;
-                color: #3498db;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .footer {{
-                text-align: center;
-                padding: 20px;
-                background: #ecf0f1;
-                color: #7f8c8d;
-                font-size: 13px;
-                border-top: 1px solid #bdc3c7;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>✏️ Editar Movimentação</h1>
-            </div>
-            <div class="user-info">
-                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
-
-            <div class="form-container">
-                <form method="post" action="/editar_movimentacao/{id}">
-                    <div>
-                        <label>Tipo</label>
-                        <select name="tipo" disabled>
-                            <option value="{mov['tipo']}" selected>{mov['tipo'].upper()}</option>
-                        </select>
-                        <small style="color: #7f8c8d;">O tipo não pode ser alterado.</small>
-                    </div>
-
-                    <div>
-                        <label>Material</label>
-                        <input type="text" value="{material['denominacao'] if material else 'Material excluído'}" readonly>
-                    </div>
-
-                    <div class="grid-2">
-                        <div>
-                            <label>Quantidade</label>
-                            <input type="number" name="quantidade" value="{mov['quantidade']}" step="0.01" required>
-                        </div>
-                        <div>
-                            <label>Valor Unitário (R$)</label>
-                            <input type="number" name="valor_unitario" value="{mov['valor_unitario']}" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label>Motivo ou Observação</label>
-                        <textarea name="motivo" rows="3">{mov.get('motivo', '')}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn">💾 Salvar Alterações</button>
-                </form>
-            </div>
-
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
-
-@app.route('/editar_movimentacao/<int:id>', methods=['POST'])
-def editar_movimentacao(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    quantidade = request.form.get('quantidade')
-    valor_unitario = request.form.get('valor_unitario')
-    motivo = request.form.get('motivo')
-
-    if not quantidade or not valor_unitario:
-        flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        quantidade = float(quantidade)
-        valor_unitario = float(valor_unitario)
-        valor_total = quantidade * valor_unitario
-    except:
-        flash("Valores inválidos.")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        dados = {
-            "quantidade": quantidade,
-            "valor_unitario": valor_unitario,
-            "valor_total": valor_total,
-            "motivo": motivo
-        }
-        response = requests.patch(url, json=dados, headers=headers)
-
-        if response.status_code == 204:
-            flash("✅ Movimentação atualizada com sucesso!")
-        else:
-            flash("❌ Erro ao atualizar movimentação.")
-    except Exception as e:
-        flash("❌ Erro ao atualizar movimentação.")
 
     return redirect(url_for('estoque'))
 
@@ -5435,6 +5255,61 @@ def importar_excel():
             return redirect(request.url)
 
     return render_template('importar_excel.html', log=None)
+
+
+# ROTA PARA EDIÇÃO IN-LINE DAS MOVIMENTAÇÕES
+@app.route('/atualizar_movimentacao_inline', methods=['POST'])
+def atualizar_movimentacao_inline():
+    if 'usuario' not in session:
+        return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+
+    try:
+        data = request.get_json()
+        mov_id = data.get('id')
+        field = data.get('field')
+        value = data.get('value')
+
+        if not all([mov_id, field, value is not None]):
+            return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+
+        # Converte o valor para o tipo correto
+        try:
+            if field in ['quantidade', 'valor_unitario']:
+                value = float(value)
+            elif field in ['data_movimentacao']:
+                # Validar formato da data se necessário
+                pass 
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Valor numérico inválido'}), 400
+
+        # Busca a movimentação para recalcular o valor_total se necessário
+        url_get = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{mov_id}&select=quantidade,valor_unitario"
+        resp_get = requests.get(url_get, headers=headers)
+        if resp_get.status_code != 200 or not resp_get.json():
+            return jsonify({'success': False, 'message': 'Movimentação não encontrada'}), 404
+        
+        movimentacao_atual = resp_get.json()[0]
+
+        dados_para_atualizar = {field: value}
+
+        # Recalcula o valor_total se quantidade ou valor_unitario forem alterados
+        if field == 'quantidade':
+            valor_total = value * movimentacao_atual['valor_unitario']
+            dados_para_atualizar['valor_total'] = valor_total
+        elif field == 'valor_unitario':
+            valor_total = movimentacao_atual['quantidade'] * value
+            dados_para_atualizar['valor_total'] = valor_total
+
+        url_patch = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{mov_id}"
+        response = requests.patch(url_patch, json=dados_para_atualizar, headers=headers)
+
+        if response.status_code == 204:
+            return jsonify({'success': True, 'message': 'Atualizado com sucesso!'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar no banco de dados'}), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ========================
