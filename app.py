@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 import requests
 import os
 import pandas as pd
@@ -7,17 +7,29 @@ from openpyxl.styles import Font, PatternFill
 from io import BytesIO
 from datetime import datetime
 
+
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
 
-SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co  "
+
+# ========================
+# Dados do Supabase (API)
+# ========================
+SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
+
 
 headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
+
+
+# ========================
+# Funções para acessar o Supabase
+# ========================
+
 
 def buscar_usuario_por_login(username, password):
     try:
@@ -31,6 +43,7 @@ def buscar_usuario_por_login(username, password):
         print("Erro de conexão:", e)
         return None
 
+
 def buscar_usuarios():
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
@@ -43,6 +56,7 @@ def buscar_usuarios():
     except Exception as e:
         print("Erro de conexão:", e)
         return []
+
 
 def criar_usuario(username, password, nivel):
     try:
@@ -65,6 +79,7 @@ def criar_usuario(username, password, nivel):
         print("Erro de conexão:", e)
         return False
 
+
 def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
@@ -80,6 +95,7 @@ def excluir_usuario(id):
     except Exception as e:
         print("Erro de conexão:", e)
         return False
+
 
 def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
                   entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
@@ -117,6 +133,7 @@ def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, 
         print("Erro de conexão:", e)
         return False
 
+
 def buscar_empresas():
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
@@ -130,6 +147,7 @@ def buscar_empresas():
         print("Erro de conexão:", e)
         return []
 
+
 def buscar_materiais():
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
@@ -139,6 +157,7 @@ def buscar_materiais():
         return []
     except:
         return []
+
 
 def calcular_estoque_atual():
     try:
@@ -174,6 +193,7 @@ def calcular_estoque_atual():
         print("❌ Erro ao calcular estoque:", str(e))
         return {}
 
+
 def buscar_movimentacoes_com_materiais(busca=None):
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data_movimentacao.desc"
@@ -187,6 +207,7 @@ def buscar_movimentacoes_com_materiais(busca=None):
         print("Erro ao buscar movimentações:", e)
         return []
 
+
 def excluir_movimentacao_db(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
@@ -195,10 +216,17 @@ def excluir_movimentacao_db(id):
     except:
         return False
 
+
 def format_data(data_str):
     if data_str is None or not data_str:
         return ''
     return data_str[:16].replace("T", " ")
+
+
+# ========================
+# Configurações do sistema (remetente)
+# ========================
+
 
 def buscar_configuracoes():
     try:
@@ -207,6 +235,7 @@ def buscar_configuracoes():
         if response.status_code == 200 and response.json():
             return response.json()[0]
         else:
+            # Retorna padrão se não existir
             return {
                 "nome_remetente": "Liraprint",
                 "endereco_remetente": "R. Dr. Roberto Fernandes, 81",
@@ -225,26 +254,37 @@ def buscar_configuracoes():
             "cep_remetente": "07076-070"
         }
 
+
 def salvar_configuracoes(config):
     try:
         url = f"{SUPABASE_URL}/rest/v1/configuracoes"
+        # Primeiro verifica se já existe
         response_check = requests.get(url, headers=headers)
         if response_check.status_code == 200 and response_check.json():
+            # Atualiza
             id = response_check.json()[0]['id']
             response = requests.patch(f"{url}?id=eq.{id}", json=config, headers=headers)
             return response.status_code == 204
         else:
+            # Cria novo
             response = requests.post(url, json=config, headers=headers)
             return response.status_code == 201
     except Exception as e:
         print("Erro ao salvar configurações:", e)
         return False
 
+
+# ========================
+# Páginas do sistema
+# ========================
+
+
 @app.route('/')
 def index():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     return redirect(url_for('clientes'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -370,10 +410,12 @@ def login():
     </html>
     '''
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
 
 @app.route('/clientes')
 def clientes():
@@ -388,7 +430,7 @@ def clientes():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Menu da Gráfica</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -492,7 +534,6 @@ def clientes():
     </body>
     </html>
     '''
-
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -505,6 +546,7 @@ def gerenciar_usuarios():
     except Exception as e:
         flash("Erro ao carregar usuários.")
         return redirect(url_for('clientes'))
+
 
 @app.route('/criar_usuario', methods=['POST'])
 def criar_usuario_view():
@@ -535,6 +577,7 @@ def criar_usuario_view():
     
     return redirect(url_for('gerenciar_usuarios'))
 
+
 @app.route('/excluir_usuario/<int:id>')
 def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -551,6 +594,7 @@ def excluir_usuario_view(id):
         flash("Erro interno no servidor.")
     
     return redirect(url_for('gerenciar_usuarios'))
+
 
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
@@ -584,7 +628,7 @@ def cadastrar_cliente():
             return redirect(url_for('cadastrar_cliente'))
 
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
-                         entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
+                           entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
             flash("✅ Empresa cadastrada com sucesso!")
         else:
             flash("❌ Erro ao cadastrar empresa.")
@@ -599,7 +643,7 @@ def cadastrar_cliente():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cadastrar Empresa - Sua Gráfica</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -883,7 +927,7 @@ def cadastrar_cliente():
                     return;
                 }}
 
-                fetch(`https://viacep.com.br/ws/  ${{cep}}/json/`)
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(response => response.json())
                     .then(data => {{
                         if (data.erro) {{
@@ -911,7 +955,7 @@ def cadastrar_cliente():
                 const cep = this.value.replace(/\\D/g, '');
                 if (cep.length !== 8) return;
 
-                fetch(`https://viacep.com.br/ws/  ${{cep}}/json/`)
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(r => r.json())
                     .then(data => {{
                         if (!data.erro) {{
@@ -926,6 +970,7 @@ def cadastrar_cliente():
     </body>
     </html>
     '''
+
 
 @app.route('/empresas')
 def listar_empresas():
@@ -1102,6 +1147,7 @@ def listar_empresas():
     </html>
     '''
 
+
 @app.route('/empresa/<int:id>')
 def detalhes_empresa(id):
     if 'usuario' not in session:
@@ -1130,7 +1176,7 @@ def detalhes_empresa(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{empresa['nome_empresa']} - Detalhes</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -1240,6 +1286,7 @@ def detalhes_empresa(id):
     </html>
     '''
 
+
 @app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
 def editar_empresa(id):
     if 'usuario' not in session:
@@ -1323,7 +1370,7 @@ def editar_empresa(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Editar Empresa - Sua Gráfica</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -1613,7 +1660,7 @@ def editar_empresa(id):
                     return;
                 }}
 
-                fetch(`https://viacep.com.br/ws/  ${{cep}}/json/`)
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(response => response.json())
                     .then(data => {{
                         if (data.erro) {{
@@ -1641,7 +1688,7 @@ def editar_empresa(id):
                 const cep = this.value.replace(/\\D/g, '');
                 if (cep.length !== 8) return;
 
-                fetch(`https://viacep.com.br/ws/  ${{cep}}/json/`)
+                fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
                     .then(r => r.json())
                     .then(data => {{
                         if (!data.erro) {{
@@ -1656,6 +1703,7 @@ def editar_empresa(id):
     </body>
     </html>
     '''
+
 
 @app.route('/servicos')
 def listar_servicos():
@@ -1940,6 +1988,7 @@ def listar_servicos():
     </html>
     '''
 
+
 @app.route('/servicos_empresa/<int:id>')
 def servicos_por_empresa(id):
     if 'usuario' not in session:
@@ -2007,7 +2056,7 @@ def servicos_por_empresa(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Serviços - {empresa['nome_empresa']}</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -2113,6 +2162,7 @@ def servicos_por_empresa(id):
     </html>
     '''
 
+
 @app.route('/adicionar_servico', methods=['GET', 'POST'])
 def adicionar_servico():
     if 'usuario' not in session:
@@ -2203,8 +2253,6 @@ def adicionar_servico():
         except Exception as e:
             flash("❌ Erro de conexão.")
 
-        return redirect(request.url)
-
     empresas = buscar_empresas()
     materiais = buscar_materiais()
 
@@ -2216,10 +2264,10 @@ def adicionar_servico():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Adicionar Serviço</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #f5f7fa;
                 color: #333;
                 min-height: 100vh;
                 padding: 0;
@@ -2446,6 +2494,7 @@ def adicionar_servico():
     </body>
     </html>
     '''
+
 
 @app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
 def editar_servico(id):
@@ -2746,6 +2795,7 @@ def editar_servico(id):
     </html>
     '''
 
+
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -2766,6 +2816,7 @@ def excluir_servico(id):
         flash("❌ Erro ao excluir serviço.")
 
     return redirect(url_for('servicos'))
+
 
 @app.route('/os/<int:id>')
 def imprimir_os(id):
@@ -2808,16 +2859,56 @@ def imprimir_os(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>OS {servico['codigo_servico']} - Impressão</title>
         <style>
-            body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; }}
-            .header {{ text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}
-            .header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; }}
-            .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-            .info-item strong {{ display: block; font-size: 14px; color: #555; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
-            th {{ background-color: #ecf0f1; color: #2c3e50; }}
-            .total-box {{ text-align: right; font-size: 16px; margin-top: 20px; }}
-            .status {{ font-weight: bold; color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'}; }}
+            body {{
+                font-family: Arial, sans-serif;
+                padding: 40px;
+                color: #333;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #2c3e50;
+                padding-bottom: 15px;
+            }}
+            .header h1 {{
+                margin: 0;
+                color: #2c3e50;
+                font-size: 24px;
+            }}
+            .info-grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }}
+            .info-item strong {{
+                display: block;
+                font-size: 14px;
+                color: #555;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }}
+            th, td {{
+                border: 1px solid #ccc;
+                padding: 8px;
+                text-align: left;
+            }}
+            th {{
+                background-color: #ecf0f1;
+                color: #2c3e50;
+            }}
+            .total-box {{
+                text-align: right;
+                font-size: 16px;
+                margin-top: 20px;
+            }}
+            .status {{
+                font-weight: bold;
+                color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'};
+            }}
             @media print {{
                 .no-print {{ display: none; }}
             }}
@@ -2846,7 +2937,8 @@ def imprimir_os(id):
                 <strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}
             </div>
             <div class="info-item">
-                <strong>Quantidade:</strong> {servico.get('quantidade', '-')}</div>
+                <strong>Quantidade:</strong> {servico.get('quantidade', '-')}
+            </div>
         </div>
 
         <h3>Materiais Utilizados</h3>
@@ -2888,6 +2980,7 @@ def imprimir_os(id):
     '''
     return html
 
+
 @app.route('/configuracoes')
 def configuracoes():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -2904,7 +2997,7 @@ def configuracoes():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Configurações do Sistema</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -3030,6 +3123,7 @@ def configuracoes():
     </html>
     '''
 
+
 @app.route('/salvar_configuracoes', methods=['POST'])
 def salvar_configuracoes_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -3051,6 +3145,7 @@ def salvar_configuracoes_view():
         flash("❌ Erro ao salvar configurações.")
 
     return redirect(url_for('configuracoes'))
+
 
 @app.route('/materiais')
 def listar_materiais():
@@ -3082,7 +3177,7 @@ def listar_materiais():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Materiais Cadastrados</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -3224,6 +3319,7 @@ def listar_materiais():
     </html>
     '''
 
+
 @app.route('/material/<int:id>')
 def detalhes_material(id):
     if 'usuario' not in session:
@@ -3357,6 +3453,7 @@ def detalhes_material(id):
     </html>
     '''
 
+
 @app.route('/editar_material/<int:id>', methods=['GET', 'POST'])
 def editar_material(id):
     if 'usuario' not in session:
@@ -3429,7 +3526,7 @@ def editar_material(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Editar Material - Sua Gráfica</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -3476,11 +3573,6 @@ def editar_material(id):
                 color: #2c3e50;
             }}
             .form-container input,
-            .form-container select,
-            .form-container textarea {{
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd
             .form-container select,
             .form-container textarea {{
                 width: 100%;
@@ -3602,6 +3694,7 @@ def editar_material(id):
     </html>
     '''
 
+
 @app.route('/cadastrar_material', methods=['GET', 'POST'])
 def cadastrar_material():
     if 'usuario' not in session:
@@ -3663,7 +3756,7 @@ def cadastrar_material():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cadastrar Material - Sua Gráfica</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3824,6 +3917,7 @@ def cadastrar_material():
     </html>
     '''
 
+
 @app.route('/excluir_material/<int:id>')
 def excluir_material(id):
     if 'usuario' not in session:
@@ -3840,6 +3934,7 @@ def excluir_material(id):
         flash("❌ Erro de conexão.")
 
     return redirect(url_for('listar_materiais'))
+
 
 @app.route('/gerar_etiqueta/<int:id>')
 def gerar_etiqueta(id):
@@ -3869,7 +3964,7 @@ def gerar_etiqueta(id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Gerar Etiqueta - Correios</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -3945,6 +4040,15 @@ def gerar_etiqueta(id):
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
             }}
+            pre {{
+                background: #f1f1f1;
+                padding: 20px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 16px;
+                white-space: pre-wrap;
+                border: 1px solid #ddd;
+            }}
         </style>
     </head>
     <body>
@@ -3988,6 +4092,7 @@ def gerar_etiqueta(id):
     </body>
     </html>
     '''
+
 
 @app.route('/imprimir_etiqueta/<int:id>', methods=['POST'])
 def imprimir_etiqueta(id):
@@ -4044,6 +4149,7 @@ REMETENTE:
 {remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}
 CEP: {remetente['cep']}
 
+
 DESTINATÁRIO:
 {destinatario['nome']}
 {destinatario['endereco']}
@@ -4074,6 +4180,7 @@ CEP: {destinatario['cep']}
     </body>
     </html>
     '''
+
 
 @app.route('/estoque')
 def estoque():
@@ -4117,14 +4224,10 @@ def estoque():
         valor_total = m.get("valor_total", 0.0) or 0.0
         qtd = m.get("quantidade", 0) or 0
 
-        acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
-        if session["nivel"] == "administrador":
-            acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
-        else:
-            acoes += "—"
+        acoes = f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
 
         movimentacoes_html += f'''
-        <tr>
+        <tr data-id="{m["id"]}">
             <td>{data}</td>
             <td>{nome_material}</td>
             <td class="{classe_tipo}">{tipo.upper()}</td>
@@ -4147,6 +4250,7 @@ def estoque():
             <td>
                 <a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>
                 <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>
+                <a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
             </td>
         </tr>
         '''
@@ -4286,6 +4390,7 @@ def estoque():
                 <h2 class="section-title">Adicionar ao Estoque</h2>
                 <p style="margin: 10px 0;">
                     <a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a>
+                    <a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a>
                 </p>
             </div>
 
@@ -4341,6 +4446,7 @@ def estoque():
     </html>
     '''
 
+
 @app.route('/registrar_entrada_form')
 def registrar_entrada_form():
     if 'usuario' not in session:
@@ -4368,7 +4474,7 @@ def registrar_entrada_form():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Registrar Entrada</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -4536,7 +4642,6 @@ def registrar_entrada_form():
                 const select = document.getElementById('material_id');
                 const id = select.value;
                 const material = materiais.find(m => m.id == id);
-
                 if (material) {{
                     document.getElementById('unidade_medida').value = material.unidade_medida;
                     document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2);
@@ -4581,6 +4686,7 @@ def registrar_entrada_form():
     </html>
     '''
 
+
 @app.route('/registrar_entrada', methods=['POST'])
 def registrar_entrada():
     if 'usuario' not in session:
@@ -4615,7 +4721,7 @@ def registrar_entrada():
             "valor_unitario": valor_unitario,
             "valor_total": valor_total,
             "tamanho": tamanho,
-            "data_movimentacao": "2025-04-05T10:00:00",
+            "data_movimentacao": datetime.now().isoformat(),
             "motivo": None
         }
         response = requests.post(url, json=dados, headers=headers)
@@ -4630,6 +4736,7 @@ def registrar_entrada():
         flash("❌ Erro ao conectar ao banco de dados.")
 
     return redirect(url_for('estoque'))
+
 
 @app.route('/registrar_saida_form')
 def registrar_saida_form():
@@ -4661,7 +4768,7 @@ def registrar_saida_form():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Registrar Saída</title>
         <style>
-            @import url('  https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: #f5f7fa;
@@ -4838,6 +4945,7 @@ def registrar_saida_form():
     </html>
     '''
 
+
 @app.route('/registrar_saida', methods=['POST'])
 def registrar_saida():
     if 'usuario' not in session:
@@ -4861,20 +4969,13 @@ def registrar_saida():
         return redirect(url_for('estoque'))
 
     try:
-        saldo = calcular_estoque_atual()
-        saldo_atual = saldo.get(int(material_id), 0)
-
-        if quantidade > saldo_atual:
-            if not confirm("A quantidade é maior que o saldo. Deseja continuar?"):
-                return redirect(url_for('registrar_saida_form', material_id=material_id))
-
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
             "material_id": int(material_id),
             "tipo": "saida",
             "quantidade": quantidade,
             "motivo": motivo,
-            "data_movimentacao": "2025-04-05T11:00:00"
+            "data_movimentacao": datetime.now().isoformat()
         }
         response = requests.post(url, json=dados, headers=headers)
 
@@ -4887,216 +4988,6 @@ def registrar_saida():
 
     return redirect(url_for('estoque'))
 
-@app.route('/editar_movimentacao/<int:id>')
-def editar_movimentacao_form(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200 or not response.json():
-            flash("Movimentação não encontrada.")
-            return redirect(url_for('estoque'))
-        mov = response.json()[0]
-    except Exception as e:
-        flash("Erro ao carregar movimentação.")
-        return redirect(url_for('estoque'))
-
-    try:
-        url_mat = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{mov['material_id']}"
-        response_mat = requests.get(url_mat, headers=headers)
-        material = response_mat.json()[0] if response_mat.status_code == 200 and response_mat.json() else None
-    except:
-        material = None
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Editar Movimentação</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f5f7fa;
-                color: #333;
-                min-height: 100vh;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                max-width: 900px;
-                margin: 30px auto;
-                background: white;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-            }}
-            .header {{
-                background: #2c3e50;
-                color: white;
-                text-align: center;
-                padding: 30px;
-            }}
-            h1 {{
-                font-size: 28px;
-                margin: 0;
-                font-weight: 600;
-            }}
-            .user-info {{
-                background: #34495e;
-                color: white;
-                padding: 15px 20px;
-                font-size: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .form-container {{
-                padding: 30px;
-            }}
-            .grid-2 {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }}
-            .form-container label {{
-                display: block;
-                margin: 10px 0 5px 0;
-                font-weight: 600;
-                color: #2c3e50;
-            }}
-            .form-container input,
-            .form-container select {{
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                font-size: 14px;
-            }}
-            .btn {{
-                padding: 12px 20px;
-                background: #f39c12;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-            }}
-            .back-link {{
-                display: inline-block;
-                margin: 20px 30px;
-                color: #3498db;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .footer {{
-                text-align: center;
-                padding: 20px;
-                background: #ecf0f1;
-                color: #7f8c8d;
-                font-size: 13px;
-                border-top: 1px solid #bdc3c7;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>✏️ Editar Movimentação</h1>
-            </div>
-            <div class="user-info">
-                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
-
-            <div class="form-container">
-                <form method="post" action="/editar_movimentacao/{id}">
-                    <div>
-                        <label>Tipo</label>
-                        <select name="tipo" disabled>
-                            <option value="{mov['tipo']}" selected>{mov['tipo'].upper()}</option>
-                        </select>
-                        <small style="color: #7f8c8d;">O tipo não pode ser alterado.</small>
-                    </div>
-
-                    <div>
-                        <label>Material</label>
-                        <input type="text" value="{material['denominacao'] if material else 'Material excluído'}" readonly>
-                    </div>
-
-                    <div class="grid-2">
-                        <div>
-                            <label>Quantidade</label>
-                            <input type="number" name="quantidade" value="{mov['quantidade']}" step="0.01" required>
-                        </div>
-                        <div>
-                            <label>Valor Unitário (R$)</label>
-                            <input type="number" name="valor_unitario" value="{mov['valor_unitario']}" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label>Motivo ou Observação</label>
-                        <textarea name="motivo" rows="3">{mov.get('motivo', '')}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn">💾 Salvar Alterações</button>
-                </form>
-            </div>
-
-            <div class="footer">
-                Sistema de Gestão para Gráfica Rápida | © 2025
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
-@app.route('/editar_movimentacao/<int:id>', methods=['POST'])
-def editar_movimentacao(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    quantidade = request.form.get('quantidade')
-    valor_unitario = request.form.get('valor_unitario')
-    motivo = request.form.get('motivo')
-
-    if not quantidade or not valor_unitario:
-        flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        quantidade = float(quantidade)
-        valor_unitario = float(valor_unitario)
-        valor_total = quantidade * valor_unitario
-    except:
-        flash("Valores inválidos.")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        dados = {
-            "quantidade": quantidade,
-            "valor_unitario": valor_unitario,
-            "valor_total": valor_total,
-            "motivo": motivo
-        }
-        response = requests.patch(url, json=dados, headers=headers)
-
-        if response.status_code == 204:
-            flash("✅ Movimentação atualizada com sucesso!")
-        else:
-            flash("❌ Erro ao atualizar movimentação.")
-    except Exception as e:
-        flash("❌ Erro ao atualizar movimentação.")
-
-    return redirect(url_for('estoque'))
 
 @app.route('/excluir_movimentacao/<int:id>')
 def excluir_movimentacao(id):
@@ -5110,6 +5001,7 @@ def excluir_movimentacao(id):
         flash("❌ Erro ao excluir movimentação.")
 
     return redirect(url_for('estoque'))
+
 
 @app.route('/exportar_excel')
 def exportar_excel():
@@ -5214,6 +5106,7 @@ def exportar_excel():
         download_name="backup_sistema_grafica.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 @app.route('/importar_excel', methods=['GET', 'POST'])
 def importar_excel():
@@ -5321,9 +5214,10 @@ def importar_excel():
 
     return render_template('importar_excel.html', log=None)
 
+
 # ========================
 # Iniciar o app
 # ========================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)                
+    app.run(host='0.0.0.0', port=port)
