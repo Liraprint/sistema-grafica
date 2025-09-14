@@ -3,3 +3,4 @@ requests
 openpyxl
 pandas
 gunicorn
+pdfkit==1.0.0

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 import requests
 import os
 import pandas as pd
@@ -38,6 +38,7 @@ def buscar_usuario_por_login(username, password):
         print("Erro de conexão:", e)
         return None
 
+
 def buscar_usuarios():
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
@@ -50,6 +51,7 @@ def buscar_usuarios():
     except Exception as e:
         print("Erro de conexão:", e)
         return []
+
 
 def criar_usuario(username, password, nivel):
     try:
@@ -72,6 +74,7 @@ def criar_usuario(username, password, nivel):
         print("Erro de conexão:", e)
         return False
 
+
 def excluir_usuario(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
@@ -87,6 +90,7 @@ def excluir_usuario(id):
     except Exception as e:
         print("Erro de conexão:", e)
         return False
+
 
 def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
                   entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
@@ -124,6 +128,7 @@ def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, 
         print("Erro de conexão:", e)
         return False
 
+
 def buscar_empresas():
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
@@ -137,6 +142,7 @@ def buscar_empresas():
         print("Erro de conexão:", e)
         return []
 
+
 def buscar_materiais():
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
@@ -146,6 +152,7 @@ def buscar_materiais():
         return []
     except:
         return []
+
 
 def calcular_estoque_atual():
     try:
@@ -181,6 +188,7 @@ def calcular_estoque_atual():
         print("❌ Erro ao calcular estoque:", str(e))
         return {}
 
+
 def buscar_movimentacoes_com_materiais(busca=None):
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque?select=*,materiais(denominacao,unidade_medida)&order=data_movimentacao.desc"
@@ -194,6 +202,7 @@ def buscar_movimentacoes_com_materiais(busca=None):
         print("Erro ao buscar movimentações:", e)
         return []
 
+
 def excluir_movimentacao_db(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
@@ -202,14 +211,85 @@ def excluir_movimentacao_db(id):
     except:
         return False
 
+
 def format_data(data_str):
     if data_str is None or not data_str:
         return ''
     return data_str[:16].replace("T", " ")
 
+
+# ========================
+# Funções para Fornecedores
+# ========================
+
+def buscar_fornecedores():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*&order=nome.asc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("Erro ao buscar fornecedores:", response.status_code, response.text)
+            return []
+    except Exception as e:
+        print("Erro de conexão ao buscar fornecedores:", e)
+        return []
+
+
+def criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores"
+        dados = {
+            "nome": nome,
+            "cnpj": cnpj,
+            "contato": contato,
+            "telefone": telefone,
+            "email": email,
+            "endereco": endereco
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        if response.status_code == 201:
+            return True
+        else:
+            print("❌ Erro ao criar fornecedor:", response.status_code, response.text)
+            return False
+    except Exception as e:
+        print("Erro de conexão ao criar fornecedor:", e)
+        return False
+
+
+def atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        dados = {
+            "nome": nome,
+            "cnpj": cnpj,
+            "contato": contato,
+            "telefone": telefone,
+            "email": email,
+            "endereco": endereco
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro de conexão ao atualizar fornecedor:", e)
+        return False
+
+
+def excluir_fornecedor(id):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro de conexão ao excluir fornecedor:", e)
+        return False
+
+
 # ========================
 # Configurações do sistema (remetente)
 # ========================
+
 
 def buscar_configuracoes():
     try:
@@ -237,6 +317,7 @@ def buscar_configuracoes():
             "cep_remetente": "07076-070"
         }
 
+
 def salvar_configuracoes(config):
     try:
         url = f"{SUPABASE_URL}/rest/v1/configuracoes"
@@ -255,15 +336,18 @@ def salvar_configuracoes(config):
         print("Erro ao salvar configurações:", e)
         return False
 
+
 # ========================
 # Páginas do sistema
 # ========================
+
 
 @app.route('/')
 def index():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     return redirect(url_for('clientes'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -389,10 +473,12 @@ def login():
     </html>
     '''
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
 
 @app.route('/clientes')
 def clientes():
@@ -475,6 +561,7 @@ def clientes():
             .btn-blue {{ background: #3498db; }}
             .btn-purple {{ background: #8e44ad; }}
             .btn-red {{ background: #e74c3c; }}
+            .btn-orange {{ background: #e67e22; }}
             .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
             .footer {{
                 text-align: center;
@@ -499,6 +586,7 @@ def clientes():
                 <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
@@ -512,6 +600,7 @@ def clientes():
     </html>
     '''
 
+
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -524,6 +613,7 @@ def gerenciar_usuarios():
     except Exception as e:
         flash("Erro ao carregar usuários.")
         return redirect(url_for('clientes'))
+
 
 @app.route('/criar_usuario', methods=['POST'])
 def criar_usuario_view():
@@ -554,6 +644,7 @@ def criar_usuario_view():
     
     return redirect(url_for('gerenciar_usuarios'))
 
+
 @app.route('/excluir_usuario/<int:id>')
 def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -570,6 +661,7 @@ def excluir_usuario_view(id):
         flash("Erro interno no servidor.")
     
     return redirect(url_for('gerenciar_usuarios'))
+
 
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
@@ -603,7 +695,7 @@ def cadastrar_cliente():
             return redirect(url_for('cadastrar_cliente'))
 
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
-                         entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
+                           entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
             flash("✅ Empresa cadastrada com sucesso!")
         else:
             flash("❌ Erro ao cadastrar empresa.")
@@ -946,6 +1038,7 @@ def cadastrar_cliente():
     </html>
     '''
 
+
 @app.route('/empresas')
 def listar_empresas():
     if 'usuario' not in session:
@@ -1053,9 +1146,6 @@ def listar_empresas():
                 text-decoration: none;
                 font-weight: 500;
             }}
-            .back-link:hover {{
-                text-decoration: underline;
-            }}
             .footer {{
                 text-align: center;
                 padding: 20px;
@@ -1120,6 +1210,7 @@ def listar_empresas():
     </body>
     </html>
     '''
+
 
 @app.route('/empresa/<int:id>')
 def detalhes_empresa(id):
@@ -1258,6 +1349,7 @@ def detalhes_empresa(id):
     </body>
     </html>
     '''
+
 
 @app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
 def editar_empresa(id):
@@ -1676,6 +1768,7 @@ def editar_empresa(id):
     </html>
     '''
 
+
 @app.route('/servicos')
 def listar_servicos():
     if 'usuario' not in session:
@@ -1959,6 +2052,7 @@ def listar_servicos():
     </html>
     '''
 
+
 @app.route('/servicos_empresa/<int:id>')
 def servicos_por_empresa(id):
     if 'usuario' not in session:
@@ -2131,6 +2225,7 @@ def servicos_por_empresa(id):
     </body>
     </html>
     '''
+
 
 @app.route('/adicionar_servico', methods=['GET', 'POST'])
 def adicionar_servico():
@@ -2464,6 +2559,7 @@ def adicionar_servico():
     </html>
     '''
 
+
 @app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
 def editar_servico(id):
     if 'usuario' not in session:
@@ -2763,6 +2859,7 @@ def editar_servico(id):
     </html>
     '''
 
+
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -2783,6 +2880,7 @@ def excluir_servico(id):
         flash("❌ Erro ao excluir serviço.")
 
     return redirect(url_for('servicos'))
+
 
 @app.route('/os/<int:id>')
 def imprimir_os(id):
@@ -2946,6 +3044,7 @@ def imprimir_os(id):
     '''
     return html
 
+
 @app.route('/configuracoes')
 def configuracoes():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -3088,6 +3187,7 @@ def configuracoes():
     </html>
     '''
 
+
 @app.route('/salvar_configuracoes', methods=['POST'])
 def salvar_configuracoes_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -3109,6 +3209,7 @@ def salvar_configuracoes_view():
         flash("❌ Erro ao salvar configurações.")
 
     return redirect(url_for('configuracoes'))
+
 
 @app.route('/materiais')
 def listar_materiais():
@@ -3282,6 +3383,7 @@ def listar_materiais():
     </html>
     '''
 
+
 @app.route('/material/<int:id>')
 def detalhes_material(id):
     if 'usuario' not in session:
@@ -3415,6 +3517,7 @@ def detalhes_material(id):
     </html>
     '''
 
+
 @app.route('/editar_material/<int:id>', methods=['GET', 'POST'])
 def editar_material(id):
     if 'usuario' not in session:
@@ -3439,7 +3542,7 @@ def editar_material(id):
         unidade_outro = request.form.get('unidade_outro')
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
-        fornecedor = request.form.get('fornecedor')
+        fornecedor_id = request.form.get('fornecedor_id')
 
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
@@ -3466,8 +3569,15 @@ def editar_material(id):
                 "unidade_medida": unidade_medida,
                 "valor_unitario": valor_unitario,
                 "especificacao": especificacao,
-                "fornecedor": fornecedor
+                "fornecedor": None
             }
+
+            if fornecedor_id:
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor:
+                    dados["fornecedor"] = fornecedor["nome"]
+
             response = requests.patch(url, json=dados, headers=headers)
             if response.status_code == 204:
                 flash("✅ Material atualizado com sucesso!")
@@ -3478,6 +3588,17 @@ def editar_material(id):
             flash("❌ Erro de conexão.")
 
         return redirect(request.url)
+
+    fornecedores = buscar_fornecedores()
+    fornecedor_selecionado = None
+    if material.get('fornecedor'):
+        fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
+
+    # ✅ CORREÇÃO PRINCIPAL: Expressão ternária correta
+    def get_selected_attr(f_id):
+        if fornecedor_selecionado and f_id == fornecedor_selecionado['id']:
+            return 'selected'
+        return ''
 
     return f'''
     <!DOCTYPE html>
@@ -3596,19 +3717,19 @@ def editar_material(id):
                     <label>Unidade de Medida *</label>
                     <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
                         <option value="">Selecione</option>
-                        <option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ''}>folha</option>
-                        <option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ''}>metro</option>
-                        <option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ''}>centímetro</option>
-                        <option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ''}>milímetro</option>
-                        <option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ''}>grama</option>
-                        <option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ''}>quilograma</option>
-                        <option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ''}>rolo</option>
-                        <option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ''}>litro</option>
-                        <option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ''}>unidade</option>
-                        <option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ''}>conjunto</option>
-                        <option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ''}>m²</option>
-                        <option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ''}>cm²</option>
-                        <option value="outro" {"selected" if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}>Outro (especifique)</option>
+                        <option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ""}>folha</option>
+                        <option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ""}>metro</option>
+                        <option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ""}>centímetro</option>
+                        <option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ""}>milímetro</option>
+                        <option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ""}>grama</option>
+                        <option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ""}>quilograma</option>
+                        <option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ""}>rolo</option>
+                        <option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ""}>litro</option>
+                        <option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ""}>unidade</option>
+                        <option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ""}>conjunto</option>
+                        <option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ""}>m²</option>
+                        <option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ""}>cm²</option>
+                        <option value="outro" {"selected" if material['unidade_medida'] == 'outro' else ""}>Outro (especifique)</option>
                     </select>
                     <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}">
                 </div>
@@ -3622,7 +3743,10 @@ def editar_material(id):
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <input type="text" name="fornecedor" value="{material['fornecedor']}">
+                    <select name="fornecedor_id" id="fornecedor_id">
+                        <option value="">Selecione um fornecedor</option>
+                        {''.join(f'<option value="{f["id"]}" {get_selected_attr(f["id"])}>{f["nome"]}</option>' for f in fornecedores)}
+                    </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Alterações</button>
             </form>
@@ -3655,6 +3779,7 @@ def editar_material(id):
     </html>
     '''
 
+
 @app.route('/cadastrar_material', methods=['GET', 'POST'])
 def cadastrar_material():
     if 'usuario' not in session:
@@ -3668,7 +3793,7 @@ def cadastrar_material():
         unidade_outro = request.form.get('unidade_outro')
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
-        fornecedor = request.form.get('fornecedor')
+        fornecedor_id = request.form.get('fornecedor_id')
 
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
@@ -3695,8 +3820,15 @@ def cadastrar_material():
                 "unidade_medida": unidade_medida,
                 "valor_unitario": valor_unitario,
                 "especificacao": especificacao,
-                "fornecedor": fornecedor
+                "fornecedor": None
             }
+
+            if fornecedor_id:
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor:
+                    dados["fornecedor"] = fornecedor["nome"]
+
             response = requests.post(url, json=dados, headers=headers)
             if response.status_code == 201:
                 flash("✅ Material cadastrado com sucesso!")
@@ -3707,6 +3839,8 @@ def cadastrar_material():
             flash("❌ Erro de conexão.")
 
         return redirect(request.url)
+
+    fornecedores = buscar_fornecedores()
 
     return f'''
     <!DOCTYPE html>
@@ -3851,7 +3985,10 @@ def cadastrar_material():
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <input type="text" name="fornecedor">
+                    <select name="fornecedor_id" id="fornecedor_id">
+                        <option value="">Selecione um fornecedor</option>
+                        {''.join(f'<option value="{f["id"]}">{f["nome"]}</option>' for f in fornecedores)}
+                    </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Material</button>
             </form>
@@ -3877,6 +4014,7 @@ def cadastrar_material():
     </html>
     '''
 
+
 @app.route('/excluir_material/<int:id>')
 def excluir_material(id):
     if 'usuario' not in session:
@@ -3893,6 +4031,7 @@ def excluir_material(id):
         flash("❌ Erro de conexão.")
 
     return redirect(url_for('listar_materiais'))
+
 
 @app.route('/gerar_etiqueta/<int:id>')
 def gerar_etiqueta(id):
@@ -4051,6 +4190,7 @@ def gerar_etiqueta(id):
     </html>
     '''
 
+
 @app.route('/imprimir_etiqueta/<int:id>', methods=['POST'])
 def imprimir_etiqueta(id):
     if 'usuario' not in session:
@@ -4106,6 +4246,7 @@ REMETENTE:
 {remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}
 CEP: {remetente['cep']}
 
+
 DESTINATÁRIO:
 {destinatario['nome']}
 {destinatario['endereco']}
@@ -4136,6 +4277,7 @@ CEP: {destinatario['cep']}
     </body>
     </html>
     '''
+
 
 @app.route('/estoque')
 def estoque():
@@ -4179,14 +4321,10 @@ def estoque():
         valor_total = m.get("valor_total", 0.0) or 0.0
         qtd = m.get("quantidade", 0) or 0
 
-        acoes = f'<a href="/editar_movimentacao/{m["id"]}" class="btn btn-edit">✏️ Editar</a>'
-        if session["nivel"] == "administrador":
-            acoes += f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
-        else:
-            acoes += "—"
+        acoes = f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
 
         movimentacoes_html += f'''
-        <tr>
+        <tr data-id="{m["id"]}">
             <td>{data}</td>
             <td>{nome_material}</td>
             <td class="{classe_tipo}">{tipo.upper()}</td>
@@ -4209,6 +4347,7 @@ def estoque():
             <td>
                 <a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>
                 <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>
+                <a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
             </td>
         </tr>
         '''
@@ -4348,6 +4487,7 @@ def estoque():
                 <h2 class="section-title">Adicionar ao Estoque</h2>
                 <p style="margin: 10px 0;">
                     <a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a>
+                    <a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a>
                 </p>
             </div>
 
@@ -4402,6 +4542,7 @@ def estoque():
     </body>
     </html>
     '''
+
 
 @app.route('/registrar_entrada_form')
 def registrar_entrada_form():
@@ -4598,7 +4739,6 @@ def registrar_entrada_form():
                 const select = document.getElementById('material_id');
                 const id = select.value;
                 const material = materiais.find(m => m.id == id);
-
                 if (material) {{
                     document.getElementById('unidade_medida').value = material.unidade_medida;
                     document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2);
@@ -4643,6 +4783,7 @@ def registrar_entrada_form():
     </html>
     '''
 
+
 @app.route('/registrar_entrada', methods=['POST'])
 def registrar_entrada():
     if 'usuario' not in session:
@@ -4677,7 +4818,7 @@ def registrar_entrada():
             "valor_unitario": valor_unitario,
             "valor_total": valor_total,
             "tamanho": tamanho,
-            "data_movimentacao": "2025-04-05T10:00:00",
+            "data_movimentacao": datetime.now().isoformat(),
             "motivo": None
         }
         response = requests.post(url, json=dados, headers=headers)
@@ -4692,6 +4833,7 @@ def registrar_entrada():
         flash("❌ Erro ao conectar ao banco de dados.")
 
     return redirect(url_for('estoque'))
+
 
 @app.route('/registrar_saida_form')
 def registrar_saida_form():
@@ -4900,6 +5042,7 @@ def registrar_saida_form():
     </html>
     '''
 
+
 @app.route('/registrar_saida', methods=['POST'])
 def registrar_saida():
     if 'usuario' not in session:
@@ -4923,20 +5066,13 @@ def registrar_saida():
         return redirect(url_for('estoque'))
 
     try:
-        saldo = calcular_estoque_atual()
-        saldo_atual = saldo.get(int(material_id), 0)
-
-        if quantidade > saldo_atual:
-            if not confirm("A quantidade é maior que o saldo. Deseja continuar?"):
-                return redirect(url_for('registrar_saida_form', material_id=material_id))
-
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
             "material_id": int(material_id),
             "tipo": "saida",
             "quantidade": quantidade,
             "motivo": motivo,
-            "data_movimentacao": "2025-04-05T11:00:00"
+            "data_movimentacao": datetime.now().isoformat()
         }
         response = requests.post(url, json=dados, headers=headers)
 
@@ -4949,28 +5085,46 @@ def registrar_saida():
 
     return redirect(url_for('estoque'))
 
-@app.route('/editar_movimentacao/<int:id>')
-def editar_movimentacao_form(id):
+
+@app.route('/excluir_movimentacao/<int:id>')
+def excluir_movimentacao(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('estoque'))
+
+    if excluir_movimentacao_db(id):
+        flash("🗑️ Movimentação excluída com sucesso!")
+    else:
+        flash("❌ Erro ao excluir movimentação.")
+
+    return redirect(url_for('estoque'))
+
+
+# ========================
+# Rotas para Fornecedores
+# ========================
+
+@app.route('/fornecedores')
+def listar_fornecedores():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200 or not response.json():
-            flash("Movimentação não encontrada.")
-            return redirect(url_for('estoque'))
-        mov = response.json()[0]
-    except Exception as e:
-        flash("Erro ao carregar movimentação.")
-        return redirect(url_for('estoque'))
+    busca = request.args.get('q', '').strip()
 
     try:
-        url_mat = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{mov['material_id']}"
-        response_mat = requests.get(url_mat, headers=headers)
-        material = response_mat.json()[0] if response_mat.status_code == 200 and response_mat.json() else None
-    except:
-        material = None
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/fornecedores?or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            fornecedores = response.json()
+        else:
+            flash("Erro ao carregar fornecedores.")
+            fornecedores = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        fornecedores = []
 
     return f'''
     <!DOCTYPE html>
@@ -4978,7 +5132,7 @@ def editar_movimentacao_form(id):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Editar Movimentação</title>
+        <title>Fornecedores Cadastrados</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
             body {{
@@ -4990,7 +5144,7 @@ def editar_movimentacao_form(id):
                 margin: 0;
             }}
             .container {{
-                max-width: 900px;
+                max-width: 1100px;
                 margin: 30px auto;
                 background: white;
                 border-radius: 16px;
@@ -5017,13 +5171,185 @@ def editar_movimentacao_form(id):
                 justify-content: space-between;
                 align-items: center;
             }}
-            .form-container {{
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input {{
+                width: 70%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 16px 20px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 14px;
+            }}
+            tr:nth-child(even) {{
+                background: #f9f9f9;
+            }}
+            tr:hover {{
+                background: #f1f7fb;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📋 Fornecedores Cadastrados</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
+
+            <div class="search-box">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>CNPJ</th>
+                        <th>Contato</th>
+                        <th>Telefone</th>
+                        <th>E-mail</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{f["id"]}</td>
+                        <td>{f["nome"]}</td>
+                        <td>{f["cnpj"]}</td>
+                        <td>{f.get("contato", "—")}</td>
+                        <td>{f.get("telefone", "—")}</td>
+                        <td>{f.get("email", "—")}</td>
+                        <td>
+                            <div style="display: flex; gap: 10px;">
+                                <a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                                <a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                            </div>
+                        </td>
+                    </tr>
+                    """ for f in fornecedores)}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/cadastrar_fornecedor', methods=['GET', 'POST'])
+def cadastrar_fornecedor():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+
+        if criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor cadastrado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
+        else:
+            flash("❌ Erro ao cadastrar fornecedor.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cadastrar Fornecedor</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
                 padding: 30px;
             }}
-            .grid-2 {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
             }}
             .form-container label {{
                 display: block;
@@ -5032,7 +5358,176 @@ def editar_movimentacao_form(id):
                 color: #2c3e50;
             }}
             .form-container input,
-            .form-container select {{
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Cadastrar Novo Fornecedor</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Nome *</label>
+                    <input type="text" name="nome" required>
+                </div>
+                <div>
+                    <label>CNPJ</label>
+                    <input type="text" name="cnpj">
+                </div>
+                <div>
+                    <label>Contato</label>
+                    <input type="text" name="contato">
+                </div>
+                <div>
+                    <label>Telefone</label>
+                    <input type="text" name="telefone">
+                </div>
+                <div>
+                    <label>E-mail</label>
+                    <input type="email" name="email">
+                </div>
+                <div>
+                    <label>Endereço</label>
+                    <textarea name="endereco" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Fornecedor</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/editar_fornecedor/<int:id>', methods=['GET', 'POST'])
+def editar_fornecedor(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Fornecedor não encontrado.")
+            return redirect(url_for('listar_fornecedores'))
+        fornecedor = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar fornecedor.")
+        return redirect(url_for('listar_fornecedores'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+
+        if atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor atualizado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
+        else:
+            flash("❌ Erro ao atualizar fornecedor.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Fornecedor</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container textarea {{
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
@@ -5069,49 +5564,40 @@ def editar_movimentacao_form(id):
     <body>
         <div class="container">
             <div class="header">
-                <h1>✏️ Editar Movimentação</h1>
+                <h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1>
             </div>
             <div class="user-info">
                 <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
                 <a href="/logout">🚪 Sair</a>
             </div>
-            <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
-
-            <div class="form-container">
-                <form method="post" action="/editar_movimentacao/{id}">
-                    <div>
-                        <label>Tipo</label>
-                        <select name="tipo" disabled>
-                            <option value="{mov['tipo']}" selected>{mov['tipo'].upper()}</option>
-                        </select>
-                        <small style="color: #7f8c8d;">O tipo não pode ser alterado.</small>
-                    </div>
-
-                    <div>
-                        <label>Material</label>
-                        <input type="text" value="{material['denominacao'] if material else 'Material excluído'}" readonly>
-                    </div>
-
-                    <div class="grid-2">
-                        <div>
-                            <label>Quantidade</label>
-                            <input type="number" name="quantidade" value="{mov['quantidade']}" step="0.01" required>
-                        </div>
-                        <div>
-                            <label>Valor Unitário (R$)</label>
-                            <input type="number" name="valor_unitario" value="{mov['valor_unitario']}" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label>Motivo ou Observação</label>
-                        <textarea name="motivo" rows="3">{mov.get('motivo', '')}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn">💾 Salvar Alterações</button>
-                </form>
-            </div>
-
+            <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Nome *</label>
+                    <input type="text" name="nome" value="{fornecedor['nome']}" required>
+                </div>
+                <div>
+                    <label>CNPJ</label>
+                    <input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}">
+                </div>
+                <div>
+                    <label>Contato</label>
+                    <input type="text" name="contato" value="{fornecedor.get('contato', '')}">
+                </div>
+                <div>
+                    <label>Telefone</label>
+                    <input type="text" name="telefone" value="{fornecedor.get('telefone', '')}">
+                </div>
+                <div>
+                    <label>E-mail</label>
+                    <input type="email" name="email" value="{fornecedor.get('email', '')}">
+                </div>
+                <div>
+                    <label>Endereço</label>
+                    <textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
@@ -5120,58 +5606,20 @@ def editar_movimentacao_form(id):
     </html>
     '''
 
-@app.route('/editar_movimentacao/<int:id>', methods=['POST'])
-def editar_movimentacao(id):
+
+@app.route('/excluir_fornecedor/<int:id>')
+def excluir_fornecedor_view(id):
     if 'usuario' not in session:
+        flash("Acesso negado!")
         return redirect(url_for('login'))
 
-    quantidade = request.form.get('quantidade')
-    valor_unitario = request.form.get('valor_unitario')
-    motivo = request.form.get('motivo')
-
-    if not quantidade or not valor_unitario:
-        flash("Preencha todos os campos obrigatórios!")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        quantidade = float(quantidade)
-        valor_unitario = float(valor_unitario)
-        valor_total = quantidade * valor_unitario
-    except:
-        flash("Valores inválidos.")
-        return redirect(url_for('editar_movimentacao_form', id=id))
-
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/estoque?id=eq.{id}"
-        dados = {
-            "quantidade": quantidade,
-            "valor_unitario": valor_unitario,
-            "valor_total": valor_total,
-            "motivo": motivo
-        }
-        response = requests.patch(url, json=dados, headers=headers)
-
-        if response.status_code == 204:
-            flash("✅ Movimentação atualizada com sucesso!")
-        else:
-            flash("❌ Erro ao atualizar movimentação.")
-    except Exception as e:
-        flash("❌ Erro ao atualizar movimentação.")
-
-    return redirect(url_for('estoque'))
-
-@app.route('/excluir_movimentacao/<int:id>')
-def excluir_movimentacao(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('estoque'))
-
-    if excluir_movimentacao_db(id):
-        flash("🗑️ Movimentação excluída com sucesso!")
+    if excluir_fornecedor(id):
+        flash("🗑️ Fornecedor excluído com sucesso!")
     else:
-        flash("❌ Erro ao excluir movimentação.")
+        flash("❌ Erro ao excluir fornecedor.")
 
-    return redirect(url_for('estoque'))
+    return redirect(url_for('listar_fornecedores'))
+
 
 @app.route('/exportar_excel')
 def exportar_excel():
@@ -5276,6 +5724,7 @@ def exportar_excel():
         download_name="backup_sistema_grafica.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 @app.route('/importar_excel', methods=['GET', 'POST'])
 def importar_excel():
@@ -5382,6 +5831,7 @@ def importar_excel():
             return redirect(request.url)
 
     return render_template('importar_excel.html', log=None)
+
 
 # ========================
 # Iniciar o app
