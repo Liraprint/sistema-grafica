@@ -54,42 +54,30 @@ def buscar_usuarios():
         return []
 
 
-def criar_usuario_com_permissoes(username, password, nivel, permissoes):
+def criar_usuario(username, password, nivel):
     try:
-        # Primeiro cria o usuário
-        url_user = f"{SUPABASE_URL}/rest/v1/usuarios"
-        dados_user = {
+        url = f"{SUPABASE_URL}/rest/v1/usuarios"
+        dados = {
             "nome de usuario": username,
             "SENHA": password,
             "NÍVEL": nivel
         }
-        response_user = requests.post(url_user, json=dados_user, headers=headers)
-        if response_user.status_code != 201:
+        response = requests.post(url, json=dados, headers=headers)
+        
+        if response.status_code == 201:
+            return True
+        else:
+            print("❌ Erro ao criar usuário:")
+            print("Status:", response.status_code)
+            print("Resposta:", response.text)
             return False
-
-        usuario_id = response_user.json()['id']
-
-        # Agora salva as permissões
-        url_perm = f"{SUPABASE_URL}/rest/v1/permissoes_usuario"
-        dados_perm = {
-            "usuario_id": usuario_id,
-            **permissoes
-        }
-        response_perm = requests.post(url_perm, json=dados_perm, headers=headers)
-        return response_perm.status_code == 201
-
     except Exception as e:
-        print("Erro ao criar usuário com permissões:", e)
+        print("Erro de conexão:", e)
         return False
 
 
 def excluir_usuario(id):
     try:
-        # Primeiro exclui as permissões
-        url_perm = f"{SUPABASE_URL}/rest/v1/permissoes_usuario?usuario_id=eq.{id}"
-        requests.delete(url_perm, headers=headers)
-        
-        # Depois exclui o usuário
         url = f"{SUPABASE_URL}/rest/v1/usuarios?id=eq.{id}"
         response = requests.delete(url, headers=headers)
         
@@ -103,29 +91,6 @@ def excluir_usuario(id):
     except Exception as e:
         print("Erro de conexão:", e)
         return False
-
-
-def carregar_permissoes_usuario(usuario_id):
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/permissoes_usuario?usuario_id=eq.{usuario_id}"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200 and response.json():
-            return response.json()[0]
-        else:
-            # Retorna permissões padrão se não existir
-            return {
-                "pode_ver_empresas": True,
-                "pode_editar_empresas": False,
-                "pode_criar_servicos": True,
-                "pode_criar_orcamentos": True,
-                "pode_registrar_estoque": False,
-                "pode_ver_fornecedores": False,
-                "pode_gerenciar_usuarios": False,
-                "pode_exportar_excel": False
-            }
-    except Exception as e:
-        print("Erro ao carregar permissões:", e)
-        return {}
 
 
 def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
@@ -396,12 +361,6 @@ def login():
             if usuario:
                 session['usuario'] = usuario['nome de usuario']
                 session['nivel'] = usuario['NÍVEL']
-                session['usuario_id'] = usuario['id']
-                
-                # Carrega permissões
-                permissoes = carregar_permissoes_usuario(usuario['id'])
-                session['permissoes'] = permissoes
-
                 return redirect(url_for('clientes'))
             else:
                 flash("Usuário ou senha incorretos!")
@@ -527,8 +486,6 @@ def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    permissoes = session.get('permissoes', {})
-    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -631,10 +588,10 @@ def clientes():
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
-                {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if permissoes.get('pode_ver_fornecedores', False) else ''}
+                {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
-                {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if permissoes.get('pode_exportar_excel', False) else ''}
+                {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
             </div>
             <div class="footer">
@@ -654,84 +611,7 @@ def gerenciar_usuarios():
     
     try:
         usuarios = buscar_usuarios()
-        return f'''
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <title>Gerenciar Usuários</title>
-            <style>
-                body {{ font-family: Arial; margin: 40px; }}
-                .form-group {{ margin: 15px 0; }}
-                .checkbox-group {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0; }}
-                button {{ padding: 10px 20px; background: #27ae60; color: white; border: none; cursor: pointer; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th, td {{ padding: 10px; border: 1px solid #ddd; text-align: left; }}
-                th {{ background: #f2f2f2; }}
-            </style>
-        </head>
-        <body>
-            <h2>🔐 Gerenciar Usuários</h2>
-            <a href="/clientes">← Voltar</a>
-
-            <h3>➕ Criar Novo Usuário</h3>
-            <form method="post" action="/criar_usuario">
-                <div class="form-group">
-                    <label>Usuário:</label>
-                    <input type="text" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label>Senha:</label>
-                    <input type="password" name="password" required>
-                </div>
-                <div class="form-group">
-                    <label>Nível:</label>
-                    <select name="nivel" required>
-                        <option value="administrador">Administrador</option>
-                        <option value="vendedor">Vendedor</option>
-                        <option value="consulta">Consulta</option>
-                    </select>
-                </div>
-
-                <h4>Permissões Específicas:</h4>
-                <div class="checkbox-group">
-                    <label><input type="checkbox" name="pode_ver_empresas" checked> Ver Empresas</label>
-                    <label><input type="checkbox" name="pode_editar_empresas"> Editar Empresas</label>
-                    <label><input type="checkbox" name="pode_criar_servicos" checked> Criar Serviços</label>
-                    <label><input type="checkbox" name="pode_criar_orcamentos" checked> Criar Orçamentos</label>
-                    <label><input type="checkbox" name="pode_registrar_estoque"> Registrar Estoque</label>
-                    <label><input type="checkbox" name="pode_ver_fornecedores"> Ver Fornecedores</label>
-                    <label><input type="checkbox" name="pode_gerenciar_usuarios"> Gerenciar Usuários</label>
-                    <label><input type="checkbox" name="pode_exportar_excel"> Exportar Excel</label>
-                </div>
-
-                <button type="submit">Criar Usuário</button>
-            </form>
-
-            <h3>📋 Usuários Existentes</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Usuário</th>
-                        <th>Nível</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {''.join(f"""
-                    <tr>
-                        <td>{u['id']}</td>
-                        <td>{u['nome de usuario']}</td>
-                        <td>{u['NÍVEL']}</td>
-                        <td><a href="/excluir_usuario/{u['id']}" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td>
-                    </tr>
-                    """ for u in usuarios)}
-                </tbody>
-            </table>
-        </body>
-        </html>
-        '''
+        return render_template('gerenciar_usuarios.html', usuarios=usuarios)
     except Exception as e:
         flash("Erro ao carregar usuários.")
         return redirect(url_for('clientes'))
@@ -742,40 +622,28 @@ def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('gerenciar_usuarios'))
-
+    
     username = request.form.get('username')
     password = request.form.get('password')
     nivel = request.form.get('nivel')
-
+    
     if not username or not password or not nivel:
         flash("Todos os campos são obrigatórios!")
         return redirect(url_for('gerenciar_usuarios'))
-
+    
     if nivel not in ['administrador', 'vendedor', 'consulta']:
         flash("Nível inválido!")
         return redirect(url_for('gerenciar_usuarios'))
-
-    # Coleta permissões (se não marcado, será False)
-    permissoes = {
-        "pode_ver_empresas": bool(request.form.get('pode_ver_empresas')),
-        "pode_editar_empresas": bool(request.form.get('pode_editar_empresas')),
-        "pode_criar_servicos": bool(request.form.get('pode_criar_servicos')),
-        "pode_criar_orcamentos": bool(request.form.get('pode_criar_orcamentos')),
-        "pode_registrar_estoque": bool(request.form.get('pode_registrar_estoque')),
-        "pode_ver_fornecedores": bool(request.form.get('pode_ver_fornecedores')),
-        "pode_gerenciar_usuarios": bool(request.form.get('pode_gerenciar_usuarios')),
-        "pode_exportar_excel": bool(request.form.get('pode_exportar_excel')),
-    }
-
+    
     try:
-        if criar_usuario_com_permissoes(username, password, nivel, permissoes):
+        if criar_usuario(username, password, nivel):
             flash("Usuário criado com sucesso!")
         else:
             flash("Erro ao criar usuário.")
     except Exception as e:
         print("Erro ao criar usuário:", e)
         flash("Erro interno no servidor.")
-
+    
     return redirect(url_for('gerenciar_usuarios'))
 
 
@@ -6014,7 +5882,7 @@ def listar_orcamentos():
                         <td>{format_data(o.get('data_abertura'))}</td>
                         <td>
                             <a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a>
-                            <a href="/converter_orcamento_form/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Completar</a>
+                            <a href="/converter_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a>
                             <a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a>
                             <a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
                         </td>
@@ -6248,260 +6116,26 @@ def adicionar_orcamento():
     '''
 
 
-@app.route('/converter_orcamento_form/<int:id>')
-def converter_orcamento_form(id):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-
-    try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
-        response = requests.get(url_serv, headers=headers)
-        if response.status_code != 200 or not response.json():
-            flash("Orçamento não encontrado.")
-            return redirect(url_for('listar_orcamentos'))
-        orcamento = response.json()[0]
-    except Exception as e:
-        flash("Erro ao carregar orçamento.")
-        return redirect(url_for('listar_orcamentos'))
-
-    materiais = buscar_materiais()
-
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Completar Serviço - {orcamento['codigo_servico']}</title>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f5f7fa;
-                color: #333;
-                min-height: 100vh;
-                padding: 0;
-                margin: 0;
-            }}
-            .container {{
-                max-width: 1000px;
-                margin: 30px auto;
-                background: white;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-                overflow: hidden;
-            }}
-            .header {{
-                background: #2c3e50;
-                color: white;
-                text-align: center;
-                padding: 30px;
-            }}
-            h1 {{
-                font-size: 28px;
-                margin: 0;
-                font-weight: 600;
-            }}
-            .user-info {{
-                background: #34495e;
-                color: white;
-                padding: 15px 20px;
-                font-size: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .form-container {{
-                padding: 30px;
-            }}
-            .grid-2 {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }}
-            .form-container label {{
-                display: block;
-                margin: 10px 0 5px 0;
-                font-weight: 600;
-                color: #2c3e50;
-            }}
-            .form-container input,
-            .form-container select,
-            .form-container textarea {{
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                font-size: 14px;
-            }}
-            .btn {{
-                padding: 12px 20px;
-                background: #27ae60;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-            }}
-            .back-link {{
-                display: inline-block;
-                margin: 20px 30px;
-                color: #3498db;
-                text-decoration: none;
-                font-weight: 500;
-            }}
-            .footer {{
-                text-align: center;
-                padding: 20px;
-                background: #ecf0f1;
-                color: #7f8c8d;
-                font-size: 13px;
-                border-top: 1px solid #bdc3c7;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>✅ Completar Conversão para Serviço</h1>
-            </div>
-            <div class="user-info">
-                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-                <a href="/logout">🚪 Sair</a>
-            </div>
-            <a href="/orcamentos" class="back-link">← Voltar aos Orçamentos</a>
-            <form method="post" action="/converter_orcamento/{id}" class="form-container">
-                <input type="hidden" name="titulo" value="{orcamento['titulo']}">
-                <input type="hidden" name="empresa_id" value="{orcamento['empresa_id']}">
-                <input type="hidden" name="quantidade" value="{orcamento.get('quantidade', '')}">
-                <input type="hidden" name="dimensao" value="{orcamento.get('dimensao', '')}">
-                <input type="hidden" name="numero_cores" value="{orcamento.get('numero_cores', '')}">
-                <input type="hidden" name="aplicacao" value="{orcamento.get('aplicacao', '')}">
-                <input type="hidden" name="valor_cobrado" value="{orcamento.get('valor_cobrado', 0)}">
-                <input type="hidden" name="observacoes" value="{orcamento.get('observacoes', '')}">
-                <input type="hidden" name="data_abertura" value="{orcamento.get('data_abertura', '')}">
-
-                <h3>Dados a Completar</h3>
-
-                <div class="grid-2">
-                    <div>
-                        <label>Status</label>
-                        <select name="status">
-                            <option value="Pendente" selected>Pendente</option>
-                            <option value="Em Produção">Em Produção</option>
-                            <option value="Concluído">Concluído</option>
-                            <option value="Entregue">Entregue</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Previsão de Entrega *</label>
-                        <input type="date" name="previsao_entrega" required>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px;">Materiais Usados</h3>
-                <div id="materiais-lista">
-                    <div class="grid-3">
-                        <div>
-                            <label>Material</label>
-                            <select name="material_id[]" required>
-                                <option value="">Selecione</option>
-                                {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-                            </select>
-                        </div>
-                        <div>
-                            <label>Qtd Usada</label>
-                            <input type="number" name="quantidade_usada[]" step="0.01" required>
-                        </div>
-                        <div>
-                            <label>Valor Unitário (R$)</label>
-                            <input type="number" name="valor_unitario[]" step="0.01" required>
-                        </div>
-                    </div>
-                </div>
-                <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
-
-                <button type="submit" class="btn">✅ Confirmar e Criar Serviço</button>
-            </form>
-            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-        </div>
-
-        <script>
-            function adicionarMaterial() {{
-                const container = document.getElementById('materiais-lista');
-                const div = document.createElement('div');
-                div.className = 'grid-3';
-                div.innerHTML = `
-                    <div>
-                        <label>Material</label>
-                        <select name="material_id[]" required>
-                            <option value="">Selecione</option>
-                            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-                        </select>
-                    </div>
-                    <div>
-                        <label>Qtd Usada</label>
-                        <input type="number" name="quantidade_usada[]" step="0.01" required>
-                    </div>
-                    <div>
-                        <label>Valor Unitário (R$)</label>
-                        <input type="number" name="valor_unitario[]" step="0.01" required>
-                    </div>
-                `;
-                container.appendChild(div);
-            }}
-        </script>
-    </body>
-    </html>
-    '''
-
-
-@app.route('/converter_orcamento/<int:id>', methods=['POST'])
+@app.route('/converter_orcamento/<int:id>')
 def converter_orcamento(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
-    # Atualiza o serviço para tipo "Produção"
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         dados = {
             "tipo": "Produção",
-            "status": request.form.get('status', 'Pendente'),
-            "previsao_entrega": request.form.get('previsao_entrega')
+            "status": "Pendente"
         }
         response = requests.patch(url, json=dados, headers=headers)
-        if response.status_code != 204:
-            flash("❌ Erro ao atualizar serviço.")
-            return redirect(url_for('listar_orcamentos'))
+        if response.status_code == 204:
+            flash("✅ Orçamento convertido em serviço!")
+        else:
+            flash("❌ Erro ao converter.")
     except Exception as e:
-        flash("❌ Erro de conexão ao atualizar serviço.")
-        return redirect(url_for('listar_orcamentos'))
+        flash("❌ Erro de conexão.")
 
-    # Agora adiciona os materiais usados
-    materiais_ids = request.form.getlist('material_id[]')
-    quantidades = request.form.getlist('quantidade_usada[]')
-    valores_unitarios = request.form.getlist('valor_unitario[]')
-
-    for i in range(len(materiais_ids)):
-        try:
-            material_id = int(materiais_ids[i])
-            qtd = float(quantidades[i])
-            vlr = float(valores_unitarios[i])
-            total = qtd * vlr
-            dados_mat = {
-                "servico_id": id,
-                "material_id": material_id,
-                "quantidade_usada": qtd,
-                "valor_unitario": vlr,
-                "valor_total": total
-            }
-            requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
-        except Exception as e:
-            continue  # ignora erro individual
-
-    flash("✅ Orçamento convertido em serviço com sucesso!")
-    return redirect(url_for('listar_servicos'))
+    return redirect(url_for('listar_orcamentos'))
 
 
 @app.route('/pdf_orcamento/<int:id>')
@@ -6778,67 +6412,13 @@ def importar_excel():
                     except Exception as e:
                         log.append(f"❌ Erro ao importar movimentação: {str(e)}")
 
-            return render_template_string('''
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Importação Concluída</title>
-                <style>
-                    body { font-family: Arial; padding: 40px; }
-                    .log-item { margin: 5px 0; }
-                    .success { color: green; }
-                    .error { color: red; }
-                    .warning { color: orange; }
-                </style>
-            </head>
-            <body>
-                <h2>📥 Importação Concluída</h2>
-                <a href="/clientes">← Voltar ao Menu</a>
-                <h3>Log de Importação:</h3>
-                <div>
-                    {% for item in log %}
-                        <p class="log-item {% if '✅' in item %}success{% elif '❌' in item %}error{% elif '⚠️' in item %}warning{% endif %}">
-                            {{ item }}
-                        </p>
-                    {% endfor %}
-                </div>
-            </body>
-            </html>
-            ''', log=log)
+            return render_template('importar_excel.html', log=log)
 
         except Exception as e:
             flash(f"❌ Erro ao ler o arquivo: {str(e)}")
             return redirect(request.url)
 
-    return '''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Importar Excel</title>
-        <style>
-            body { font-family: Arial; padding: 40px; }
-            .form-container { margin: 30px 0; }
-            .btn { padding: 10px 20px; background: #3498db; color: white; border: none; cursor: pointer; }
-            a { color: #3498db; text-decoration: none; }
-        </style>
-    </head>
-    <body>
-        <h2>📤 Importar Dados via Excel</h2>
-        <a href="/clientes">← Voltar ao Menu</a>
-
-        <div class="form-container">
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="arquivo" accept=".xlsx,.xls" required>
-                <button type="submit" class="btn">📤 Importar Arquivo</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    '''
+    return render_template('importar_excel.html', log=None)
 
 
 # ========================
