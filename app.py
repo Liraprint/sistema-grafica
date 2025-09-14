@@ -24,6 +24,31 @@ headers = {
 }
 
 # ========================
+# Função para buscar permissões do usuário
+# ========================
+def buscar_permissoes_usuario(id_usuario):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/permissoes_usuario?select=*&usuario_id=eq.{id_usuario}"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200 and response.json():
+            return response.json()[0]
+        else:
+            # Permissões padrão para usuários sem registro na tabela
+            return {
+                "pode_ver_empresas": True,
+                "pode_editar_empresas": False,
+                "pode_criar_servicos": True,
+                "pode_criar_orcamentos": True,
+                "pode_registrar_estoque": False,
+                "pode_ver_fornecedores": False,
+                "pode_gerenciar_usuarios": False,
+                "pode_exportar_excel": False
+            }
+    except Exception as e:
+        print("Erro ao buscar permissões:", e)
+        return None
+
+# ========================
 # Funções para acessar o Supabase
 # ========================
 
@@ -361,6 +386,7 @@ def login():
             if usuario:
                 session['usuario'] = usuario['nome de usuario']
                 session['nivel'] = usuario['NÍVEL']
+                session['usuario_id'] = usuario['id']  # ✅ Armazena o ID do usuário
                 return redirect(url_for('clientes'))
             else:
                 flash("Usuário ou senha incorretos!")
@@ -605,10 +631,16 @@ def clientes():
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('clientes'))
-    
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_gerenciar_usuarios'):
+            flash("❌ Você não tem permissão para acessar esta página.")
+            return redirect(url_for('clientes'))
+
     try:
         usuarios = buscar_usuarios()
         return render_template('gerenciar_usuarios.html', usuarios=usuarios)
@@ -619,10 +651,16 @@ def gerenciar_usuarios():
 
 @app.route('/criar_usuario', methods=['POST'])
 def criar_usuario_view():
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('gerenciar_usuarios'))
-    
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_gerenciar_usuarios'):
+            flash("❌ Você não tem permissão para criar usuários.")
+            return redirect(url_for('gerenciar_usuarios'))
+
     username = request.form.get('username')
     password = request.form.get('password')
     nivel = request.form.get('nivel')
@@ -649,10 +687,16 @@ def criar_usuario_view():
 
 @app.route('/excluir_usuario/<int:id>')
 def excluir_usuario_view(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('clientes'))
-    
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_gerenciar_usuarios'):
+            flash("❌ Você não tem permissão para excluir usuários.")
+            return redirect(url_for('gerenciar_usuarios'))
+
     try:
         if excluir_usuario(id):
             flash("Usuário excluído!")
@@ -669,6 +713,13 @@ def excluir_usuario_view(id):
 def cadastrar_cliente():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_editar_empresas'):
+            flash("❌ Você não tem permissão para cadastrar empresas.")
+            return redirect(url_for('empresas'))
 
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -1046,6 +1097,13 @@ def listar_empresas():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_empresas'):
+            flash("❌ Você não tem permissão para acessar esta página.")
+            return redirect(url_for('clientes'))
+
     busca = request.args.get('q', '').strip()
 
     try:
@@ -1219,6 +1277,13 @@ def detalhes_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_empresas'):
+            flash("❌ Você não tem permissão para acessar esta página.")
+            return redirect(url_for('clientes'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1357,6 +1422,13 @@ def detalhes_empresa(id):
 def editar_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_editar_empresas'):
+            flash("❌ Você não tem permissão para editar empresas.")
+            return redirect(url_for('empresas'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
@@ -2060,6 +2132,13 @@ def servicos_por_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_empresas'):
+            flash("❌ Você não tem permissão para acessar esta página.")
+            return redirect(url_for('clientes'))
+
     try:
         url_emp = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response_emp = requests.get(url_emp, headers=headers)
@@ -2233,6 +2312,13 @@ def servicos_por_empresa(id):
 def adicionar_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_servicos'):
+            flash("❌ Você não tem permissão para criar serviços.")
+            return redirect(url_for('servicos'))
 
     if request.method == 'POST':
         titulo = request.form.get('titulo')
@@ -2567,6 +2653,13 @@ def editar_servico(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_servicos'):
+            flash("❌ Você não tem permissão para editar serviços.")
+            return redirect(url_for('servicos'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -2865,9 +2958,15 @@ def editar_servico(id):
 # ✅ CORREÇÃO AQUI: Redirecionar para 'listar_servicos', não 'servicos'
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('listar_servicos'))  # ✅ Corrigido aqui
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_servicos'):
+            flash("❌ Você não tem permissão para excluir serviços.")
+            return redirect(url_for('servicos'))
 
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
@@ -3327,6 +3426,13 @@ def listar_materiais():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para acessar materiais.")
+            return redirect(url_for('clientes'))
+
     busca = request.args.get('q', '').strip()
 
     try:
@@ -3500,6 +3606,13 @@ def detalhes_material(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para acessar materiais.")
+            return redirect(url_for('clientes'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -3633,6 +3746,13 @@ def detalhes_material(id):
 def editar_material(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para editar materiais.")
+            return redirect(url_for('materiais'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
@@ -3896,6 +4016,13 @@ def cadastrar_material():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para cadastrar materiais.")
+            return redirect(url_for('materiais'))
+
     if request.method == 'POST':
         denominacao = request.form.get('denominacao')
         marca = request.form.get('marca')
@@ -4131,6 +4258,13 @@ def excluir_material(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para excluir materiais.")
+            return redirect(url_for('materiais'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
         response = requests.delete(url, headers=headers)
@@ -4148,6 +4282,13 @@ def excluir_material(id):
 def gerar_etiqueta(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_empresas'):
+            flash("❌ Você não tem permissão para gerar etiquetas.")
+            return redirect(url_for('clientes'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
@@ -4307,6 +4448,13 @@ def imprimir_etiqueta(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_empresas'):
+            flash("❌ Você não tem permissão para imprimir etiquetas.")
+            return redirect(url_for('clientes'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -4394,6 +4542,13 @@ CEP: {destinatario['cep']}
 def estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para acessar o estoque.")
+            return redirect(url_for('clientes'))
 
     busca_mov = request.args.get('q', '').strip()
 
@@ -4660,6 +4815,13 @@ def registrar_entrada_form():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para registrar entrada de estoque.")
+            return redirect(url_for('estoque'))
+
     material_id = request.args.get('material_id')
     material = None
 
@@ -4900,6 +5062,13 @@ def registrar_entrada():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para registrar entrada de estoque.")
+            return redirect(url_for('estoque'))
+
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
     valor_total = request.form.get('valor_total')
@@ -4950,6 +5119,13 @@ def registrar_entrada():
 def registrar_saida_form():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para registrar saída de estoque.")
+            return redirect(url_for('estoque'))
 
     material_id = request.args.get('material_id')
     material = None
@@ -5159,6 +5335,13 @@ def registrar_saida():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_registrar_estoque'):
+            flash("❌ Você não tem permissão para registrar saída de estoque.")
+            return redirect(url_for('estoque'))
+
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
     motivo = request.form.get('motivo')
@@ -5219,6 +5402,13 @@ def excluir_movimentacao(id):
 def listar_fornecedores():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_fornecedores'):
+            flash("❌ Você não tem permissão para acessar fornecedores.")
+            return redirect(url_for('clientes'))
 
     busca = request.args.get('q', '').strip()
 
@@ -5396,6 +5586,13 @@ def cadastrar_fornecedor():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_fornecedores'):
+            flash("❌ Você não tem permissão para cadastrar fornecedores.")
+            return redirect(url_for('fornecedores'))
+
     if request.method == 'POST':
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
@@ -5553,6 +5750,13 @@ def cadastrar_fornecedor():
 def editar_fornecedor(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_fornecedores'):
+            flash("❌ Você não tem permissão para editar fornecedores.")
+            return redirect(url_for('fornecedores'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
@@ -5723,6 +5927,13 @@ def excluir_fornecedor_view(id):
     if 'usuario' not in session:
         flash("Acesso negado!")
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_ver_fornecedores'):
+            flash("❌ Você não tem permissão para excluir fornecedores.")
+            return redirect(url_for('fornecedores'))
 
     if excluir_fornecedor(id):
         flash("🗑️ Fornecedor excluído com sucesso!")
@@ -5902,6 +6113,13 @@ def listar_orcamentos():
 def adicionar_orcamento():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_orcamentos'):
+            flash("❌ Você não tem permissão para criar orçamentos.")
+            return redirect(url_for('orcamentos'))
 
     if request.method == 'POST':
         titulo = request.form.get('titulo')
@@ -6123,6 +6341,13 @@ def complementar_orcamento(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_servicos'):
+            flash("❌ Você não tem permissão para converter orçamentos em serviços.")
+            return redirect(url_for('orcamentos'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -6325,6 +6550,13 @@ def salvar_como_servico(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_criar_servicos'):
+            flash("❌ Você não tem permissão para converter orçamentos em serviços.")
+            return redirect(url_for('orcamentos'))
+
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         dados = {
@@ -6447,9 +6679,15 @@ def pdf_orcamento(id):
 
 @app.route('/exportar_excel')
 def exportar_excel():
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('clientes'))
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    # ✅ Verifica permissão
+    if session['nivel'] != 'administrador':
+        permissoes = buscar_permissoes_usuario(session['usuario_id'])
+        if not permissoes or not permissoes.get('pode_exportar_excel'):
+            flash("❌ Você não tem permissão para exportar dados.")
+            return redirect(url_for('clientes'))
 
     output = BytesIO()
     wb = Workbook()
