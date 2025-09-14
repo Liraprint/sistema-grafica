@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from io import BytesIO
 from datetime import datetime
+import pdfkit  # Para gerar PDFs
 
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
@@ -585,6 +586,7 @@ def clientes():
             <div class="btn-grid">
                 <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
+                <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
@@ -1777,7 +1779,7 @@ def listar_servicos():
     busca = request.args.get('q', '').strip()
 
     try:
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc"
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc&tipo=neq.Orçamento"
         if busca:
             url += f"&titulo=ilike.*{busca}*"
         response = requests.get(url, headers=headers)
@@ -2066,7 +2068,7 @@ def servicos_por_empresa(id):
             return redirect(url_for('listar_empresas'))
         empresa = response_emp.json()[0]
 
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=*,materiais_usados(*,materiais(denominacao))&empresa_id=eq.{id}&order=codigo_servico.desc"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=*,materiais_usados(*,materiais(denominacao))&empresa_id=eq.{id}&order=codigo_servico.desc&tipo=neq.Orçamento"
         response_serv = requests.get(url_serv, headers=headers)
         servicos = response_serv.json() if response_serv.status_code == 200 else []
     except Exception as e:
@@ -3037,12 +3039,120 @@ def imprimir_os(id):
 
         <div style="margin-top: 40px; text-align: center;">
             <button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button>
+            <a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a>
             <a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a>
         </div>
     </body>
     </html>
     '''
     return html
+
+
+@app.route('/pdf_os/<int:id>')
+def pdf_os(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))"
+        response = requests.get(url_serv, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Serviço não encontrado.")
+            return redirect(url_for('listar_servicos'))
+        servico = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar serviço.")
+        return redirect(url_for('listar_servicos'))
+
+    def calcular_custo():
+        try:
+            url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
+            resp = requests.get(url_mat, headers=headers)
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
+            return 0.0
+        except:
+            return 0.0
+
+    custo_materiais = calcular_custo()
+    valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
+    lucro = valor_cobrado - custo_materiais
+
+    empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
+
+    html = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>OS {servico['codigo_servico']}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; padding: 40px; }}
+            .header {{ text-align: center; margin-bottom: 30px; }}
+            .header h1 {{ margin: 0; color: #2c3e50; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+            th {{ background-color: #ecf0f1; }}
+            .total-box {{ text-align: right; font-size: 18px; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>ORDEM DE SERVIÇO</h1>
+            <p><strong>Código:</strong> {servico['codigo_servico']}</p>
+        </div>
+
+        <table>
+            <tr><th>Cliente</th><td>{empresa_nome}</td></tr>
+            <tr><th>Status</th><td>{servico['status']}</td></tr>
+            <tr><th>Título</th><td>{servico['titulo']}</td></tr>
+            <tr><th>Quantidade</th><td>{servico.get('quantidade', '—')}</td></tr>
+            <tr><th>Dimensão</th><td>{servico.get('dimensao', '—')}</td></tr>
+            <tr><th>Data Abertura</th><td>{format_data(servico.get('data_abertura'))}</td></tr>
+            <tr><th>Previsão Entrega</th><td>{format_data(servico.get('previsao_entrega'))}</td></tr>
+            <tr><th>Valor Cobrado</th><td>R$ {valor_cobrado:.2f}</td></tr>
+            <tr><th>Custo Materiais</th><td>R$ {custo_materiais:.2f}</td></tr>
+            <tr><th>Lucro</th><td>R$ {lucro:.2f}</td></tr>
+        </table>
+
+        <h3>Materiais Utilizados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Qtd</th>
+                    <th>Valor Unit.</th>
+                    <th>Valor Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {''.join(f"""
+                <tr>
+                    <td>{m['materiais']['denominacao']}</td>
+                    <td>{m['quantidade_usada']}</td>
+                    <td>R$ {m['valor_unitario']:.2f}</td>
+                    <td>R$ {m['valor_total']:.2f}</td>
+                </tr>
+                """ for m in servico.get('materiais_usados', []) if m.get('materiais'))}
+            </tbody>
+        </table>
+
+        <div class="total-box">
+            <p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p>
+        </div>
+    </body>
+    </html>
+    '''
+
+    pdf = pdfkit.from_string(html, False)
+
+    return send_file(
+        BytesIO(pdf),
+        as_attachment=True,
+        download_name=f"os_{servico['codigo_servico']}.pdf",
+        mimetype="application/pdf"
+    )
 
 
 @app.route('/configuracoes')
@@ -3594,7 +3704,7 @@ def editar_material(id):
     if material.get('fornecedor'):
         fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
 
-    # ✅ CORREÇÃO PRINCIPAL: Expressão ternária correta
+    # Função auxiliar para gerar o atributo 'selected'
     def get_selected_attr(f_id):
         if fornecedor_selecionado and f_id == fornecedor_selecionado['id']:
             return 'selected'
@@ -5620,6 +5730,484 @@ def excluir_fornecedor_view(id):
 
     return redirect(url_for('listar_fornecedores'))
 
+
+# ========================
+# ROTAS DE ORÇAMENTOS — NOVIDADE!
+# ========================
+
+@app.route('/orcamentos')
+def listar_orcamentos():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    busca = request.args.get('q', '').strip()
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
+        if busca:
+            url += f"&titulo=ilike.*{busca}*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            orcamentos = response.json()
+        else:
+            flash("Erro ao carregar orçamentos.")
+            orcamentos = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        orcamentos = []
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Orçamentos</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1400px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .btn {{
+                padding: 10px 15px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+                margin: 5px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💰 Orçamentos</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
+
+            <div style="text-align: center; padding: 20px;">
+                <form method="get" style="display: inline;">
+                    <input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Cliente</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{o['codigo_servico']}</td>
+                        <td>{o['titulo']}</td>
+                        <td>{o['empresas']['nome_empresa'] if o.get('empresas') else '—'}</td>
+                        <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
+                        <td>{format_data(o.get('data_abertura'))}</td>
+                        <td>
+                            <a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a>
+                            <a href="/converter_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a>
+                            <a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a>
+                            <a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    """ for o in orcamentos)}
+                </tbody>
+            </table>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/adicionar_orcamento', methods=['GET', 'POST'])
+def adicionar_orcamento():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        titulo = request.form.get('titulo')
+        empresa_id = request.form.get('empresa_id')
+        quantidade = request.form.get('quantidade')
+        dimensao = request.form.get('dimensao')
+        numero_cores = request.form.get('numero_cores')
+        aplicacao = request.form.get('aplicacao')
+        data_abertura = request.form.get('data_abertura')
+        valor_cobrado = request.form.get('valor_cobrado') or 0.0
+        observacoes = request.form.get('observacoes')
+
+        if not titulo or not empresa_id:
+            flash("Título e Cliente são obrigatórios!")
+            return redirect(url_for('adicionar_orcamento'))
+
+        try:
+            valor_cobrado = float(valor_cobrado)
+        except:
+            valor_cobrado = 0.0
+
+        try:
+            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
+            response = requests.get(url_seq, headers=headers)
+            if response.status_code == 200 and response.json():
+                ultimo = response.json()[0]['codigo_servico']
+                numero = int(ultimo.split('-')[1]) + 1
+            else:
+                numero = 1
+            codigo_servico = f"OR-{numero:03d}"  # OR de Orçamento
+        except:
+            codigo_servico = "OR-001"
+
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/servicos"
+            dados = {
+                "codigo_servico": codigo_servico,
+                "titulo": titulo,
+                "empresa_id": int(empresa_id),
+                "tipo": "Orçamento",
+                "quantidade": quantidade,
+                "dimensao": dimensao,
+                "numero_cores": numero_cores,
+                "aplicacao": aplicacao,
+                "status": "Pendente",
+                "data_abertura": data_abertura,
+                "valor_cobrado": valor_cobrado,
+                "observacoes": observacoes
+            }
+            response = requests.post(url, json=dados, headers=headers)
+
+            if response.status_code == 201:
+                flash("✅ Orçamento criado com sucesso!")
+                return redirect(url_for('listar_orcamentos'))
+            else:
+                flash("❌ Erro ao salvar orçamento.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+
+    empresas = buscar_empresas()
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Adicionar Orçamento</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Adicionar Novo Orçamento</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/orcamentos" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <label>Código do Orçamento</label>
+                <input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
+
+                <label>Título do Orçamento *</label>
+                <input type="text" name="titulo" required>
+
+                <label>Cliente *</label>
+                <select name="empresa_id" required>
+                    <option value="">Selecione uma empresa</option>
+                    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
+                </select>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Quantidade</label>
+                        <input type="number" name="quantidade" step="1">
+                    </div>
+                    <div>
+                        <label>Nº de Cores</label>
+                        <input type="number" name="numero_cores" step="1">
+                    </div>
+                </div>
+
+                <div>
+                    <label>Dimensão (ex: 60x90 cm)</label>
+                    <input type="text" name="dimensao">
+                </div>
+
+                <div>
+                    <label>Valor Cobrado (R$) *</label>
+                    <input type="number" name="valor_cobrado" step="0.01" required>
+                </div>
+
+                <div>
+                    <label>Data de Abertura</label>
+                    <input type="date" name="data_abertura">
+                </div>
+
+                <label>Aplicação / Uso / Ambiente</label>
+                <textarea name="aplicacao" rows="3"></textarea>
+
+                <label>Observações</label>
+                <textarea name="observacoes" rows="3"></textarea>
+
+                <button type="submit" class="btn">💾 Salvar Orçamento</button>
+            </form>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/converter_orcamento/<int:id>')
+def converter_orcamento(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        dados = {
+            "tipo": "Produção",
+            "status": "Pendente"
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        if response.status_code == 204:
+            flash("✅ Orçamento convertido em serviço!")
+        else:
+            flash("❌ Erro ao converter.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
+
+    return redirect(url_for('listar_orcamentos'))
+
+
+@app.route('/pdf_orcamento/<int:id>')
+def pdf_orcamento(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa)"
+        response = requests.get(url_serv, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Orçamento não encontrado.")
+            return redirect(url_for('listar_orcamentos'))
+        orcamento = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar orçamento.")
+        return redirect(url_for('listar_orcamentos'))
+
+    html = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Orçamento {orcamento['codigo_servico']}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; padding: 40px; }}
+            .header {{ text-align: center; margin-bottom: 30px; }}
+            .header h1 {{ margin: 0; color: #2c3e50; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+            th {{ background-color: #ecf0f1; }}
+            .total-box {{ text-align: right; font-size: 18px; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>ORÇAMENTO</h1>
+            <p><strong>Código:</strong> {orcamento['codigo_servico']}</p>
+        </div>
+
+        <table>
+            <tr><th>Cliente</th><td>{orcamento['empresas']['nome_empresa'] if orcamento.get('empresas') else '—'}</td></tr>
+            <tr><th>Título</th><td>{orcamento['titulo']}</td></tr>
+            <tr><th>Quantidade</th><td>{orcamento.get('quantidade', '—')}</td></tr>
+            <tr><th>Dimensão</th><td>{orcamento.get('dimensao', '—')}</td></tr>
+            <tr><th>Valor Cobrado</th><td>R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}</td></tr>
+            <tr><th>Data</th><td>{format_data(orcamento.get('data_abertura'))}</td></tr>
+            <tr><th>Observações</th><td>{orcamento.get('observacoes', '—')}</td></tr>
+        </table>
+
+        <div class="total-box">
+            <p><strong>Valor Total:</strong> R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}</p>
+        </div>
+    </body>
+    </html>
+    '''
+
+    # Gera o PDF
+    pdf = pdfkit.from_string(html, False)
+
+    # Envia o PDF para download
+    return send_file(
+        BytesIO(pdf),
+        as_attachment=True,
+        download_name=f"orcamento_{orcamento['codigo_servico']}.pdf",
+        mimetype="application/pdf"
+    )
+
+
+# ========================
+# Exportação e Importação Excel
+# ========================
 
 @app.route('/exportar_excel')
 def exportar_excel():
