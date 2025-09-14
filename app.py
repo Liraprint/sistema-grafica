@@ -229,7 +229,7 @@ def format_data(data_str):
 
 def buscar_fornecedores():
     try:
-        url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
+        url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*&order=nome.asc"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             return response.json()
@@ -3548,7 +3548,7 @@ def editar_material(id):
         unidade_outro = request.form.get('unidade_outro')
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
-        fornecedor = request.form.get('fornecedor')
+        fornecedor_id = request.form.get('fornecedor_id')
 
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
@@ -3575,8 +3575,15 @@ def editar_material(id):
                 "unidade_medida": unidade_medida,
                 "valor_unitario": valor_unitario,
                 "especificacao": especificacao,
-                "fornecedor": fornecedor
+                "fornecedor": None
             }
+
+            if fornecedor_id:
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor:
+                    dados["fornecedor"] = fornecedor["nome"]
+
             response = requests.patch(url, json=dados, headers=headers)
             if response.status_code == 204:
                 flash("✅ Material atualizado com sucesso!")
@@ -3587,6 +3594,11 @@ def editar_material(id):
             flash("❌ Erro de conexão.")
 
         return redirect(request.url)
+
+    fornecedores = buscar_fornecedores()
+    fornecedor_selecionado = None
+    if material.get('fornecedor'):
+        fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
 
     return f'''
     <!DOCTYPE html>
@@ -3705,19 +3717,19 @@ def editar_material(id):
                     <label>Unidade de Medida *</label>
                     <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
                         <option value="">Selecione</option>
-                        <option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ''}>folha</option>
-                        <option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ''}>metro</option>
-                        <option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ''}>centímetro</option>
-                        <option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ''}>milímetro</option>
-                        <option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ''}>grama</option>
-                        <option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ''}>quilograma</option>
-                        <option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ''}>rolo</option>
-                        <option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ''}>litro</option>
-                        <option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ''}>unidade</option>
-                        <option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ''}>conjunto</option>
-                        <option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ''}>m²</option>
-                        <option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ''}>cm²</option>
-                        <option value="outro" {"selected" if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}>Outro (especifique)</option>
+                        <option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ""}>folha</option>
+                        <option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ""}>metro</option>
+                        <option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ""}>centímetro</option>
+                        <option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ""}>milímetro</option>
+                        <option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ""}>grama</option>
+                        <option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ""}>quilograma</option>
+                        <option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ""}>rolo</option>
+                        <option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ""}>litro</option>
+                        <option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ""}>unidade</option>
+                        <option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ""}>conjunto</option>
+                        <option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ""}>m²</option>
+                        <option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ""}>cm²</option>
+                        <option value="outro" {"selected" if material['unidade_medida'] == 'outro' else ""}>Outro (especifique)</option>
                     </select>
                     <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}">
                 </div>
@@ -3731,7 +3743,10 @@ def editar_material(id):
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <input type="text" name="fornecedor" value="{material['fornecedor']}">
+                    <select name="fornecedor_id" id="fornecedor_id">
+                        <option value="">Selecione um fornecedor</option>
+                        {''.join(f'<option value="{f["id"]}" {"selected" if f["id"] == fornecedor_selecionado["id"] if fornecedor_selecionado else ""}>{f["nome"]}</option>' for f in fornecedores)}
+                    </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Alterações</button>
             </form>
@@ -3778,7 +3793,7 @@ def cadastrar_material():
         unidade_outro = request.form.get('unidade_outro')
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
-        fornecedor = request.form.get('fornecedor')
+        fornecedor_id = request.form.get('fornecedor_id')
 
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
@@ -3805,8 +3820,15 @@ def cadastrar_material():
                 "unidade_medida": unidade_medida,
                 "valor_unitario": valor_unitario,
                 "especificacao": especificacao,
-                "fornecedor": fornecedor
+                "fornecedor": None
             }
+
+            if fornecedor_id:
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor:
+                    dados["fornecedor"] = fornecedor["nome"]
+
             response = requests.post(url, json=dados, headers=headers)
             if response.status_code == 201:
                 flash("✅ Material cadastrado com sucesso!")
@@ -3817,6 +3839,8 @@ def cadastrar_material():
             flash("❌ Erro de conexão.")
 
         return redirect(request.url)
+
+    fornecedores = buscar_fornecedores()
 
     return f'''
     <!DOCTYPE html>
@@ -3961,7 +3985,10 @@ def cadastrar_material():
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <input type="text" name="fornecedor">
+                    <select name="fornecedor_id" id="fornecedor_id">
+                        <option value="">Selecione um fornecedor</option>
+                        {''.join(f'<option value="{f["id"]}">{f["nome"]}</option>' for f in fornecedores)}
+                    </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Material</button>
             </form>
@@ -5234,8 +5261,10 @@ def listar_fornecedores():
                         <td>{f.get("telefone", "—")}</td>
                         <td>{f.get("email", "—")}</td>
                         <td>
-                            <a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
-                            <a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                            <div style="display: flex; gap: 10px;">
+                                <a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
+                                <a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                            </div>
                         </td>
                     </tr>
                     """ for f in fornecedores)}
