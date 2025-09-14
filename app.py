@@ -1638,7 +1638,7 @@ def editar_empresa(id):
                 <!-- Checkbox para endereço de entrega -->
                 <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;">
                     <input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" 
-                           {"checked" if empresa.get("entrega_endereco") else ""} style="margin-right: 8px; vertical-align: middle;">
+                        {"checked" if empresa.get("entrega_endereco") else ""} style="margin-right: 8px; vertical-align: middle;">
                     <label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">
                         Endereço de entrega diferente do endereço da empresa?
                     </label>
@@ -1650,17 +1650,17 @@ def editar_empresa(id):
                         <div>
                             <label>CEP de Entrega</label>
                             <input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" 
-                                   value="{empresa.get('entrega_cep', '')}" style="width: 150px;">
+                                value="{empresa.get('entrega_cep', '')}" style="width: 150px;">
                         </div>
                         <div>
                             <label>Bairro de Entrega</label>
                             <input type="text" name="entrega_bairro" id="entrega_bairro" 
-                                   value="{empresa.get('entrega_bairro', '')}" style="width: 150px;">
+                                value="{empresa.get('entrega_bairro', '')}" style="width: 150px;">
                         </div>
                         <div>
                             <label>Endereço de Entrega</label>
                             <input type="text" name="entrega_endereco" id="entrega_endereco" 
-                                   value="{empresa.get('entrega_endereco', '')}" style="width: 100%; max-width: 350px;">
+                                value="{empresa.get('entrega_endereco', '')}" style="width: 100%; max-width: 350px;">
                         </div>
                     </div>
 
@@ -1668,12 +1668,12 @@ def editar_empresa(id):
                         <div>
                             <label>Número de Entrega</label>
                             <input type="text" name="entrega_numero" placeholder="Ex: 123" 
-                                   value="{empresa.get('entrega_numero', '')}">
+                                value="{empresa.get('entrega_numero', '')}">
                         </div>
                         <div>
                             <label>Cidade de Entrega</label>
                             <input type="text" name="entrega_cidade" id="entrega_cidade" 
-                                   value="{empresa.get('entrega_cidade', '')}">
+                                value="{empresa.get('entrega_cidade', '')}">
                         </div>
                         <div>
                             <label>Estado de Entrega</label>
@@ -5732,7 +5732,7 @@ def excluir_fornecedor_view(id):
 
 
 # ========================
-# ROTAS DE ORÇAMENTOS — NOVIDADE!
+# ROTAS DE ORÇAMENTOS — ATUALIZADAS!
 # ========================
 
 @app.route('/orcamentos')
@@ -5882,7 +5882,7 @@ def listar_orcamentos():
                         <td>{format_data(o.get('data_abertura'))}</td>
                         <td>
                             <a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a>
-                            <a href="/converter_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a>
+                            <a href="/complementar_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a>
                             <a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a>
                             <a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
                         </td>
@@ -6116,8 +6116,229 @@ def adicionar_orcamento():
     '''
 
 
-@app.route('/converter_orcamento/<int:id>')
-def converter_orcamento(id):
+# Nova rota: Formulário para complementar o orçamento
+@app.route('/complementar_orcamento/<int:id>')
+def complementar_orcamento(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Orçamento não encontrado.")
+            return redirect(url_for('listar_orcamentos'))
+        orcamento = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar orçamento.")
+        return redirect(url_for('listar_orcamentos'))
+
+    empresas = buscar_empresas()
+    materiais = buscar_materiais()
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Complementar Orçamento</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1000px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✅ Complementar Orçamento</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/orcamentos" class="back-link">← Voltar à lista</a>
+            <form method="post" action="/salvar_como_servico/{id}" class="form-container">
+                <h3>Dados do Orçamento</h3>
+                <div>
+                    <label>Código</label>
+                    <input type="text" value="{orcamento['codigo_servico']}" readonly>
+                </div>
+                <div>
+                    <label>Título</label>
+                    <input type="text" value="{orcamento['titulo']}" readonly>
+                </div>
+                <div>
+                    <label>Cliente</label>
+                    <input type="text" value="{orcamento['empresas']['nome_empresa'] if orcamento.get('empresas') else '—'}" readonly>
+                </div>
+                <div>
+                    <label>Valor</label>
+                    <input type="text" value="R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}" readonly>
+                </div>
+
+                <h3 style="margin-top: 30px;">Complementar com dados do Serviço</h3>
+                <div>
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="Pendente" {"selected" if orcamento.get('status') == 'Pendente' else ""}>Pendente</option>
+                        <option value="Em Produção">Em Produção</option>
+                        <option value="Concluído">Concluído</option>
+                        <option value="Entregue">Entregue</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Previsão de Entrega</label>
+                    <input type="date" name="previsao_entrega">
+                </div>
+                <div>
+                    <label>Observações</label>
+                    <textarea name="observacoes" rows="3">{orcamento.get('observacoes', '')}</textarea>
+                </div>
+
+                <h3 style="margin-top: 30px;">Materiais Usados</h3>
+                <div id="materiais-lista">
+                    <div class="grid-3">
+                        <div>
+                            <label>Material</label>
+                            <select name="material_id[]" required>
+                                <option value="">Selecione</option>
+                                {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Qtd Usada</label>
+                            <input type="number" name="quantidade_usada[]" step="0.01" required>
+                        </div>
+                        <div>
+                            <label>Valor Unitário (R$)</label>
+                            <input type="number" name="valor_unitario[]" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
+
+                <button type="submit" class="btn">💾 Salvar como Serviço</button>
+            </form>
+            <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        </div>
+
+        <script>
+            function adicionarMaterial() {{
+                const container = document.getElementById('materiais-lista');
+                const div = document.createElement('div');
+                div.className = 'grid-3';
+                div.innerHTML = `
+                    <div>
+                        <label>Material</label>
+                        <select name="material_id[]" required>
+                            <option value="">Selecione</option>
+                            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Qtd Usada</label>
+                        <input type="number" name="quantidade_usada[]" step="0.01" required>
+                    </div>
+                    <div>
+                        <label>Valor Unitário (R$)</label>
+                        <input type="number" name="valor_unitario[]" step="0.01" required>
+                    </div>
+                `;
+                container.appendChild(div);
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+
+# Nova rota: Salvar como serviço
+@app.route('/salvar_como_servico/<int:id>', methods=['POST'])
+def salvar_como_servico(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
@@ -6125,17 +6346,49 @@ def converter_orcamento(id):
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         dados = {
             "tipo": "Produção",
-            "status": "Pendente"
+            "status": request.form.get('status') or 'Pendente',
+            "previsao_entrega": request.form.get('previsao_entrega'),
+            "observacoes": request.form.get('observacoes')
         }
         response = requests.patch(url, json=dados, headers=headers)
         if response.status_code == 204:
             flash("✅ Orçamento convertido em serviço!")
+
+            # Adicionar materiais usados
+            materiais_ids = request.form.getlist('material_id[]')
+            quantidades = request.form.getlist('quantidade_usada[]')
+            valores_unitarios = request.form.getlist('valor_unitario[]')
+
+            for i in range(len(materiais_ids)):
+                try:
+                    material_id = int(materiais_ids[i])
+                    qtd = float(quantidades[i])
+                    vlr = float(valores_unitarios[i])
+                    total = qtd * vlr
+                    dados_mat = {
+                        "servico_id": id,
+                        "material_id": material_id,
+                        "quantidade_usada": qtd,
+                        "valor_unitario": vlr,
+                        "valor_total": total
+                    }
+                    requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
+                except Exception as e:
+                    print("Erro ao adicionar material:", e)
+                    continue
+
         else:
             flash("❌ Erro ao converter.")
     except Exception as e:
         flash("❌ Erro de conexão.")
 
     return redirect(url_for('listar_orcamentos'))
+
+
+@app.route('/converter_orcamento/<int:id>')
+def converter_orcamento(id):
+    # Esta rota agora está obsoleta — substituída por /complementar_orcamento
+    return redirect(url_for('complementar_orcamento', id=id))
 
 
 @app.route('/pdf_orcamento/<int:id>')
