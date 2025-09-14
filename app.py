@@ -7,10 +7,8 @@ from openpyxl.styles import Font, PatternFill
 from io import BytesIO
 from datetime import datetime
 
-
 app = Flask(__name__)
 app.secret_key = 'minha_chave_secreta_123'
-
 
 # ========================
 # Dados do Supabase (API)
@@ -18,18 +16,15 @@ app.secret_key = 'minha_chave_secreta_123'
 SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
 
-
 headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
 
-
 # ========================
 # Funções para acessar o Supabase
 # ========================
-
 
 def buscar_usuario_por_login(username, password):
     try:
@@ -604,6 +599,8 @@ def clientes():
     </body>
     </html>
     '''
+
+
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -1148,9 +1145,6 @@ def listar_empresas():
                 color: #3498db;
                 text-decoration: none;
                 font-weight: 500;
-            }}
-            .back-link:hover {{
-                text-decoration: underline;
             }}
             .footer {{
                 text-align: center;
@@ -3600,6 +3594,12 @@ def editar_material(id):
     if material.get('fornecedor'):
         fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
 
+    # ✅ CORREÇÃO PRINCIPAL: Expressão ternária correta
+    def get_selected_attr(f_id):
+        if fornecedor_selecionado and f_id == fornecedor_selecionado['id']:
+            return 'selected'
+        return ''
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3743,10 +3743,10 @@ def editar_material(id):
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                <select name="fornecedor_id" id="fornecedor_id">
-                            <option value="">Selecione um fornecedor</option>
-                            {''.join(f'<option value="{f["id"]}" {"selected" if f["id"] == fornecedor_selecionado["id"] if fornecedor_selecionado else ""}>{f["nome"]}</option>' for f in fornecedores)}
-                            </select>
+                    <select name="fornecedor_id" id="fornecedor_id">
+                        <option value="">Selecione um fornecedor</option>
+                        {''.join(f'<option value="{f["id"]}" {get_selected_attr(f["id"])}>{f["nome"]}</option>' for f in fornecedores)}
+                    </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Alterações</button>
             </form>
