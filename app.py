@@ -2862,11 +2862,12 @@ def editar_servico(id):
     '''
 
 
+# ✅ CORREÇÃO AQUI: Redirecionar para 'listar_servicos', não 'servicos'
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
-        return redirect(url_for('servicos'))
+        return redirect(url_for('listar_servicos'))  # ✅ Corrigido aqui
 
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
@@ -2881,7 +2882,7 @@ def excluir_servico(id):
     except Exception as e:
         flash("❌ Erro ao excluir serviço.")
 
-    return redirect(url_for('servicos'))
+    return redirect(url_for('listar_servicos'))  # ✅ Corrigido aqui
 
 
 @app.route('/os/<int:id>')
@@ -6116,7 +6117,7 @@ def adicionar_orcamento():
     '''
 
 
-# Nova rota: Formulário para complementar o orçamento
+# Nova rota: Formulário para complementar o orçamento — MOSTRA APENAS OS CAMPOS NOVOS
 @app.route('/complementar_orcamento/<int:id>')
 def complementar_orcamento(id):
     if 'usuario' not in session:
@@ -6242,25 +6243,7 @@ def complementar_orcamento(id):
             </div>
             <a href="/orcamentos" class="back-link">← Voltar à lista</a>
             <form method="post" action="/salvar_como_servico/{id}" class="form-container">
-                <h3>Dados do Orçamento</h3>
-                <div>
-                    <label>Código</label>
-                    <input type="text" value="{orcamento['codigo_servico']}" readonly>
-                </div>
-                <div>
-                    <label>Título</label>
-                    <input type="text" value="{orcamento['titulo']}" readonly>
-                </div>
-                <div>
-                    <label>Cliente</label>
-                    <input type="text" value="{orcamento['empresas']['nome_empresa'] if orcamento.get('empresas') else '—'}" readonly>
-                </div>
-                <div>
-                    <label>Valor</label>
-                    <input type="text" value="R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}" readonly>
-                </div>
-
-                <h3 style="margin-top: 30px;">Complementar com dados do Serviço</h3>
+                <h3>Campos a Preencher</h3>
                 <div>
                     <label>Status</label>
                     <select name="status">
