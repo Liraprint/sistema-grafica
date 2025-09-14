@@ -3743,10 +3743,10 @@ def editar_material(id):
                 </div>
                 <div>
                     <label>Fornecedor</label>
-                    <select name="fornecedor_id" id="fornecedor_id">
-                        <option value="">Selecione um fornecedor</option>
-                        {''.join(f'<option value="{f["id"]}" {"selected" if f["id"] == fornecedor_selecionado["id"] if fornecedor_selecionado else ""}>{f["nome"]}</option>' for f in fornecedores)}
-                    </select>
+                <select name="fornecedor_id" id="fornecedor_id">
+                            <option value="">Selecione um fornecedor</option>
+                            {''.join(f'<option value="{f["id"]}" {"selected" if f["id"] == fornecedor_selecionado["id"] if fornecedor_selecionado else ""}>{f["nome"]}</option>' for f in fornecedores)}
+                            </select>
                 </div>
                 <button type="submit" class="btn">💾 Salvar Alterações</button>
             </form>
