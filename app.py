@@ -14,7 +14,7 @@ app.secret_key = 'minha_chave_secreta_123'
 # ========================
 # Dados do Supabase (API)
 # ========================
-SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
+SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"  # ← removido espaços!
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
 
 headers = {
@@ -5947,14 +5947,21 @@ def adicionar_orcamento():
                 print("❌ Erro ao criar orçamento principal:", response.status_code, response.text)
                 return redirect(url_for('adicionar_orcamento'))
 
-            # 👇 AQUI ESTÁ O PONTO CRÍTICO 👇
-            orcamento_data = response.json()
-            if not orcamento_data or 'id' not in orcamento_data:
-                flash("❌ Orçamento criado, mas ID não retornado.")
-                print("❌ Dados recebidos:", orcamento_data)
+            # 🔥 CORREÇÃO PRINCIPAL: Buscar o ID do orçamento recém-criado
+            url_busca = f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1"
+            resp_busca = requests.get(url_busca, headers=headers)
+
+            if resp_busca.status_code == 200:
+                orc_data = resp_busca.json()
+                if len(orc_data) > 0:
+                    orcamento_id = orc_data[0]['id']
+                    print("✅ ID do orçamento criado:", orcamento_id)
+                else:
+                    flash("❌ Orçamento criado, mas ID não encontrado.")
+                    return redirect(url_for('adicionar_orcamento'))
+            else:
+                flash("❌ Falha ao buscar o ID do orçamento.")
                 return redirect(url_for('adicionar_orcamento'))
-            orcamento_id = orcamento_data['id']
-            print("✅ ID do orçamento criado:", orcamento_id)  # ← LOG IMPORTANTE!
 
             valor_total_orcamento = 0.0
 
@@ -5991,10 +5998,6 @@ def adicionar_orcamento():
                         "valor_total": vlr_total,
                         "observacoes": obs
                     }
-
-                    # 👇 LOG ANTES DE ENVIAR O ITEM 👇
-                    print(f"\n➡️ Tentando salvar item {i+1}: {titulo}")
-                    print("Dados do item:", dados_item)
 
                     resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
 
@@ -6226,7 +6229,7 @@ def adicionar_orcamento():
         </script>
     </body>
     </html>
-    '''
+    ''' 
 
 
 # Nova rota: Formulário para complementar o orçamento — MOSTRA APENAS OS CAMPOS NOVOS
