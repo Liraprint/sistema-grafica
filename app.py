@@ -5898,6 +5898,9 @@ def listar_orcamentos():
     '''
 
 
+# ========================
+# ROTA CORRIGIDA: adicionar_orcamento
+# ========================
 @app.route('/adicionar_orcamento', methods=['GET', 'POST'])
 def adicionar_orcamento():
     if 'usuario' not in session:
@@ -5920,29 +5923,39 @@ def adicionar_orcamento():
             else:
                 numero = 1
             codigo_servico = f"OR-{numero:03d}"
-        except:
+        except Exception as e:
+            print("Erro ao gerar código:", e)
             codigo_servico = "OR-001"
 
-        # Cria o orçamento principal (sem valor_cobrado, pois será calculado)
+        # Cria o orçamento principal
         try:
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados_orc = {
                 "codigo_servico": codigo_servico,
-                "titulo": "Orçamento Múltiplo",  # Título genérico
+                "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
                 "tipo": "Orçamento",
                 "status": "Pendente",
                 "data_abertura": data_abertura,
-                "valor_cobrado": 0.0,  # Será atualizado depois
+                "valor_cobrado": 0.0,
                 "observacoes": request.form.get('observacoes_gerais', '')
             }
             response = requests.post(url, json=dados_orc, headers=headers)
 
             if response.status_code != 201:
                 flash("❌ Erro ao criar orçamento.")
+                print("❌ Erro ao criar orçamento principal:", response.status_code, response.text)
                 return redirect(url_for('adicionar_orcamento'))
 
-            orcamento_id = response.json()['id']
+            # 👇 AQUI ESTÁ O PONTO CRÍTICO 👇
+            orcamento_id = response.json().get('id')
+            print("✅ ID do orçamento criado:", orcamento_id)  # ← LOG IMPORTANTE!
+
+            if not orcamento_id:
+                flash("❌ Orçamento criado, mas ID não retornado.")
+                print("❌ response.json():", response.json())
+                return redirect(url_for('adicionar_orcamento'))
+
             valor_total_orcamento = 0.0
 
             # Processa os itens
@@ -5968,9 +5981,8 @@ def adicionar_orcamento():
                     vlr_total = qtd * vlr_unit
                     valor_total_orcamento += vlr_total
 
-                    # Salva item
                     dados_item = {
-                        "orcamento_id": orcamento_id,
+                        "orcamento_id": orcamento_id,  # ← USA O ID DO ORÇAMENTO
                         "titulo": titulo,
                         "quantidade": qtd,
                         "dimensao": dim,
@@ -5979,10 +5991,20 @@ def adicionar_orcamento():
                         "valor_total": vlr_total,
                         "observacoes": obs
                     }
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
+
+                    # 👇 LOG ANTES DE ENVIAR O ITEM 👇
+                    print(f"\n➡️ Tentando salvar item {i+1}: {titulo}")
+                    print("Dados do item:", dados_item)
+
+                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
+
+                    if resp_item.status_code == 201:
+                        print(f"✅ Item {i+1} salvo com sucesso!")
+                    else:
+                        print(f"❌ Erro ao salvar item {i+1}:", resp_item.status_code, resp_item.text)
 
                 except Exception as e:
-                    print("Erro ao salvar item:", e)
+                    print(f"❌ Exceção ao salvar item {i+1}:", str(e))
                     continue
 
             # Atualiza valor total no orçamento principal
@@ -5996,7 +6018,7 @@ def adicionar_orcamento():
             return redirect(url_for('listar_orcamentos'))
 
         except Exception as e:
-            print("Erro geral:", e)
+            print("❌ Erro geral:", e)
             flash("❌ Erro de conexão.")
 
     empresas = buscar_empresas()
@@ -6510,6 +6532,10 @@ def pdf_orcamento(id):
         </tr>
         """
 
+    # Verifica se o logo existe
+    logo_path = os.path.join(os.getcwd(), 'logo.png')
+    logo_tag = f'<img src="file://{logo_path}" width="200" style="margin-bottom: 20px;">' if os.path.exists(logo_path) else ''
+
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -6576,6 +6602,7 @@ def pdf_orcamento(id):
     </head>
     <body>
         <div class="header">
+            {logo_tag}
             <h1>PROPOSTA COMERCIAL</h1>
         </div>
 
