@@ -5948,13 +5948,13 @@ def adicionar_orcamento():
                 return redirect(url_for('adicionar_orcamento'))
 
             # 👇 AQUI ESTÁ O PONTO CRÍTICO 👇
-            orcamento_id = response.json().get('id')
-            print("✅ ID do orçamento criado:", orcamento_id)  # ← LOG IMPORTANTE!
-
-            if not orcamento_id:
+            orcamento_data = response.json()
+            if not orcamento_data or 'id' not in orcamento_data:
                 flash("❌ Orçamento criado, mas ID não retornado.")
-                print("❌ response.json():", response.json())
+                print("❌ Dados recebidos:", orcamento_data)
                 return redirect(url_for('adicionar_orcamento'))
+            orcamento_id = orcamento_data['id']
+            print("✅ ID do orçamento criado:", orcamento_id)  # ← LOG IMPORTANTE!
 
             valor_total_orcamento = 0.0
 
