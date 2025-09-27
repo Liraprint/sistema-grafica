@@ -14,7 +14,7 @@ app.secret_key = 'minha_chave_secreta_123'
 # ========================
 # Dados do Supabase (API)
 # ========================
-SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"  # ← removido espaços!
+SUPABASE_URL = "https://muqksofhbonebgbpuucy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11cWtzb2ZoYm9uZWJnYnB1dWN5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjYwOTA5OCwiZXhwIjoyMDcyMTg1MDk4fQ.k5W4Jr_q77O09ugiMynOZ0Brlk1l8u35lRtDxu0vpxw"
 
 headers = {
@@ -54,13 +54,14 @@ def buscar_usuarios():
         return []
 
 
-def criar_usuario(username, password, nivel):
+def criar_usuario(username, password, nivel, telefone=None):
     try:
         url = f"{SUPABASE_URL}/rest/v1/usuarios"
         dados = {
             "nome de usuario": username,
             "SENHA": password,
-            "NÍVEL": nivel
+            "NÍVEL": nivel,
+            "telefone": telefone
         }
         response = requests.post(url, json=dados, headers=headers)
         
@@ -361,6 +362,7 @@ def login():
             if usuario:
                 session['usuario'] = usuario['nome de usuario']
                 session['nivel'] = usuario['NÍVEL']
+                session['telefone'] = usuario.get('telefone', '')  # ← Salva telefone na sessão
                 return redirect(url_for('clientes'))
             else:
                 flash("Usuário ou senha incorretos!")
@@ -611,7 +613,73 @@ def gerenciar_usuarios():
     
     try:
         usuarios = buscar_usuarios()
-        return render_template('gerenciar_usuarios.html', usuarios=usuarios)
+        return f'''
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <title>Gerenciar Usuários</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; background: #f5f7fa; }}
+                .container {{ max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ccc; padding: 12px; text-align: left; }}
+                th {{ background: #ecf0f1; font-weight: bold; }}
+                .form-container {{ background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }}
+                input, select {{ padding: 10px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }}
+                button {{ padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }}
+                a {{ color: #3498db; text-decoration: none; }}
+                .back-link {{ display: inline-block; margin: 20px 0; color: #3498db; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>🔐 Gerenciar Usuários</h2>
+                <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+                <div class="form-container">
+                    <h3>➕ Criar Novo Usuário</h3>
+                    <form method="post" action="/criar_usuario">
+                        <input type="text" name="username" placeholder="Usuário" required>
+                        <input type="password" name="password" placeholder="Senha" required>
+                        <input type="text" name="telefone" placeholder="Telefone (opcional)">
+                        <select name="nivel" required>
+                            <option value="">Selecione o nível</option>
+                            <option value="administrador">Administrador</option>
+                            <option value="vendedor">Vendedor</option>
+                            <option value="consulta">Consulta</option>
+                        </select>
+                        <button type="submit">Criar Usuário</button>
+                    </form>
+                </div>
+
+                <h3>📋 Usuários Cadastrados</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Nível</th>
+                            <th>Telefone</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {''.join(f"""
+                        <tr>
+                            <td>{u['id']}</td>
+                            <td>{u['nome de usuario']}</td>
+                            <td>{u['NÍVEL']}</td>
+                            <td>{u.get('telefone', '—')}</td>
+                            <td><a href="/excluir_usuario/{u['id']}" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td>
+                        </tr>
+                        """ for u in usuarios)}
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+        '''
     except Exception as e:
         flash("Erro ao carregar usuários.")
         return redirect(url_for('clientes'))
@@ -626,6 +694,7 @@ def criar_usuario_view():
     username = request.form.get('username')
     password = request.form.get('password')
     nivel = request.form.get('nivel')
+    telefone = request.form.get('telefone')  # ← novo campo
     
     if not username or not password or not nivel:
         flash("Todos os campos são obrigatórios!")
@@ -636,7 +705,7 @@ def criar_usuario_view():
         return redirect(url_for('gerenciar_usuarios'))
     
     try:
-        if criar_usuario(username, password, nivel):
+        if criar_usuario(username, password, nivel, telefone):  # ← passa telefone
             flash("Usuário criado com sucesso!")
         else:
             flash("Erro ao criar usuário.")
@@ -6496,7 +6565,7 @@ def pdf_orcamento(id):
 
     try:
         # Busca orçamento principal
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa)"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,telefone)"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Orçamento não encontrado.")
@@ -6508,8 +6577,14 @@ def pdf_orcamento(id):
         response_itens = requests.get(url_itens, headers=headers)
         itens = response_itens.json() if response_itens.status_code == 200 else []
 
-        # Busca nome da empresa
-        empresa_nome = orcamento['empresas']['nome_empresa'] if orcamento.get('empresas') else '—'
+        # Busca nome da empresa e telefone
+        empresa = orcamento.get('empresas', {})
+        empresa_nome = empresa.get('nome_empresa', '—')
+        telefone_empresa = empresa.get('telefone', '(11) 95439-3025')  # Telefone padrão se não tiver
+
+        # Nome e telefone do vendedor logado
+        nome_vendedor = session.get('usuario', 'Vendedor')
+        telefone_vendedor = session.get('telefone', '(11) 95439-3025')  # Usa telefone do usuário ou padrão
 
     except Exception as e:
         flash("Erro ao carregar orçamento.")
@@ -6535,9 +6610,9 @@ def pdf_orcamento(id):
         </tr>
         """
 
-    # Verifica se o logo existe
+    # Caminho do logo
     logo_path = os.path.join(os.getcwd(), 'logo.png')
-    logo_tag = f'<img src="file://{logo_path}" width="200" style="margin-bottom: 20px;">' if os.path.exists(logo_path) else ''
+    logo_tag = f'<img src="file://{logo_path}" width="200" style="margin-bottom: 20px;">' if os.path.exists(logo_path) else '<h2>LIRAPRINT</h2>'
 
     html = f'''
     <!DOCTYPE html>
@@ -6615,7 +6690,7 @@ def pdf_orcamento(id):
                 <p><strong>Cliente:</strong> {empresa_nome}</p>
             </div>
             <div>
-                <p><strong>Orçamento de adesivos:</strong> {orcamento['codigo_servico']}</p>
+                <p><strong>Orçamento:</strong> {orcamento['codigo_servico']}</p>
             </div>
         </div>
 
@@ -6643,8 +6718,8 @@ def pdf_orcamento(id):
 
         <div class="ass">
             <p>Atenciosamente</p>
-            <p>Telma Alves</p>
-            <p>Tel: (11) 95439-3025</p>
+            <p>{nome_vendedor}</p>
+            <p>Tel: {telefone_vendedor}</p>
             <p>São Paulo - SP</p>
         </div>
     </body>
@@ -6734,12 +6809,13 @@ def exportar_excel():
 
     ws_usuarios = wb.create_sheet("Usuários")
     usuarios = buscar_usuarios()
-    ws_usuarios.append(["ID", "Nome de Usuário", "Nível"])
+    ws_usuarios.append(["ID", "Nome de Usuário", "Nível", "Telefone"])
     for u in usuarios:
         ws_usuarios.append([
             u.get("id"),
             u.get("nome de usuario", ""),
-            u.get("NÍVEL", "").upper()
+            u.get("NÍVEL", "").upper(),
+            u.get("telefone", "")
         ])
     for cell in ws_usuarios[1]:
         cell.font = Font(bold=True)
