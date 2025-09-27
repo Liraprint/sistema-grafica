@@ -590,6 +590,7 @@ def clientes():
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
                 <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                <a href="/envios" class="btn btn-blue">📦 Rastreamento</a>
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
@@ -5976,9 +5977,6 @@ def listar_orcamentos():
     '''
 
 
-# ========================
-# ROTA CORRIGIDA: adicionar_orcamento
-# ========================
 @app.route('/adicionar_orcamento', methods=['GET', 'POST'])
 def adicionar_orcamento():
     if 'usuario' not in session:
@@ -6959,6 +6957,417 @@ def importar_excel():
             return redirect(request.url)
 
     return render_template('importar_excel.html', log=None)
+
+
+# ========================
+# MÓDULO DE RASTREAMENTO DE ENVIOS
+# ========================
+
+def buscar_envios():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar envios:", e)
+        return []
+
+def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios"
+        dados = {
+            "tipo_envio": tipo_envio,
+            "empresa_id": int(empresa_id),
+            "descricao": descricao,
+            "codigo_rastreio": codigo_rastreio
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print("Erro ao criar envio:", e)
+        return False
+
+def marcar_entregue(id):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
+        dados = {
+            "status": "Entregue",
+            "data_entrega": datetime.now().isoformat()
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro ao marcar entrega:", e)
+        return False
+
+@app.route('/registrar_envio')
+def registrar_envio():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    # Buscar empresas para o menu suspenso
+    empresas = buscar_empresas()
+    # Buscar serviços para o menu suspenso (só os concluídos/entregues)
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico,titulo&status=in.(Concluído,Entregue)&order=codigo_servico.desc"
+        response = requests.get(url_serv, headers=headers)
+        servicos = response.json() if response.status_code == 200 else []
+    except:
+        servicos = []
+    
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registrar Envio - Rastreamento</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 Registrar Envio para Rastreamento</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/envios" class="back-link">← Voltar à Lista de Envios</a>
+            <form method="post" action="/salvar_envio" class="form-container">
+                <div>
+                    <label>Tipo de Envio *</label>
+                    <select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required>
+                        <option value="">Selecione</option>
+                        <option value="Serviço">Serviço (vinculado a OS)</option>
+                        <option value="Amostra">Amostra Grátis</option>
+                    </select>
+                </div>
+
+                <div id="servico-campo" style="display: none;">
+                    <label>Serviço *</label>
+                    <select name="servico_id">
+                        <option value="">Selecione um serviço</option>
+                        {''.join(f'<option value="{s["id"]}">{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
+                    </select>
+                </div>
+
+                <div>
+                    <label>Cliente *</label>
+                    <select name="empresa_id" required>
+                        <option value="">Selecione uma empresa</option>
+                        {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
+                    </select>
+                </div>
+
+                <div>
+                    <label>O que foi enviado? *</label>
+                    <textarea name="descricao" rows="3" placeholder="Ex: Amostra de papel couché 300g" required></textarea>
+                </div>
+
+                <div>
+                    <label>Código de Rastreio *</label>
+                    <input type="text" name="codigo_rastreio" placeholder="Ex: PQ123456789BR" required>
+                </div>
+
+                <button type="submit" class="btn">💾 Registrar Envio</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function toggleServico() {{
+                const tipo = document.getElementById('tipo_envio').value;
+                const campo = document.getElementById('servico-campo');
+                if (tipo === 'Serviço') {{
+                    campo.style.display = 'block';
+                }} else {{
+                    campo.style.display = 'none';
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/salvar_envio', methods=['POST'])
+def salvar_envio():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    tipo_envio = request.form.get('tipo_envio')
+    empresa_id = request.form.get('empresa_id')
+    descricao = request.form.get('descricao')
+    codigo_rastreio = request.form.get('codigo_rastreio')
+    
+    if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio:
+        flash("Preencha todos os campos obrigatórios!")
+        return redirect(url_for('registrar_envio'))
+    
+    # Se for serviço, atualiza o serviço para "Enviado"
+    if tipo_envio == "Serviço":
+        servico_id = request.form.get('servico_id')
+        if servico_id:
+            try:
+                url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}"
+                requests.patch(url, json={"status": "Enviado"}, headers=headers)
+            except:
+                pass
+    
+    if criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
+        flash("✅ Envio registrado com sucesso!")
+    else:
+        flash("❌ Erro ao registrar envio.")
+    
+    return redirect(url_for('envios'))
+
+@app.route('/envios')
+def envios():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    lista_envios = buscar_envios()
+    
+    envios_html = ""
+    for e in lista_envios:
+        status_cor = "#27ae60" if e['status'] == "Entregue" else "#e67e22"
+        data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
+        
+        envios_html += f'''
+        <tr>
+            <td>{format_data(e.get('data_envio'))}</td>
+            <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
+            <td>{e['tipo_envio']}</td>
+            <td>{e['descricao']}</td>
+            <td>{e['codigo_rastreio']}</td>
+            <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
+            <td>{data_entrega}</td>
+            <td>
+                <a href="https://www.correios.com.br/rastreamento?objeto={e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+                {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
+            </td>
+        </tr>
+        '''
+    
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rastreamento de Envios</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1400px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .btn {{
+                padding: 8px 12px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                cursor: pointer;
+                text-decoration: none;
+                margin-right: 5px;
+            }}
+            .btn-blue {{ background: #3498db; color: white; }}
+            .btn-green {{ background: #27ae60; color: white; }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 Rastreamento de Envios</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data Envio</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>O que foi enviado</th>
+                        <th>Código Rastreio</th>
+                        <th>Status</th>
+                        <th>Data Entrega</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {envios_html}
+                </tbody>
+            </table>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/marcar_entregue/<int:id>')
+def marcar_entregue_view(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    if marcar_entregue(id):
+        flash("✅ Entrega registrada com sucesso!")
+    else:
+        flash("❌ Erro ao registrar entrega.")
+    
+    return redirect(url_for('envios'))
 
 
 # ========================
