@@ -2939,26 +2939,17 @@ def excluir_servico(id):
         return redirect(url_for('listar_servicos'))  # ✅ Corrigido aqui
 
     try:
-        # Primeiro: Exclui todos os itens do orçamento (se for orçamento)
-        url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
-        response_itens = requests.delete(url_itens, headers=headers)
-        if response_itens.status_code not in [204, 200]:
-            print(f"⚠️ Erro ao excluir itens: {response_itens.status_code} - {response_itens.text}")
-
-        # Depois: Exclui os materiais usados (se houver)
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
         requests.delete(url_mats, headers=headers)
 
-        # Finalmente: Exclui o serviço/orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.delete(url, headers=headers)
-
         if response.status_code == 204:
-            flash("🗑️ Orçamento/Serviço excluído com sucesso!")
+            flash("🗑️ Serviço excluído com sucesso!")
         else:
-            flash("❌ Erro ao excluir orçamento.")
+            flash("❌ Erro ao excluir serviço.")
     except Exception as e:
-        flash("❌ Erro ao excluir orçamento.")
+        flash("❌ Erro ao excluir serviço.")
 
     return redirect(url_for('listar_servicos'))  # ✅ Corrigido aqui
 
@@ -6619,9 +6610,10 @@ def pdf_orcamento(id):
         </tr>
         """
 
-    # Usa URL pública do logo
-logo_url = "https://ibb.co/m5YgQS9Z"  # ← COLE SEU LINK AQUI!
-logo_tag = f'<img src="{logo_url}" width="200" style="margin-bottom: 20px;">'
+    # Caminho do logo
+    logo_path = os.path.join(os.getcwd(), 'logo.png')
+    logo_tag = f'<img src="file://{logo_path}" width="200" style="margin-bottom: 20px;">' if os.path.exists(logo_path) else '<h2>LIRAPRINT</h2>'
+
     html = f'''
     <!DOCTYPE html>
     <html>
