@@ -6620,7 +6620,7 @@ def pdf_orcamento(id):
         """
 
     # Caminho do logo
-    logo_url = "https://ibb.co/m5YgQS9Z"  # ← COLE SEU LINK AQUI!
+    logo_url = "[logo.png](https://postimg.cc/WhLDxCzh)"  # ← COLE SEU LINK AQUI!
     logo_tag = f'<img src="{logo_url}" width="200" style="margin-bottom: 20px;">'
 
     html = f'''
