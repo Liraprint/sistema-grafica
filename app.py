@@ -6982,7 +6982,8 @@ def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
             "empresa_id": int(empresa_id),
             "descricao": descricao,
             "codigo_rastreio": codigo_rastreio,
-             "data_envio": datetime.now().isoformat()
+             "data_envio": datetime.now().isoformat(),
+             "status": "Enviado"
          }
         response = requests.post(url, json=dados, headers=headers)
         return response.status_code == 201
@@ -7245,11 +7246,13 @@ def envios():
     <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
     <td>{data_entrega}</td>
     <td>
+    <div style="display: flex; gap: 5px; align-items: center;">
         <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
         <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
         <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
         {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
-    </td>
+    </div>
+</td>
     </tr>
 '''
     
@@ -7387,6 +7390,234 @@ def marcar_entregue_view(id):
         flash("✅ Entrega registrada com sucesso!")
     else:
         flash("❌ Erro ao registrar entrega.")
+    
+    return redirect(url_for('envios'))
+
+@app.route('/editar_envio/<int:id>', methods=['GET', 'POST'])
+def editar_envio(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Envio não encontrado.")
+            return redirect(url_for('envios'))
+        envio = response.json()[0]
+        
+        empresas = buscar_empresas()
+        servicos = buscar_servicos()  # ← você precisa criar esta função ou usar a existente
+        
+    except Exception as e:
+        flash("Erro ao carregar envio.")
+        return redirect(url_for('envios'))
+
+    if request.method == 'POST':
+        tipo_envio = request.form.get('tipo_envio')
+        empresa_id = request.form.get('empresa_id')
+        descricao = request.form.get('descricao')
+        codigo_rastreio = request.form.get('codigo_rastreio')
+        data_envio = request.form.get('data_envio')  # opcional
+        
+        if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio:
+            flash("Preencha todos os campos obrigatórios!")
+            return redirect(request.url)
+        
+        try:
+            dados = {
+                "tipo_envio": tipo_envio,
+                "empresa_id": int(empresa_id),
+                "descricao": descricao,
+                "codigo_rastreio": codigo_rastreio
+            }
+            
+            if data_envio:
+                dados["data_envio"] = data_envio
+            
+            response = requests.patch(url, json=dados, headers=headers)
+            if response.status_code == 204:
+                flash("✅ Envio atualizado com sucesso!")
+                return redirect(url_for('envios'))
+            else:
+                flash("❌ Erro ao atualizar envio.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+        
+        return redirect(request.url)
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Envio</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #f39c12;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar Envio</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/envios" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Tipo de Envio *</label>
+                    <select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required>
+                        <option value="">Selecione</option>
+                        <option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option>
+                        <option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option>
+                    </select>
+                </div>
+
+                <div id="servico-campo" style="display: {'block' if envio['tipo_envio'] == 'Serviço' else 'none'};">
+                    <label>Serviço *</label>
+                    <select name="servico_id">
+                        <option value="">Selecione um serviço</option>
+                        {''.join(f'<option value="{s["id"]}" {"selected" if s["id"] == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
+                    </select>
+                </div>
+
+                <div>
+                    <label>Cliente *</label>
+                    <select name="empresa_id" required>
+                        <option value="">Selecione uma empresa</option>
+                        {''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == envio["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}
+                    </select>
+                </div>
+
+                <div>
+                    <label>O que foi enviado? *</label>
+                    <textarea name="descricao" rows="3" required>{envio['descricao']}</textarea>
+                </div>
+
+                <div>
+                    <label>Código de Rastreio *</label>
+                    <input type="text" name="codigo_rastreio" value="{envio['codigo_rastreio']}" required>
+                </div>
+
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+
+        <script>
+            function toggleServico() {{
+                const tipo = document.getElementById('tipo_envio').value;
+                const campo = document.getElementById('servico-campo');
+                if (tipo === 'Serviço') {{
+                    campo.style.display = 'block';
+                }} else {{
+                    campo.style.display = 'none';
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/excluir_envio/<int:id>')
+def excluir_envio(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            flash("🗑️ Envio excluído com sucesso!")
+        else:
+            flash("❌ Erro ao excluir envio.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
     
     return redirect(url_for('envios'))
 
