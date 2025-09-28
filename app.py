@@ -596,7 +596,7 @@ def clientes():
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
-                {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup (Excel)</a>' if session['nivel'] == 'administrador' else ''}
+                {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
             </div>
             <div class="footer">
@@ -3620,8 +3620,8 @@ def listar_materiais():
                         <td>{m["unidade_medida"]}</td>
                         <td>{m["fornecedor"] or "—"}</td>
                         <td>
-                            <a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
-                            <a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                            {f'<a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}
+                            {f'<a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session['nivel'] == 'administrador' else ''}
                         </td>
                     </tr>
                     ''' for m in materiais)}
@@ -3774,6 +3774,10 @@ def detalhes_material(id):
 def editar_material(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    if session['nivel'] not in ['administrador', 'vendedor']:
+        flash("Acesso negado!")
+        return redirect(url_for('listar_materiais'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
@@ -5040,6 +5044,10 @@ def registrar_entrada_form():
 def registrar_entrada():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    if session['nivel'] not in ['administrador', 'vendedor']:
+        flash("Acesso negado!")
+        return redirect(url_for('estoque'))
 
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
@@ -5299,6 +5307,10 @@ def registrar_saida_form():
 def registrar_saida():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+        if session['nivel'] not in ['administrador', 'vendedor']:
+            flash("Acesso negado!")
+            return redirect(url_for('estoque'))
 
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
@@ -5358,8 +5370,9 @@ def excluir_movimentacao(id):
 
 @app.route('/fornecedores')
 def listar_fornecedores():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
 
     busca = request.args.get('q', '').strip()
 
@@ -5536,6 +5549,10 @@ def listar_fornecedores():
 def cadastrar_fornecedor():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+        if session['nivel'] != 'administrador':
+            flash("Acesso negado!")
+            return redirect(url_for('clientes'))
 
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -5694,6 +5711,10 @@ def cadastrar_fornecedor():
 def editar_fornecedor(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+        if session['nivel'] != 'administrador':
+            flash("Acesso negado!")
+            return redirect(url_for('clientes'))
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
@@ -5864,6 +5885,10 @@ def excluir_fornecedor_view(id):
     if 'usuario' not in session:
         flash("Acesso negado!")
         return redirect(url_for('login'))
+    
+        if session['nivel'] != 'administrador':
+            flash("Acesso negado!")
+            return redirect(url_for('clientes'))
 
     if excluir_fornecedor(id):
         flash("🗑️ Fornecedor excluído com sucesso!")
