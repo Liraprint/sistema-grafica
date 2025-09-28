@@ -7407,7 +7407,14 @@ def editar_envio(id):
         envio = response.json()[0]
         
         empresas = buscar_empresas()
-        servicos = buscar_servicos()  # ← você precisa criar esta função ou usar a existente
+        
+        # Buscar serviços
+        try:
+            url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico,titulo&tipo=neq.Orçamento&order=codigo_servico.desc"
+            response_serv = requests.get(url_serv, headers=headers)
+            servicos = response_serv.json() if response_serv.status_code == 200 else []
+        except:
+            servicos = []
         
     except Exception as e:
         flash("Erro ao carregar envio.")
@@ -7418,7 +7425,6 @@ def editar_envio(id):
         empresa_id = request.form.get('empresa_id')
         descricao = request.form.get('descricao')
         codigo_rastreio = request.form.get('codigo_rastreio')
-        data_envio = request.form.get('data_envio')  # opcional
         
         if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio:
             flash("Preencha todos os campos obrigatórios!")
@@ -7432,8 +7438,11 @@ def editar_envio(id):
                 "codigo_rastreio": codigo_rastreio
             }
             
-            if data_envio:
-                dados["data_envio"] = data_envio
+            # Se for serviço, adiciona o servico_id
+            if tipo_envio == "Serviço":
+                servico_id = request.form.get('servico_id')
+                if servico_id:
+                    dados["servico_id"] = int(servico_id)
             
             response = requests.patch(url, json=dados, headers=headers)
             if response.status_code == 204:
@@ -7560,7 +7569,7 @@ def editar_envio(id):
                     <label>Serviço *</label>
                     <select name="servico_id">
                         <option value="">Selecione um serviço</option>
-                        {''.join(f'<option value="{s["id"]}" {"selected" if s["id"] == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
+                        {''.join(f'<option value="{s["id"]}" {"selected" if s.get("id") == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
                     </select>
                 </div>
 
