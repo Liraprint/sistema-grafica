@@ -1483,7 +1483,6 @@ def detalhes_empresa(id):
     </html>
     '''
 
-
 @app.route('/editar_empresa/<int:id>', methods=['GET', 'POST'])
 def editar_empresa(id):
     if 'usuario' not in session:
