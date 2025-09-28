@@ -6815,10 +6815,11 @@ def exportar_excel():
     output = BytesIO()
     wb = Workbook()
 
+    # Empresas
     ws_empresas = wb.active
     ws_empresas.title = "Empresas"
     empresas = buscar_empresas()
-    ws_empresas.append(["ID", "Nome da Empresa", "CNPJ", "Responsável", "WhatsApp", "Email", "Endereço", "Bairro", "Cidade", "Estado", "CEP", "Número"])
+    ws_empresas.append(["ID", "Nome da Empresa", "CNPJ", "Responsável", "WhatsApp", "Email", "Endereço", "Bairro", "Cidade", "Estado", "CEP", "Número", "Entrega Endereço", "Entrega Número", "Entrega Bairro", "Entrega Cidade", "Entrega Estado", "Entrega CEP"])
     for e in empresas:
         ws_empresas.append([
             e.get("id"),
@@ -6832,15 +6833,22 @@ def exportar_excel():
             e.get("cidade", ""),
             e.get("estado", ""),
             e.get("cep", ""),
-            e.get("numero", "")
+            e.get("numero", ""),
+            e.get("entrega_endereco", ""),
+            e.get("entrega_numero", ""),
+            e.get("entrega_bairro", ""),
+            e.get("entrega_cidade", ""),
+            e.get("entrega_estado", ""),
+            e.get("entrega_cep", "")
         ])
     for cell in ws_empresas[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
+    # Materiais
     ws_materiais = wb.create_sheet("Materiais")
     materiais = buscar_materiais()
-    ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor"])
+    ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor", "Especificação"])
     for m in materiais:
         ws_materiais.append([
             m.get("id"),
@@ -6849,15 +6857,17 @@ def exportar_excel():
             m.get("grupo_material", ""),
             m.get("unidade_medida", ""),
             m.get("valor_unitario", 0),
-            m.get("fornecedor", "")
+            m.get("fornecedor", ""),
+            m.get("especificacao", "")
         ])
     for cell in ws_materiais[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
+    # Estoque (movimentações)
     ws_estoque = wb.create_sheet("Estoque")
     movimentacoes = buscar_movimentacoes_com_materiais()
-    ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo"])
+    ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo", "Tamanho"])
     for m in movimentacoes:
         material_nome = m["materiais"]["denominacao"] if m.get("materiais") else "Excluído"
         ws_estoque.append([
@@ -6868,12 +6878,14 @@ def exportar_excel():
             m.get("valor_unitario", 0),
             m.get("valor_total", 0),
             m.get("data_movimentacao", "")[:16].replace("T", " "),
-            m.get("motivo", "")
+            m.get("motivo", ""),
+            m.get("tamanho", "")
         ])
     for cell in ws_estoque[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
+    # Usuários
     ws_usuarios = wb.create_sheet("Usuários")
     usuarios = buscar_usuarios()
     ws_usuarios.append(["ID", "Nome de Usuário", "Nível", "Telefone"])
@@ -6888,6 +6900,106 @@ def exportar_excel():
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
 
+    # Fornecedores
+    ws_fornecedores = wb.create_sheet("Fornecedores")
+    fornecedores = buscar_fornecedores()
+    ws_fornecedores.append(["ID", "Nome", "CNPJ", "Contato", "Telefone", "Email", "Endereço"])
+    for f in fornecedores:
+        ws_fornecedores.append([
+            f.get("id"),
+            f.get("nome", ""),
+            f.get("cnpj", ""),
+            f.get("contato", ""),
+            f.get("telefone", ""),
+            f.get("email", ""),
+            f.get("endereco", "")
+        ])
+    for cell in ws_fornecedores[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # Serviços e Orçamentos
+    ws_servicos = wb.create_sheet("Serviços")
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&order=codigo_servico.desc"
+        response = requests.get(url_serv, headers=headers)
+        servicos = response.json() if response.status_code == 200 else []
+    except:
+        servicos = []
+    
+    ws_servicos.append(["ID", "Código", "Título", "Cliente", "Tipo", "Status", "Quantidade", "Dimensão", "Nº Cores", "Valor Cobrado", "Data Abertura", "Previsão Entrega", "Observações"])
+    for s in servicos:
+        ws_servicos.append([
+            s.get("id"),
+            s.get("codigo_servico", ""),
+            s.get("titulo", ""),
+            s.get("empresas", {}).get("nome_empresa", "") if s.get("empresas") else "",
+            s.get("tipo", ""),
+            s.get("status", ""),
+            s.get("quantidade", ""),
+            s.get("dimensao", ""),
+            s.get("numero_cores", ""),
+            s.get("valor_cobrado", 0),
+            s.get("data_abertura", "")[:10] if s.get("data_abertura") else "",
+            s.get("previsao_entrega", "")[:10] if s.get("previsao_entrega") else "",
+            s.get("observacoes", "")
+        ])
+    for cell in ws_servicos[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # Itens de Orçamento
+    ws_itens_orc = wb.create_sheet("Itens Orçamento")
+    try:
+        url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?select=*,servicos(codigo_servico)&order=id.desc"
+        response = requests.get(url_itens, headers=headers)
+        itens_orc = response.json() if response.status_code == 200 else []
+    except:
+        itens_orc = []
+    
+    ws_itens_orc.append(["ID", "Orçamento", "Título", "Quantidade", "Dimensão", "Nº Cores", "Valor Unitário", "Valor Total", "Observações"])
+    for i in itens_orc:
+        ws_itens_orc.append([
+            i.get("id"),
+            i.get("servicos", {}).get("codigo_servico", "") if i.get("servicos") else "",
+            i.get("titulo", ""),
+            i.get("quantidade", 0),
+            i.get("dimensao", ""),
+            i.get("numero_cores", ""),
+            i.get("valor_unitario", 0),
+            i.get("valor_total", 0),
+            i.get("observacoes", "")
+        ])
+    for cell in ws_itens_orc[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # Envios (Rastreamento)
+    ws_envios = wb.create_sheet("Envios")
+    try:
+        url_envios = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
+        response = requests.get(url_envios, headers=headers)
+        envios = response.json() if response.status_code == 200 else []
+    except:
+        envios = []
+    
+    ws_envios.append(["ID", "Tipo", "Cliente", "Descrição", "Código Rastreio", "Data Envio", "Data Entrega", "Status"])
+    for e in envios:
+        ws_envios.append([
+            e.get("id"),
+            e.get("tipo_envio", ""),
+            e.get("empresas", {}).get("nome_empresa", "") if e.get("empresas") else "",
+            e.get("descricao", ""),
+            e.get("codigo_rastreio", ""),
+            e.get("data_envio", "")[:16].replace("T", " ") if e.get("data_envio") else "",
+            e.get("data_entrega", "")[:16].replace("T", " ") if e.get("data_entrega") else "",
+            e.get("status", "")
+        ])
+    for cell in ws_envios[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+
+    # Ajustar largura das colunas
     for ws in wb.worksheets:
         for col in ws.columns:
             max_length = 0
@@ -6973,7 +7085,8 @@ def importar_excel():
                             "grupo_material": row.get('Grupo', ''),
                             "unidade_medida": row.get('Unidade', 'unidade'),
                             "valor_unitario": float(row.get('Valor Unitário', 0)),
-                            "fornecedor": row.get('Fornecedor', '')
+                            "fornecedor": row.get('Fornecedor', ''),
+                            "especificacao": row.get('Especificação', '')
                         }
                         response = requests.post(url, json=dados, headers=headers)
                         if response.status_code == 201:
@@ -7000,7 +7113,8 @@ def importar_excel():
                             "quantidade": float(row['Quantidade']),
                             "valor_unitario": float(row['Valor Unit.']),
                             "valor_total": float(row['Valor Total']),
-                            "motivo": row.get('Motivo', '')
+                            "motivo": row.get('Motivo', ''),
+                            "tamanho": row.get('Tamanho', '')
                         }
                         response = requests.post(url, json=dados, headers=headers)
                         if response.status_code == 201:
@@ -7009,6 +7123,90 @@ def importar_excel():
                             log.append(f"❌ Erro ao registrar movimentação: {response.text}")
                     except Exception as e:
                         log.append(f"❌ Erro ao importar movimentação: {str(e)}")
+
+            if 'Fornecedores' in df:
+                for _, row in df['Fornecedores'].iterrows():
+                    try:
+                        criar_fornecedor(
+                            nome=row['Nome'],
+                            cnpj=row.get('CNPJ', ''),
+                            contato=row.get('Contato', ''),
+                            telefone=row.get('Telefone', ''),
+                            email=row.get('Email', ''),
+                            endereco=row.get('Endereço', '')
+                        )
+                        log.append(f"✅ Fornecedor '{row['Nome']}' cadastrado.")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao cadastrar fornecedor: {str(e)}")
+
+            if 'Serviços' in df:
+                for _, row in df['Serviços'].iterrows():
+                    try:
+                        # Buscar ID da empresa pelo nome
+                        empresa_id = None
+                        if row.get('Cliente'):
+                            empresas = buscar_empresas()
+                            for emp in empresas:
+                                if emp.get('nome_empresa') == row['Cliente']:
+                                    empresa_id = emp['id']
+                                    break
+                        
+                        url = f"{SUPABASE_URL}/rest/v1/servicos"
+                        dados = {
+                            "codigo_servico": row['Código'],
+                            "titulo": row['Título'],
+                            "empresa_id": empresa_id,
+                            "tipo": row['Tipo'],
+                            "status": row['Status'],
+                            "quantidade": row.get('Quantidade', ''),
+                            "dimensao": row.get('Dimensão', ''),
+                            "numero_cores": row.get('Nº Cores'),
+                            "valor_cobrado": float(row.get('Valor Cobrado', 0)),
+                            "data_abertura": row.get('Data Abertura'),
+                            "previsao_entrega": row.get('Previsão Entrega'),
+                            "observacoes": row.get('Observações', '')
+                        }
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201:
+                            log.append(f"✅ Serviço '{row['Código']}' cadastrado.")
+                        else:
+                            log.append(f"❌ Erro ao cadastrar serviço: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar serviço: {str(e)}")
+
+            if 'Envios' in df:
+                for _, row in df['Envios'].iterrows():
+                    try:
+                        # Buscar ID da empresa pelo nome
+                        empresa_id = None
+                        if row.get('Cliente'):
+                            empresas = buscar_empresas()
+                            for emp in empresas:
+                                if emp.get('nome_empresa') == row['Cliente']:
+                                    empresa_id = emp['id']
+                                    break
+                        
+                        if not empresa_id:
+                            log.append(f"⚠️ Empresa '{row['Cliente']}' não encontrada para envio. Pulando...")
+                            continue
+
+                        url = f"{SUPABASE_URL}/rest/v1/envios"
+                        dados = {
+                            "tipo_envio": row['Tipo'],
+                            "empresa_id": empresa_id,
+                            "descricao": row['Descrição'],
+                            "codigo_rastreio": row['Código Rastreio'],
+                            "data_envio": row['Data Envio'],
+                            "data_entrega": row.get('Data Entrega'),
+                            "status": row['Status']
+                        }
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201:
+                            log.append(f"✅ Envio '{row['Código Rastreio']}' cadastrado.")
+                        else:
+                            log.append(f"❌ Erro ao cadastrar envio: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar envio: {str(e)}")
 
             return render_template('importar_excel.html', log=log)
 
