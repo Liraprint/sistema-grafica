@@ -1304,6 +1304,14 @@ def detalhes_empresa(id):
         flash("Erro de conexão.")
         return redirect(url_for('listar_empresas'))
 
+    # Buscar amostras enviadas para esta empresa
+    try:
+        url_amostras = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&empresa_id=eq.{id}&tipo_envio=eq.Amostra&order=data_envio.desc"
+        response_amostras = requests.get(url_amostras, headers=headers)
+        amostras = response_amostras.json() if response_amostras.status_code == 200 else []
+    except Exception as e:
+        amostras = []
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1388,6 +1396,28 @@ def detalhes_empresa(id):
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
             }}
+            .section {{
+                padding: 20px 30px;
+            }}
+            .section h3 {{
+                margin: 20px 0 15px 0;
+                color: #2c3e50;
+                font-size: 20px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 10px 0;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+                border: 1px solid #ddd;
+            }}
+            th {{
+                background: #ecf0f1;
+                font-weight: 600;
+            }}
         </style>
     </head>
     <body>
@@ -1414,6 +1444,37 @@ def detalhes_empresa(id):
                 <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
                 <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             </div>
+
+            <!-- NOVA SEÇÃO: Amostras Enviadas -->
+            <div class="section">
+                <h3>📦 Amostras Enviadas</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Envio</th>
+                            <th>O que foi enviado</th>
+                            <th>Código Rastreio</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {''.join(f"""
+                        <tr>
+                            <td>{format_data(a.get('data_envio'))}</td>
+                            <td>{a['descricao']}</td>
+                            <td>{a['codigo_rastreio']}</td>
+                            <td><span style="color: {'#27ae60' if a['status'] == 'Entregue' else '#e67e22'}; font-weight: bold;">{a['status']}</span></td>
+                            <td>
+                                <a href="https://www.linkcorreios.com.br/{a['codigo_rastreio']}" target="_blank" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px;">🔍 Rastrear</a>
+                            </td>
+                        </tr>
+                        """ for a in amostras)}
+                    </tbody>
+                </table>
+                {f'<p style="text-align: center; color: #95a5a6;">Nenhuma amostra enviada ainda.</p>' if not amostras else ''}
+            </div>
+
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
