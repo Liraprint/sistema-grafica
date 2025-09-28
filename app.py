@@ -7190,20 +7190,36 @@ def salvar_envio():
         flash("Preencha todos os campos obrigatórios!")
         return redirect(url_for('registrar_envio'))
     
-    # Se for serviço, atualiza o serviço para "Enviado"
-    if tipo_envio == "Serviço":
-        servico_id = request.form.get('servico_id')
-        if servico_id:
-            try:
-                url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}"
-                requests.patch(url, json={"status": "Enviado"}, headers=headers)
-            except:
-                pass
-    
-    if criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
-        flash("✅ Envio registrado com sucesso!")
-    else:
-        flash("❌ Erro ao registrar envio.")
+    try:
+        dados = {
+            "tipo_envio": tipo_envio,
+            "empresa_id": int(empresa_id),
+            "descricao": descricao,
+            "codigo_rastreio": codigo_rastreio,
+            "data_envio": datetime.now().isoformat()
+        }
+        
+        # Se for serviço, adiciona o servico_id
+        if tipo_envio == "Serviço":
+            servico_id = request.form.get('servico_id')
+            if servico_id:
+                dados["servico_id"] = int(servico_id)
+                # Atualiza status do serviço
+                try:
+                    url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}"
+                    requests.patch(url_serv, json={"status": "Enviado"}, headers=headers)
+                except:
+                    pass
+        
+        response = requests.post(f"{SUPABASE_URL}/rest/v1/envios", json=dados, headers=headers)
+        
+        if response.status_code == 201:
+            flash("✅ Envio registrado com sucesso!")
+        else:
+            flash(f"❌ Erro ao registrar envio. Código: {response.status_code}")
+    except Exception as e:
+        print("Erro:", str(e))
+        flash("❌ Erro de conexão.")
     
     return redirect(url_for('envios'))
 
@@ -7229,7 +7245,7 @@ def envios():
             <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
             <td>{data_entrega}</td>
             <td>
-                <a href="https://www.correios.com.br/rastreamento?objeto={e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+                <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank">🔍 Rastrear</a>
                 {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
             </td>
         </tr>
