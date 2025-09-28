@@ -7236,20 +7236,22 @@ def envios():
         data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
         
         envios_html += f'''
-        <tr>
-            <td>{format_data(e.get('data_envio'))}</td>
-            <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
-            <td>{e['tipo_envio']}</td>
-            <td>{e['descricao']}</td>
-            <td>{e['codigo_rastreio']}</td>
-            <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
-            <td>{data_entrega}</td>
-            <td>
-                <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank">🔍 Rastrear</a>
-                {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
-            </td>
-        </tr>
-        '''
+<tr>
+    <td>{format_data(e.get('data_envio'))}</td>
+    <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
+    <td>{e['tipo_envio']}</td>
+    <td>{e['descricao']}</td>
+    <td>{e['codigo_rastreio']}</td>
+    <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
+    <td>{data_entrega}</td>
+    <td>
+        <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+        <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
+        <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+        {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
+    </td>
+    </tr>
+'''
     
     return f'''
     <!DOCTYPE html>
@@ -7307,6 +7309,8 @@ def envios():
             }}
             .btn-blue {{ background: #3498db; color: white; }}
             .btn-green {{ background: #27ae60; color: white; }}
+            .btn-yellow {{ background: #f39c12; color: white; }}
+            .btn-red {{ background: #e74c3c; color: white; }}
             table {{
                 width: 100%;
                 border-collapse: collapse;
