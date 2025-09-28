@@ -591,7 +591,7 @@ def clientes():
                 <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
                 <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
                 <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
-                <a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>
+                {f'<a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>' if session['nivel'] == 'administrador' else ''}
                 <a href="/envios" class="btn btn-blue">📦 Rastreamento</a>
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
@@ -4539,6 +4539,10 @@ CEP: {destinatario['cep']}
 def estoque():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
 
     busca_mov = request.args.get('q', '').strip()
 
@@ -4601,9 +4605,9 @@ def estoque():
             <td>{m["unidade_medida"]}</td>
             <td class="{classe_estoque}">{m["quantidade_estoque"]}</td>
             <td>
-                <a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>
-                <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>
-                <a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>
+                 {f'<a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>' if session['nivel'] == 'administrador' else ''}
+                 {f'<a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>' if session['nivel'] == 'administrador' else ''}
+                 {f'<a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}
             </td>
         </tr>
         '''
@@ -4804,6 +4808,10 @@ def estoque():
 def registrar_entrada_form():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
 
     material_id = request.args.get('material_id')
     material = None
@@ -5099,6 +5107,10 @@ def registrar_entrada():
 def registrar_saida_form():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
 
     material_id = request.args.get('material_id')
     material = None
