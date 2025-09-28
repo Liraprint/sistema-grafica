@@ -7231,30 +7231,63 @@ def envios():
     
     lista_envios = buscar_envios()
     
-    envios_html = ""
+    # Separa envios por status
+    envios_enviados = []
+    envios_entregues = []
+    
     for e in lista_envios:
-        status_cor = "#27ae60" if e['status'] == "Entregue" else "#e67e22"
+        if e.get('status') == "Entregue":
+            envios_entregues.append(e)
+        else:
+            envios_enviados.append(e)
+    
+    # Gera HTML para envios enviados
+    html_enviados = ""
+    for e in envios_enviados:
         data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
-        
-        envios_html += f'''
-<tr>
-    <td>{format_data(e.get('data_envio'))}</td>
-    <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
-    <td>{e['tipo_envio']}</td>
-    <td>{e['descricao']}</td>
-    <td>{e['codigo_rastreio']}</td>
-    <td><span style="color: {status_cor}; font-weight: bold;">{e['status']}</span></td>
-    <td>{data_entrega}</td>
-    <td>
-    <div style="display: flex; gap: 5px; align-items: center;">
-        <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
-        <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
-        <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-        {'<a href="/marcar_entregue/' + str(e['id']) + '" class="btn btn-green">✅ Entregue</a>' if e['status'] != "Entregue" else '<span style="color: #95a5a6;">Já entregue</span>'}
-    </div>
-</td>
-    </tr>
-'''
+        html_enviados += f'''
+        <tr>
+            <td>{format_data(e.get('data_envio'))}</td>
+            <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
+            <td>{e['tipo_envio']}</td>
+            <td>{e['descricao']}</td>
+            <td>{e['codigo_rastreio']}</td>
+            <td><span style="color: #e67e22; font-weight: bold;">{e['status']}</span></td>
+            <td>{data_entrega}</td>
+            <td>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+                    <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
+                    <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                    <a href="/marcar_entregue/{e['id']}" class="btn btn-green">✅ Entregue</a>
+                </div>
+            </td>
+        </tr>
+        '''
+    
+    # Gera HTML para envios entregues
+    html_entregues = ""
+    for e in envios_entregues:
+        data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
+        html_entregues += f'''
+        <tr>
+            <td>{format_data(e.get('data_envio'))}</td>
+            <td>{e['empresas']['nome_empresa'] if e.get('empresas') else '—'}</td>
+            <td>{e['tipo_envio']}</td>
+            <td>{e['descricao']}</td>
+            <td>{e['codigo_rastreio']}</td>
+            <td><span style="color: #27ae60; font-weight: bold;">{e['status']}</span></td>
+            <td>{data_entrega}</td>
+            <td>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+                    <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
+                    <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+                    <span style="color: #95a5a6;">Já entregue</span>
+                </div>
+            </td>
+        </tr>
+        '''
     
     return f'''
     <!DOCTYPE html>
@@ -7342,6 +7375,16 @@ def envios():
                 font-size: 13px;
                 border-top: 1px solid #bdc3c7;
             }}
+            .section {{
+                padding: 20px 30px;
+            }}
+            .section-title {{
+                font-size: 20px;
+                margin: 0 0 15px 0;
+                color: #2c3e50;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+            }}
         </style>
     </head>
     <body>
@@ -7356,23 +7399,50 @@ def envios():
             <a href="/clientes" class="back-link">← Voltar ao Menu</a>
             <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data Envio</th>
-                        <th>Cliente</th>
-                        <th>Tipo</th>
-                        <th>O que foi enviado</th>
-                        <th>Código Rastreio</th>
-                        <th>Status</th>
-                        <th>Data Entrega</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {envios_html}
-                </tbody>
-            </table>
+            <!-- Envios Enviados (aguardando entrega) -->
+            <div class="section">
+                <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Envio</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>O que foi enviado</th>
+                            <th>Código Rastreio</th>
+                            <th>Status</th>
+                            <th>Data Entrega</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Envios Entregues -->
+            <div class="section">
+                <h2 class="section-title">✅ Envios Entregues</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Envio</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>O que foi enviado</th>
+                            <th>Código Rastreio</th>
+                            <th>Status</th>
+                            <th>Data Entrega</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center;">Nenhum envio entregue ainda</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
