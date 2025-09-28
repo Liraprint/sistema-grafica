@@ -6978,13 +6978,13 @@ def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios"
         dados = {
-    "tipo_envio": tipo_envio,
-    "empresa_id": int(empresa_id),
-    "descricao": descricao,
-    "codigo_rastreio": codigo_rastreio,
-    "data_envio": datetime.now().isoformat(),
-    "status": "Enviado"  # ← ADICIONE ESTA LINHA!
-}
+            "tipo_envio": tipo_envio,
+            "empresa_id": int(empresa_id),
+            "descricao": descricao,
+            "codigo_rastreio": codigo_rastreio,
+            "data_envio": datetime.now().isoformat(),
+            "status": "Enviado"  # ← ADICIONE ESTA LINHA!
+        }
         response = requests.post(url, json=dados, headers=headers)
         return response.status_code == 201
     except Exception as e:
