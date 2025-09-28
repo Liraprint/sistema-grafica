@@ -7012,7 +7012,7 @@ def registrar_envio():
     empresas = buscar_empresas()
     # Buscar serviços para o menu suspenso (só os concluídos/entregues)
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico,titulo&status=in.(Concluído,Entregue)&order=codigo_servico.desc"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico,titulo&tipo=neq.Orçamento&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         servicos = response.json() if response.status_code == 200 else []
     except:
