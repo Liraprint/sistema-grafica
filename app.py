@@ -2086,13 +2086,18 @@ def listar_servicos():
         except:
             return 0.0
 
-    def calcular_prazo_restante(previsao):
+    def calcular_prazo_restante(previsao, status):
         if not previsao:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Sem prazo"}
         try:
             data_prev = datetime.strptime(previsao.split("T")[0], "%Y-%m-%d")
             hoje = datetime.now().date()
             dias = (data_prev.date() - hoje).days
+            
+            # Se o serviço já foi concluído ou entregue, não mostra atraso
+            if status in ['Concluído', 'Entregue']:
+                return {"dias": 0, "cor": "#27ae60", "texto": "Finalizado"}
+
             if dias < 0:
                 return {"dias": abs(dias), "cor": "#e74c3c", "texto": f"Atrasado há {abs(dias)} dia(s)"}
             elif dias <= 3:
@@ -2106,6 +2111,7 @@ def listar_servicos():
 
     html_todos = ""
     html_andamento = ""
+    html_concluidos = ""
 
     for s in servicos:
         empresa_nome = s['empresas']['nome_empresa'] if s.get('empresas') else "Sem cliente"
@@ -2120,7 +2126,7 @@ def listar_servicos():
             'Entregue': 'status-entregue'
         }.get(s.get('status', ''), 'status-pendente')
 
-        prazo = calcular_prazo_restante(s.get('previsao_entrega'))
+        prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
 
         linha = f'''
         <tr>
@@ -2146,6 +2152,8 @@ def listar_servicos():
 
         if s.get('status') in ['Pendente', 'Em Produção']:
             html_andamento += linha
+        elif s.get('status') in ['Concluído', 'Entregue']:
+            html_concluidos += linha
 
     return f'''
     <!DOCTYPE html>
@@ -2296,6 +2304,7 @@ def listar_servicos():
             <div class="tabs">
                 <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
                 <div class="tab" onclick="mostrarTab('andamento')">Em Andamento</div>
+                <div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div>
             </div>
 
             <table>
@@ -2319,6 +2328,9 @@ def listar_servicos():
                 </tbody>
                 <tbody id="tab-andamento" class="tab-content">
                     {html_andamento}
+                </tbody>
+                <tbody id="tab-concluidos" class="tab-content">
+                    {html_concluidos}
                 </tbody>
             </table>
             <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
