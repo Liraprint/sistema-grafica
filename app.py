@@ -668,6 +668,93 @@ def clientes():
     </html>
     '''
 
+# ========================
+# Funções para Parcelas e Caixa
+# ========================
+
+def buscar_parcelas_pendentes():
+    """Busca todas as parcelas com status 'pendente', com dados do serviço e empresa"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/parcelas?select=*,servicos(codigo_servico,titulo,valor_cobrado,empresas(nome_empresa))&status=eq.pendente&order=data_vencimento.asc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar parcelas pendentes:", e)
+        return []
+
+def buscar_todas_parcelas():
+    """Busca todas as parcelas (pagas e pendentes)"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/parcelas?select=*,servicos(codigo_servico,titulo,empresas(nome_empresa))&order=data_vencimento.desc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar todas as parcelas:", e)
+        return []
+
+def criar_parcela(servico_id, valor, data_vencimento):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/parcelas"
+        dados = {
+            "servico_id": servico_id,
+            "valor": float(valor),
+            "data_vencimento": data_vencimento,
+            "status": "pendente"
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print("Erro ao criar parcela:", e)
+        return False
+
+def marcar_parcela_como_paga(id, data_pagamento=None):
+    try:
+        if not data_pagamento:
+            data_pagamento = datetime.now().strftime("%Y-%m-%d")
+        url = f"{SUPABASE_URL}/rest/v1/parcelas?id=eq.{id}"
+        dados = {
+            "status": "pago",
+            "data_pagamento": data_pagamento
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro ao marcar parcela como paga:", e)
+        return False
+
+def registrar_entrada_caixa(valor, descricao, servico_id=None):
+    """Registra uma entrada de dinheiro no caixa"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/movimentacoes_caixa"
+        dados = {
+            "tipo": "entrada",
+            "valor": float(valor),
+            "descricao": descricao,
+            "data": datetime.now().strftime("%Y-%m-%d"),
+            "servico_id": servico_id
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print("Erro ao registrar entrada no caixa:", e)
+        return False
+
+def buscar_extrato_caixa():
+    """Busca todas as movimentações de caixa"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/movimentacoes_caixa?order=data.desc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar extrato de caixa:", e)
+        return []
+
 
 @app.route('/gerenciar_usuarios')
 def gerenciar_usuarios():
@@ -2441,6 +2528,7 @@ def adicionar_servico():
         previsao_entrega = request.form.get('previsao_entrega')
         valor_cobrado = request.form.get('valor_cobrado') or 0.0
         observacoes = request.form.get('observacoes')
+        pagamento_fracionado = request.form.get('pagamento_fracionado') == 'on'
 
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
@@ -2485,6 +2573,28 @@ def adicionar_servico():
             if response.status_code == 201:
                 servico_id = response.json()['id']
                 flash("✅ Serviço criado com sucesso!")
+
+                # === ADIÇÃO: CRIAR PARCELAS SE FOR PAGAMENTO FRACIONADO ===
+                if pagamento_fracionado:
+                    parcelas_valores = request.form.getlist('parcela_valor[]')
+                    parcelas_datas = request.form.getlist('parcela_data[]')
+                    
+                    for i in range(len(parcelas_valores)):
+                        if parcelas_valores[i] and parcelas_datas[i]:
+                            try:
+                                vlr = float(parcelas_valores[i])
+                                data_venc = parcelas_datas[i]
+                                criar_parcela(servico_id, vlr, data_venc)
+                            except:
+                                continue
+                    flash("✅ Parcelas registradas com sucesso!")
+                else:
+                    # Se não for fracionado, cria uma única parcela com o valor total
+                    if valor_cobrado > 0:
+                        hoje = datetime.now().strftime("%Y-%m-%d")
+                        criar_parcela(servico_id, valor_cobrado, hoje)
+
+                # === FIM DA ADIÇÃO ===
 
                 materiais_ids = request.form.getlist('material_id[]')
                 quantidades = request.form.getlist('quantidade_usada[]')
@@ -2693,6 +2803,23 @@ def adicionar_servico():
                     </div>
                 </div>
 
+                <!-- NOVO: PAGAMENTO FRACIONADO -->
+                <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px;">
+                    <input type="checkbox" name="pagamento_fracionado" id="pagamento_fracionado" onchange="toggleParcelas()">
+                    <label for="pagamento_fracionado" style="font-weight: 600; margin-left: 8px;">Pagamento fracionado (sinal + restante)?</label>
+                </div>
+
+                <div id="parcelas-container" style="display: none;">
+                    <h3>.Parcelas</h3>
+                    <div id="lista-parcelas">
+                        <div class="grid-2" style="margin-bottom: 10px;">
+                            <div><label>Valor (R$)</label><input type="number" name="parcela_valor[]" step="0.01" required></div>
+                            <div><label>Data de Vencimento</label><input type="date" name="parcela_data[]" required></div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="adicionarParcela()" style="margin: 10px 0; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 6px;">+ Adicionar parcela</button>
+                </div>
+
                 <label>Aplicação / Uso / Ambiente</label>
                 <textarea name="aplicacao" rows="3"></textarea>
 
@@ -2727,6 +2854,23 @@ def adicionar_servico():
         </div>
 
         <script>
+            function toggleParcelas() {{
+                const container = document.getElementById('parcelas-container');
+                container.style.display = document.getElementById('pagamento_fracionado').checked ? 'block' : 'none';
+            }}
+
+            function adicionarParcela() {{
+                const container = document.getElementById('lista-parcelas');
+                const div = document.createElement('div');
+                div.className = 'grid-2';
+                div.style.marginBottom = '10px';
+                div.innerHTML = `
+                    <div><label>Valor (R$)</label><input type="number" name="parcela_valor[]" step="0.01" required></div>
+                    <div><label>Data de Vencimento</label><input type="date" name="parcela_data[]" required></div>
+                `;
+                container.appendChild(div);
+            }}
+
             function adicionarMaterial() {{
                 const container = document.getElementById('materiais-lista');
                 const div = document.createElement('div');
@@ -8706,6 +8850,339 @@ def excluir_despesa_view(id):
         flash("❌ Erro ao excluir despesa.")
 
     return redirect(url_for('listar_despesas'))
+
+
+@app.route('/receber')
+def receber():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    parcelas = buscar_parcelas_pendentes()
+    
+    # Calcula total a receber
+    total_receber = sum(p['valor'] for p in parcelas)
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Receber - Parcelas Pendentes</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1200px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .btn {{
+                padding: 8px 12px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                cursor: pointer;
+                text-decoration: none;
+                margin-right: 5px;
+            }}
+            .btn-green {{ background: #27ae60; color: white; }}
+            .resumo {{
+                padding: 20px 30px;
+                background: #f8f9fa;
+                border-bottom: 1px solid #eee;
+                font-size: 18px;
+                font-weight: bold;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💰 Receber - Parcelas Pendentes</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+            <div class="resumo">
+                Total a Receber: R$ {total_receber:.2f}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Serviço</th>
+                        <th>Cliente</th>
+                        <th>Valor</th>
+                        <th>Vencimento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{p['servicos']['codigo_servico']} - {p['servicos']['titulo']}</td>
+                        <td>{p['servicos']['empresas']['nome_empresa']}</td>
+                        <td>R$ {p['valor']:.2f}</td>
+                        <td>{p['data_vencimento']}</td>
+                        <td>
+                            <a href="/marcar_parcela_paga/{p['id']}" class="btn btn-green" onclick="return confirm('Marcar como pago?')">✅ Pago</a>
+                        </td>
+                    </tr>
+                    """ for p in parcelas)}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/marcar_parcela_paga/<int:id>')
+def marcar_parcela_paga(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    try:
+        # Busca a parcela para pegar o valor e o serviço
+        url = f"{SUPABASE_URL}/rest/v1/parcelas?id=eq.{id}&select=valor,servicos(codigo_servico,empresas(nome_empresa))"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200 and response.json():
+            parcela = response.json()[0]
+            valor = parcela['valor']
+            servico_codigo = parcela['servicos']['codigo_servico']
+            cliente = parcela['servicos']['empresas']['nome_empresa']
+            
+            # Marca como paga
+            if marcar_parcela_como_paga(id):
+                # Registra entrada no caixa
+                descricao = f"Pagamento {servico_codigo} - {cliente}"
+                registrar_entrada_caixa(valor, descricao, parcela['servicos']['id'])
+                flash("✅ Parcela marcada como paga e registrada no caixa!")
+            else:
+                flash("❌ Erro ao marcar parcela como paga.")
+        else:
+            flash("Parcela não encontrada.")
+    except Exception as e:
+        flash("Erro ao processar pagamento.")
+
+    return redirect(url_for('receber'))
+
+@app.route('/caixa')
+def caixa():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    movimentacoes = buscar_extrato_caixa()
+    
+    # Calcula saldo
+    saldo = 0
+    for m in movimentacoes:
+        if m['tipo'] == 'entrada':
+            saldo += m['valor']
+        else:
+            saldo -= m['valor']
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Extrato de Caixa</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1200px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            .saldo {{
+                padding: 20px 30px;
+                background: #e8f5e9;
+                font-size: 20px;
+                font-weight: bold;
+                color: #27ae60;
+                border-bottom: 1px solid #eee;
+            }}
+            .entrada {{ color: #27ae60; font-weight: bold; }}
+            .saida {{ color: #e74c3c; font-weight: bold; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💵 Extrato de Caixa</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+
+            <div class="saldo">
+                Saldo em Caixa: R$ {saldo:.2f}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Serviço</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{m['data']}</td>
+                        <td>{m['descricao']}</td>
+                        <td><span class="{'entrada' if m['tipo'] == 'entrada' else 'saida'}">{m['tipo'].upper()}</span></td>
+                        <td>R$ {m['valor']:.2f}</td>
+                        <td>{m.get('servicos', {}).get('codigo_servico', '—') if m.get('servicos') else '—'}</td>
+                    </tr>
+                    """ for m in movimentacoes)}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 
 # ========================
