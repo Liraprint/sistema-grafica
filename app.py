@@ -346,6 +346,66 @@ def salvar_configuracoes(config):
 # ========================
 
 
+# ========================
+# Funções para Despesas Financeiras
+# ========================
+
+def buscar_despesas(mes_referencia=None):
+    try:
+        if mes_referencia:
+            url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras?mes_referencia=eq.{mes_referencia}&order=data.desc"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras?order=data.desc"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar despesas:", e)
+        return []
+
+def criar_despesa(data, descricao, tipo, valor, mes_referencia):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras"
+        dados = {
+            "data": data,
+            "descricao": descricao,
+            "tipo": tipo,
+            "valor": float(valor),
+            "mes_referencia": mes_referencia  # formato: "2025-10"
+        }
+        response = requests.post(url, json=dados, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print("Erro ao criar despesa:", e)
+        return False
+
+def atualizar_despesa(id, data, descricao, tipo, valor, mes_referencia):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras?id=eq.{id}"
+        dados = {
+            "data": data,
+            "descricao": descricao,
+            "tipo": tipo,
+            "valor": float(valor),
+            "mes_referencia": mes_referencia
+        }
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro ao atualizar despesa:", e)
+        return False
+
+def excluir_despesa(id):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro ao excluir despesa:", e)
+        return False
+    
+
 @app.route('/')
 def index():
     if 'usuario' not in session:
@@ -596,6 +656,7 @@ def clientes():
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
+                <a href="/despesas" class="btn btn-red">💰 Despesas</a>
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
             </div>
@@ -8086,6 +8147,565 @@ def excluir_envio(id):
         flash("❌ Erro de conexão.")
     
     return redirect(url_for('envios'))
+
+# ========================
+# Rotas para Despesas Financeiras (APENAS ADMINISTRADOR)
+# ========================
+
+@app.route('/despesas')
+def listar_despesas():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    # Pega o mês/ano do filtro (ex: "2025-10")
+    mes_filtro = request.args.get('mes', '')
+    
+    despesas = buscar_despesas(mes_filtro)
+    
+    # Calcula total por tipo
+    total_comissao = sum(d['valor'] for d in despesas if d['tipo'] == 'comissão')
+    total_imposto = sum(d['valor'] for d in despesas if d['tipo'] == 'imposto')
+    total_outras = sum(d['valor'] for d in despesas if d['tipo'] == 'outra')
+    total_geral = total_comissao + total_imposto + total_outras
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Despesas Financeiras</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 1200px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .search-box {{
+                padding: 20px 30px;
+                text-align: center;
+            }}
+            .search-box input, .search-box select {{
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+                margin: 0 5px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }}
+            th {{
+                background: #ecf0f1;
+                color: #2c3e50;
+                font-weight: 600;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .btn {{
+                padding: 8px 12px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                cursor: pointer;
+                text-decoration: none;
+                margin-right: 5px;
+            }}
+            .btn-green {{ background: #27ae60; color: white; }}
+            .btn-yellow {{ background: #f39c12; color: white; }}
+            .btn-red {{ background: #e74c3c; color: white; }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+            .resumo {{
+                padding: 20px 30px;
+                background: #f8f9fa;
+                border-bottom: 1px solid #eee;
+            }}
+            .resumo div {{
+                display: inline-block;
+                margin-right: 20px;
+                font-weight: bold;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💰 Despesas Financeiras</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+            <a href="/adicionar_despesa" class="btn btn-green">➕ Nova Despesa</a>
+
+            <div class="search-box">
+                <form method="get">
+                    <label>Filtrar por mês:</label>
+                    <input type="month" name="mes" value="{mes_filtro}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">Filtrar</button>
+                    <a href="/despesas" style="margin-left: 10px; color: #3498db;">Limpar</a>
+                </form>
+            </div>
+
+            <div class="resumo">
+                <div>Comissões: R$ {total_comissao:.2f}</div>
+                <div>Impostos: R$ {total_imposto:.2f}</div>
+                <div>Outras: R$ {total_outras:.2f}</div>
+                <div><strong>Total: R$ {total_geral:.2f}</strong></div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Mês Ref.</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(f"""
+                    <tr>
+                        <td>{d['data']}</td>
+                        <td>{d['descricao']}</td>
+                        <td>{d['tipo'].capitalize()}</td>
+                        <td>R$ {d['valor']:.2f}</td>
+                        <td>{d['mes_referencia']}</td>
+                        <td>
+                            <a href="/editar_despesa/{d['id']}" class="btn btn-yellow">✏️ Editar</a>
+                            <a href="/excluir_despesa/{d['id']}" class="btn btn-red" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    """ for d in despesas)}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/adicionar_despesa', methods=['GET', 'POST'])
+def adicionar_despesa():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    if request.method == 'POST':
+        data = request.form.get('data')
+        descricao = request.form.get('descricao')
+        tipo = request.form.get('tipo')
+        valor = request.form.get('valor')
+        mes_ref = request.form.get('mes_referencia')
+
+        if not data or not descricao or not tipo or not valor or not mes_ref:
+            flash("Todos os campos são obrigatórios!")
+            return redirect(url_for('adicionar_despesa'))
+
+        if criar_despesa(data, descricao, tipo, valor, mes_ref):
+            flash("✅ Despesa registrada com sucesso!")
+            return redirect(url_for('listar_despesas'))
+        else:
+            flash("❌ Erro ao registrar despesa.")
+
+    # Gera opções de mês/ano para os últimos 12 meses
+    from datetime import datetime, timedelta
+    meses = []
+    hoje = datetime.now()
+    for i in range(12):
+        mes = hoje - timedelta(days=30*i)
+        meses.append(mes.strftime("%Y-%m"))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Adicionar Despesa</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Adicionar Nova Despesa</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/despesas" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Data *</label>
+                    <input type="date" name="data" required>
+                </div>
+                <div>
+                    <label>Descrição *</label>
+                    <textarea name="descricao" rows="3" required placeholder="Ex: Comissão Maria - OS-005"></textarea>
+                </div>
+                <div>
+                    <label>Tipo *</label>
+                    <select name="tipo" required>
+                        <option value="">Selecione</option>
+                        <option value="comissão">Comissão</option>
+                        <option value="imposto">Imposto</option>
+                        <option value="outra">Outra despesa</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Valor (R$) *</label>
+                    <input type="number" name="valor" step="0.01" required>
+                </div>
+                <div>
+                    <label>Mês de Referência *</label>
+                    <select name="mes_referencia" required>
+                        {''.join(f'<option value="{m}">{m}</option>' for m in meses)}
+                    </select>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Despesa</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/editar_despesa/<int:id>', methods=['GET', 'POST'])
+def editar_despesa(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/despesas_financeiras?id=eq.{id}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Despesa não encontrada.")
+            return redirect(url_for('listar_despesas'))
+        despesa = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar despesa.")
+        return redirect(url_for('listar_despesas'))
+
+    if request.method == 'POST':
+        data = request.form.get('data')
+        descricao = request.form.get('descricao')
+        tipo = request.form.get('tipo')
+        valor = request.form.get('valor')
+        mes_ref = request.form.get('mes_referencia')
+
+        if not data or not descricao or not tipo or not valor or not mes_ref:
+            flash("Todos os campos são obrigatórios!")
+            return redirect(request.url)
+
+        if atualizar_despesa(id, data, descricao, tipo, valor, mes_ref):
+            flash("✅ Despesa atualizada com sucesso!")
+            return redirect(url_for('listar_despesas'))
+        else:
+            flash("❌ Erro ao atualizar despesa.")
+
+    # Gera opções de mês/ano
+    from datetime import datetime, timedelta
+    meses = []
+    hoje = datetime.now()
+    for i in range(12):
+        mes = hoje - timedelta(days=30*i)
+        meses.append(mes.strftime("%Y-%m"))
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Editar Despesa</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 800px;
+                margin: 30px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #2c3e50;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            h1 {{
+                font-size: 28px;
+                margin: 0;
+                font-weight: 600;
+            }}
+            .user-info {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 10px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container select,
+            .form-container textarea {{
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+            }}
+            .btn {{
+                padding: 12px 20px;
+                background: #f39c12;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                background: #ecf0f1;
+                color: #7f8c8d;
+                font-size: 13px;
+                border-top: 1px solid #bdc3c7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>✏️ Editar Despesa</h1>
+            </div>
+            <div class="user-info">
+                <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+                <a href="/logout">🚪 Sair</a>
+            </div>
+            <a href="/despesas" class="back-link">← Voltar à lista</a>
+            <form method="post" class="form-container">
+                <div>
+                    <label>Data *</label>
+                    <input type="date" name="data" value="{despesa['data']}" required>
+                </div>
+                <div>
+                    <label>Descrição *</label>
+                    <textarea name="descricao" rows="3" required>{despesa['descricao']}</textarea>
+                </div>
+                <div>
+                    <label>Tipo *</label>
+                    <select name="tipo" required>
+                        <option value="">Selecione</option>
+                        <option value="comissão" {"selected" if despesa['tipo'] == 'comissão' else ""}>Comissão</option>
+                        <option value="imposto" {"selected" if despesa['tipo'] == 'imposto' else ""}>Imposto</option>
+                        <option value="outra" {"selected" if despesa['tipo'] == 'outra' else ""}>Outra despesa</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Valor (R$) *</label>
+                    <input type="number" name="valor" step="0.01" value="{despesa['valor']}" required>
+                </div>
+                <div>
+                    <label>Mês de Referência *</label>
+                    <select name="mes_referencia" required>
+                        {''.join(f'<option value="{m}" {"selected" if m == despesa["mes_referencia"] else ""}>{m}</option>' for m in meses)}
+                    </select>
+                </div>
+                <button type="submit" class="btn">💾 Salvar Alterações</button>
+            </form>
+            <div class="footer">
+                Sistema de Gestão para Gráfica Rápida | © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/excluir_despesa/<int:id>')
+def excluir_despesa_view(id):
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    if excluir_despesa(id):
+        flash("🗑️ Despesa excluída com sucesso!")
+    else:
+        flash("❌ Erro ao excluir despesa.")
+
+    return redirect(url_for('listar_despesas'))
 
 
 # ========================
