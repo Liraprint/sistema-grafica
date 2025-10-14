@@ -656,7 +656,9 @@ def clientes():
                 {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
-                <a href="/despesas" class="btn btn-red">💰 Despesas</a>
+                {f'<a href="/despesas" class="btn btn-red">💰 Despesas</a>' if session['nivel'] == 'administrador' else ''}
+                {f'<a href="/receber" class="btn btn-orange">💰 Receber</a>' if session['nivel'] == 'administrador' else ''}
+                {f'<a href="/caixa" class="btn btn-blue">💵 Caixa</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup</a>' if session['nivel'] == 'administrador' else ''}
                 {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
             </div>
