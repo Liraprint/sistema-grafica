@@ -771,10 +771,11 @@ def cadastrar_cliente():
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
                            entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
             flash("✅ Empresa cadastrada com sucesso!")
+            return redirect(url_for('listar_empresas'))  # ← CORREÇÃO: REDIRECIONA PARA LISTA!
         else:
             flash("❌ Erro ao cadastrar empresa.")
 
-        return redirect(url_for('empresas'))
+        return redirect(url_for('cadastrar_cliente'))
 
     return f'''
     <!DOCTYPE html>
@@ -3032,7 +3033,7 @@ def imprimir_os(id):
         return redirect(url_for('login'))
 
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Serviço não encontrado.")
@@ -3059,6 +3060,9 @@ def imprimir_os(id):
 
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
 
+    # Caminho do logo da sua empresa (COLE O LINK DA SUA IMAGEM AQUI!)
+    logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"  # ← SUBSTITUA PELO LINK DO SEU LOGO!
+
     html = f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3071,17 +3075,24 @@ def imprimir_os(id):
                 font-family: Arial, sans-serif;
                 padding: 40px;
                 color: #333;
+                background: white;
             }}
             .header {{
                 text-align: center;
-                margin-bottom: 30px;
+                margin-bottom: 20px;
                 border-bottom: 2px solid #2c3e50;
                 padding-bottom: 15px;
+            }}
+            .header img {{
+                max-width: 200px;
+                margin-bottom: 10px;
             }}
             .header h1 {{
                 margin: 0;
                 color: #2c3e50;
                 font-size: 24px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }}
             .info-grid {{
                 display: grid;
@@ -3119,11 +3130,21 @@ def imprimir_os(id):
             }}
             @media print {{
                 .no-print {{ display: none; }}
+                body {{ background: white; }}
+            }}
+            .footer {{
+                margin-top: 40px;
+                text-align: center;
+                padding: 20px;
+                border-top: 1px solid #ddd;
+                font-size: 12px;
+                color: #7f8c8d;
             }}
         </style>
     </head>
     <body>
         <div class="header">
+            <img src="{logo_url}" alt="Logo da Empresa">
             <h1>ORDEM DE SERVIÇO</h1>
             <p><strong>Código:</strong> {servico['codigo_servico']}</p>
         </div>
@@ -3146,6 +3167,18 @@ def imprimir_os(id):
             </div>
             <div class="info-item">
                 <strong>Quantidade:</strong> {servico.get('quantidade', '-')}
+            </div>
+            <div class="info-item">
+                <strong>Dimensão:</strong> {servico.get('dimensao', '-')}
+            </div>
+            <div class="info-item">
+                <strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}
+            </div>
+            <div class="info-item">
+                <strong>Aplicação:</strong> {servico.get('aplicacao', '-')}
+            </div>
+            <div class="info-item">
+                <strong>Observações:</strong> {servico.get('observacoes', '-')}
             </div>
         </div>
 
@@ -3179,7 +3212,11 @@ def imprimir_os(id):
             <p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p>
         </div>
 
-        <div style="margin-top: 40px; text-align: center;">
+        <div class="footer">
+            Sistema de Gestão para Gráfica Rápida | © 2025
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
             <button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button>
             <a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a>
             <a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a>
@@ -3196,7 +3233,7 @@ def pdf_os(id):
         return redirect(url_for('login'))
 
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Serviço não encontrado.")
@@ -3223,6 +3260,9 @@ def pdf_os(id):
 
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
 
+    # Caminho do logo da sua empresa (COLE O LINK DA SUA IMAGEM AQUI!)
+    logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"  # ← SUBSTITUA PELO LINK DO SEU LOGO!
+
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -3230,32 +3270,78 @@ def pdf_os(id):
         <meta charset="UTF-8">
         <title>OS {servico['codigo_servico']}</title>
         <style>
-            body {{ font-family: Arial, sans-serif; padding: 40px; }}
-            .header {{ text-align: center; margin-bottom: 30px; }}
-            .header h1 {{ margin: 0; color: #2c3e50; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
-            th {{ background-color: #ecf0f1; }}
-            .total-box {{ text-align: right; font-size: 18px; margin-top: 20px; }}
+            body {{
+                font-family: Arial, sans-serif;
+                padding: 40px;
+                background: white;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #2c3e50;
+                padding-bottom: 15px;
+            }}
+            .header img {{
+                max-width: 200px;
+                margin-bottom: 10px;
+            }}
+            .header h1 {{
+                margin: 0;
+                color: #2c3e50;
+                font-size: 24px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }}
+            th, td {{
+                border: 1px solid #ccc;
+                padding: 8px;
+                text-align: left;
+            }}
+            th {{
+                background-color: #ecf0f1;
+                color: #2c3e50;
+            }}
+            .total-box {{
+                text-align: right;
+                font-size: 18px;
+                margin-top: 20px;
+            }}
+            .footer {{
+                margin-top: 40px;
+                text-align: center;
+                padding: 20px;
+                border-top: 1px solid #ddd;
+                font-size: 12px;
+                color: #7f8c8d;
+            }}
         </style>
     </head>
     <body>
         <div class="header">
+            <img src="{logo_url}" alt="Logo da Empresa">
             <h1>ORDEM DE SERVIÇO</h1>
             <p><strong>Código:</strong> {servico['codigo_servico']}</p>
         </div>
 
         <table>
             <tr><th>Cliente</th><td>{empresa_nome}</td></tr>
-            <tr><th>Status</th><td>{servico['status']}</td></tr>
             <tr><th>Título</th><td>{servico['titulo']}</td></tr>
+            <tr><th>Status</th><td>{servico['status']}</td></tr>
             <tr><th>Quantidade</th><td>{servico.get('quantidade', '—')}</td></tr>
             <tr><th>Dimensão</th><td>{servico.get('dimensao', '—')}</td></tr>
+            <tr><th>Nº de Cores</th><td>{servico.get('numero_cores', '—')}</td></tr>
+            <tr><th>Aplicação</th><td>{servico.get('aplicacao', '—')}</td></tr>
             <tr><th>Data Abertura</th><td>{format_data(servico.get('data_abertura'))}</td></tr>
             <tr><th>Previsão Entrega</th><td>{format_data(servico.get('previsao_entrega'))}</td></tr>
             <tr><th>Valor Cobrado</th><td>R$ {valor_cobrado:.2f}</td></tr>
             <tr><th>Custo Materiais</th><td>R$ {custo_materiais:.2f}</td></tr>
             <tr><th>Lucro</th><td>R$ {lucro:.2f}</td></tr>
+            <tr><th>Observações</th><td>{servico.get('observacoes', '—')}</td></tr>
         </table>
 
         <h3>Materiais Utilizados</h3>
@@ -3282,6 +3368,10 @@ def pdf_os(id):
 
         <div class="total-box">
             <p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p>
+        </div>
+
+        <div class="footer">
+            Sistema de Gestão para Gráfica Rápida | © 2025
         </div>
     </body>
     </html>
