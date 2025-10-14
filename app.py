@@ -9154,6 +9154,10 @@ def caixa():
             <div class="saldo">
                 Saldo em Caixa: R$ {saldo:.2f}
             </div>
+            <div style="text-align: center; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee;">
+    <a href="/caixa/entrada_manual" style="padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; margin: 0 10px;">➕ Entrada Manual</a>
+    <a href="/caixa/saida_manual" style="padding: 10px 20px; background: #e74c3c; color: white; text-decoration: none; border-radius: 8px; margin: 0 10px;">➖ Saída Manual</a>
+    </div>
 
             <table>
                 <thead>
@@ -9181,6 +9185,241 @@ def caixa():
             <div class="footer">
                 Sistema de Gestão para Gráfica Rápida | © 2025
             </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/caixa/entrada_manual', methods=['GET', 'POST'])
+def entrada_manual():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    if request.method == 'POST':
+        valor = request.form.get('valor')
+        descricao = request.form.get('descricao')
+        
+        if not valor or not descricao:
+            flash("Valor e descrição são obrigatórios!")
+            return redirect(request.url)
+        
+        try:
+            valor = float(valor)
+            if registrar_entrada_caixa(valor, descricao):
+                flash("✅ Entrada registrada com sucesso!")
+                return redirect(url_for('caixa'))
+            else:
+                flash("❌ Erro ao registrar entrada.")
+        except:
+            flash("Valor inválido.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Entrada Manual no Caixa</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 50px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #27ae60;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 15px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container textarea {{
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            .btn {{
+                padding: 14px 20px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                width: 100%;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➕ Entrada Manual no Caixa</h1>
+            </div>
+            <a href="/caixa" class="back-link">← Voltar ao Caixa</a>
+            <form method="post" class="form-container">
+                <label>Valor (R$) *</label>
+                <input type="number" name="valor" step="0.01" required placeholder="Ex: 150.50">
+
+                <label>Descrição *</label>
+                <textarea name="descricao" rows="3" required placeholder="Ex: Venda avulsa de cartão"></textarea>
+
+                <button type="submit" class="btn">💾 Registrar Entrada</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    '''
+
+
+@app.route('/caixa/saida_manual', methods=['GET', 'POST'])
+def saida_manual():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+
+    if request.method == 'POST':
+        valor = request.form.get('valor')
+        descricao = request.form.get('descricao')
+        
+        if not valor or not descricao:
+            flash("Valor e descrição são obrigatórios!")
+            return redirect(request.url)
+        
+        try:
+            valor = float(valor)
+            # Registrar saída (tipo = "saída")
+            url = f"{SUPABASE_URL}/rest/v1/movimentacoes_caixa"
+            dados = {
+                "tipo": "saída",
+                "valor": valor,
+                "descricao": descricao,
+                "data": datetime.now().strftime("%Y-%m-%d")
+            }
+            response = requests.post(url, json=dados, headers=headers)
+            
+            if response.status_code == 201:
+                flash("✅ Saída registrada com sucesso!")
+                return redirect(url_for('caixa'))
+            else:
+                flash("❌ Erro ao registrar saída.")
+        except Exception as e:
+            flash("Valor inválido.")
+
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Saída Manual do Caixa</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f7fa;
+                color: #333;
+                min-height: 100vh;
+                padding: 0;
+                margin: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 50px auto;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .header {{
+                background: #e74c3c;
+                color: white;
+                text-align: center;
+                padding: 30px;
+            }}
+            .form-container {{
+                padding: 30px;
+            }}
+            .form-container label {{
+                display: block;
+                margin: 15px 0 5px 0;
+                font-weight: 600;
+                color: #2c3e50;
+            }}
+            .form-container input,
+            .form-container textarea {{
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 16px;
+            }}
+            .btn {{
+                padding: 14px 20px;
+                background: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                width: 100%;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin: 20px 30px;
+                color: #3498db;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>➖ Saída Manual do Caixa</h1>
+            </div>
+            <a href="/caixa" class="back-link">← Voltar ao Caixa</a>
+            <form method="post" class="form-container">
+                <label>Valor (R$) *</label>
+                <input type="number" name="valor" step="0.01" required placeholder="Ex: 85.00">
+
+                <label>Descrição *</label>
+                <textarea name="descricao" rows="3" required placeholder="Ex: Compra de material de escritório"></textarea>
+
+                <button type="submit" class="btn">💾 Registrar Saída</button>
+            </form>
         </div>
     </body>
     </html>
