@@ -884,7 +884,7 @@ def editar_empresa(id):
     </html>
     '''
     @app.route('/servicos')
-def listar_servicos():
+    def listar_servicos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     busca = request.args.get('q', '').strip()
