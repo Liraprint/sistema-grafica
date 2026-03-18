@@ -886,8 +886,8 @@ def editar_empresa(id):
     @app.route('/servicos')
     def listar_servicos():
         if 'usuario' not in session:
-        return redirect(url_for('login'))
-    busca = request.args.get('q', '').strip()
+            return redirect(url_for('login'))
+        busca = request.args.get('q', '').strip()
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc&tipo=neq.Orçamento"
         if busca:
