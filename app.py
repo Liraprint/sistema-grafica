@@ -2109,13 +2109,13 @@ def pdf_os(id):
         download_name=f"os_{servico['codigo_servico']}.pdf",
         mimetype="application/pdf"
     )
-    @app.route('/configuracoes')
-    def configuracoes():
-        if 'usuario' not in session or session['nivel'] != 'administrador':
-    flash("Acesso negado!")  # ← 4 espaços antes do flash
-            return redirect(url_for('clientes'))
+@app.route('/configuracoes')
+def configuracoes():
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     config = buscar_configuracoes()
-            return f'''
+    return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
