@@ -2112,7 +2112,7 @@ def pdf_os(id):
     @app.route('/configuracoes')
     def configuracoes():
         if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
+    flash("Acesso negado!")  # ← 4 espaços antes do flash
             return redirect(url_for('clientes'))
     config = buscar_configuracoes()
             return f'''
