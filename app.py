@@ -2110,12 +2110,12 @@ def pdf_os(id):
         mimetype="application/pdf"
     )
     @app.route('/configuracoes')
-def configuracoes():
-    if 'usuario' not in session or session['nivel'] != 'administrador':
+    def configuracoes():
+        if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
-        return redirect(url_for('clientes'))
+            return redirect(url_for('clientes'))
     config = buscar_configuracoes()
-    return f'''
+            return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
