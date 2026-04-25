@@ -1020,6 +1020,15 @@ def listar_servicos():
         }.get(s.get('status', ''), 'status-pendente')
         prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
 
+        # ✅ CORREÇÃO: Botões com espaçamento adequado e nowrap para não quebrar
+        botoes_html = f'''
+        <div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;">
+            <a href="/os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">📄 OS</a>
+            <a href="/editar_servico/{s['id']}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a>
+            <a href="/excluir_servico/{s['id']}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
+        </div>
+        '''
+
         linha = f'''
         <tr>
         <td>{s['codigo_servico']}</td>
@@ -1032,11 +1041,7 @@ def listar_servicos():
         <td>R$ {lucro:.2f}</td>
         <td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td>
         <td><span style="color: {prazo['cor']}; font-weight: bold;">{prazo['texto']}</span></td>
-        <td>
-        <a href="/os/{s['id']}" class="btn btn-blue">📄 OS</a>
-        <a href="/editar_servico/{s['id']}" class="btn btn-edit">✏️ Editar</a>
-        <a href="/excluir_servico/{s['id']}" class="btn btn-delete" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-        </td>
+        <td>{botoes_html}</td>
         </tr>
         '''
         html_todos += linha
@@ -1059,15 +1064,17 @@ def listar_servicos():
     .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }}
-    .btn-blue {{ background: #3498db; }} .btn-edit {{ background: #f39c12; }} .btn-delete {{ background: #e74c3c; }}
+    .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; display: inline-block; }}
+    .btn-blue {{ background: #3498db; }}
+    .btn-edit {{ background: #f39c12; }}
+    .btn-delete {{ background: #e74c3c; }}
     .tabs {{ display: flex; margin: 0 30px; border-bottom: 1px solid #ddd; }}
     .tab {{ padding: 15px 20px; background: #ecf0f1; color: #7f8c8d; cursor: pointer; font-weight: 600; }}
     .tab.active {{ background: #3498db; color: white; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 12px 15px; text-align: left; }}
-    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
-    tr:nth-child(even) {{ background: #f9f9f9; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; }}
+    th {{ background: #f8f9fa; color: #2c3e50; font-weight: 600; white-space: nowrap; }}
+    tr:nth-child(even) {{ background: #fafbfc; }}
     .status-pendente {{ color: #e67e22; font-weight: bold; }}
     .status-producao {{ color: #3498db; font-weight: bold; }}
     .status-concluido {{ color: #27ae60; font-weight: bold; }}
@@ -1076,6 +1083,8 @@ def listar_servicos():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .tab-content {{ display: none; }}
     .tab-content.active {{ display: table-row-group; }}
+    .search-box {{ text-align: center; padding: 20px; }}
+    .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px; }}
     </style>
     </head>
     <body>
@@ -1084,20 +1093,22 @@ def listar_servicos():
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
-    <div class="search-box" style="text-align: center; padding: 20px;">
-    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 12px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
+    <div class="search-box">
+    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
     </div>
     <div class="tabs">
     <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
     <div class="tab" onclick="mostrarTab('andamento')">Em Andamento</div>
     <div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div>
     </div>
+    <div style="overflow-x: auto;">
     <table>
     <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
     <tbody id="tab-todos" class="tab-content active">{html_todos}</tbody>
     <tbody id="tab-andamento" class="tab-content">{html_andamento}</tbody>
     <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>
     </table>
+    </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
@@ -2769,13 +2780,19 @@ def listar_orcamentos():
 def adicionar_orcamento():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     if request.method == 'POST':
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
+        prazo_entrega = request.form.get('prazo_entrega')  # Novo campo
+        condicao_pagamento = request.form.get('condicao_pagamento') # Novo campo
+        
         if not empresa_id:
             flash("Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
+        
         try:
+            # Gera o código do orçamento (OR-001, etc.)
             url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
             response = requests.get(url_seq, headers=headers)
             if response.status_code == 200 and response.json():
@@ -2787,6 +2804,7 @@ def adicionar_orcamento():
         except Exception as e:
             print("Erro ao gerar código:", e)
             codigo_servico = "OR-001"
+        
         try:
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados_orc = {
@@ -2796,13 +2814,17 @@ def adicionar_orcamento():
                 "tipo": "Orçamento",
                 "status": "Pendente",
                 "data_abertura": data_abertura,
-                "valor_cobrado": 0.0,
-                "observacoes": request.form.get('observacoes_gerais', '')
+                # Salva o prazo e o pagamento no banco
+                "previsao_entrega": prazo_entrega, 
+                "observacoes": condicao_pagamento,
+                "valor_cobrado": 0.0
             }
             response = requests.post(url, json=dados_orc, headers=headers)
             if response.status_code != 201:
                 flash("❌ Erro ao criar orçamento.")
                 return redirect(url_for('adicionar_orcamento'))
+            
+            # Busca o ID do orçamento recém-criado para adicionar os itens
             url_busca = f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1"
             resp_busca = requests.get(url_busca, headers=headers)
             if resp_busca.status_code == 200:
@@ -2815,25 +2837,28 @@ def adicionar_orcamento():
             else:
                 flash("❌ Falha ao buscar o ID do orçamento.")
                 return redirect(url_for('adicionar_orcamento'))
+            
+            # Salva os itens do orçamento
             valor_total_orcamento = 0.0
             titulos = request.form.getlist('item_titulo[]')
             quantidades = request.form.getlist('item_quantidade[]')
             dimensoes = request.form.getlist('item_dimensao[]')
             cores = request.form.getlist('item_cores[]')
             valores_unit = request.form.getlist('item_valor_unit[]')
-            obs_itens = request.form.getlist('item_observacoes[]')
+            
             for i in range(len(titulos)):
                 try:
                     titulo = titulos[i].strip()
-                    if not titulo:
-                        continue
+                    if not titulo: continue
+                    
                     qtd = float(quantidades[i]) if quantidades[i] else 0
                     dim = dimensoes[i].strip() if dimensoes[i] else ""
                     cor = int(cores[i]) if cores[i] else None
                     vlr_unit = float(valores_unit[i]) if valores_unit[i] else 0
-                    obs = obs_itens[i].strip() if len(obs_itens) > i else ""
+                    
                     vlr_total = qtd * vlr_unit
                     valor_total_orcamento += vlr_total
+                    
                     dados_item = {
                         "orcamento_id": orcamento_id,
                         "titulo": titulo,
@@ -2841,27 +2866,36 @@ def adicionar_orcamento():
                         "dimensao": dim,
                         "numero_cores": cor,
                         "valor_unitario": vlr_unit,
-                        "valor_total": vlr_total,
-                        "observacoes": obs
+                        "valor_total": vlr_total
                     }
-                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
                 except Exception as e:
                     print(f"❌ Exceção ao salvar item {i+1}:", str(e))
                     continue
-            requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}", json={"valor_cobrado": valor_total_orcamento}, headers=headers)
+            
+            # Atualiza o valor total do orçamento principal
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}",
+                json={"valor_cobrado": valor_total_orcamento},
+                headers=headers
+            )
             flash("✅ Orçamento criado com sucesso!")
             return redirect(url_for('listar_orcamentos'))
+            
         except Exception as e:
             print("❌ Erro geral:", e)
             flash("❌ Erro de conexão.")
+    
     empresas = buscar_empresas()
+    
+    # Formulário HTML
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Orçamento com Múltiplos Itens</title>
+    <title>Adicionar Orçamento</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
@@ -2870,55 +2904,98 @@ def adicionar_orcamento():
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .form-container {{ padding: 30px; }}
-    .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }}
-    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }}
+    .grid-3 {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap: 10px; align-items: end; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee; }}
+    .grid-item {{ display: flex; flex-direction: column; }}
+    .grid-item label {{ font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #555; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }}
     .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .btn-blue {{ background: #3498db; }}
     .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .item-header {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; font-weight: bold; font-size: 13px; color: #2c3e50; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header"><h1>➕ Orçamento com Múltiplos Itens</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="header"><h1>➕ Novo Orçamento</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']}</span><a href="/logout">🚪 Sair</a></div>
     <a href="/orcamentos" class="back-link">← Voltar à lista</a>
+    
     <form method="post" class="form-container">
-    <label>Código do Orçamento</label><input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
-    <label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select>
-    <div><label>Data de Abertura</label><input type="date" name="data_abertura"></div>
-    <h3>Itens do Orçamento</h3>
-    <div id="itens-lista">
-    <div class="grid-3" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #ccc;">
-    <div><label>Título do Item *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Banner 3x1m"></div>
-    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required></div>
-    <div><label>Valor Unitário (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required></div>
-    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 60x90 cm"></div>
-    <div><label>Nº de Cores</label><input type="number" name="item_cores[]" step="1" placeholder="Ex: 4"></div>
-    <div><label>Observações do Item</label><textarea name="item_observacoes[]" rows="1"></textarea></div>
-    </div>
-    </div>
-    <button type="button" onclick="adicionarItem()" style="margin: 10px 0; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">+ Adicionar outro item</button>
-    <div style="margin-top: 30px;"><label>Observações Gerais</label><textarea name="observacoes_gerais" rows="3"></textarea></div>
-    <button type="submit" class="btn">💾 Salvar Orçamento</button>
+        <!-- Dados do Cliente -->
+        <div class="grid-2">
+            <div>
+                <label>Cliente *</label>
+                <select name="empresa_id" required>
+                    <option value="">Selecione uma empresa</option>
+                    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
+                </select>
+            </div>
+            <div>
+                <label>Data de Abertura</label>
+                <input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}">
+            </div>
+        </div>
+
+        <!-- Novos Campos de Prazo e Pagamento -->
+        <div class="grid-2" style="background: #f0f7ff; padding: 15px; border-radius: 8px; border: 1px solid #d0e3ff;">
+            <div>
+                <label style="color: #1a56db;">Prazo de Entrega *</label>
+                <input type="text" name="prazo_entrega" placeholder="Ex: 7 dias úteis" required>
+            </div>
+            <div>
+                <label style="color: #1a56db;">Condição de Pagamento *</label>
+                <input type="text" name="condicao_pagamento" placeholder="Ex: À vista, 28 dias" required>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2c3e50;">Itens do Orçamento</h3>
+        
+        <div class="item-header">
+            <span>Material / Descrição</span>
+            <span>Qtd.</span>
+            <span>Valor Unit.</span>
+            <span>Dimensão (Opcional)</span>
+            <span>Cores</span>
+            <span></span>
+        </div>
+
+        <div id="itens-lista">
+            <div class="grid-3">
+                <div class="grid-item"><input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona 440g"></div>
+                <div class="grid-item"><input type="number" name="item_quantidade[]" step="1" required placeholder="1"></div>
+                <div class="grid-item"><input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00"></div>
+                <div class="grid-item"><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                <div class="grid-item"><input type="number" name="item_cores[]" step="1" placeholder="4"></div>
+                <div style="padding-top: 5px;"></div>
+            </div>
+        </div>
+        
+        <button type="button" onclick="adicionarItem()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar outro item</button>
+        
+        <div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;">
+            <button type="submit" class="btn" style="width: 100%;">💾 Gerar Orçamento</button>
+        </div>
     </form>
+    
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
+    
     <script>
     function adicionarItem() {{
-    const container = document.getElementById('itens-lista');
-    const div = document.createElement('div');
-    div.className = 'grid-3';
-    div.style = 'margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #ccc;';
-    div.innerHTML = `
-    <div><label>Título do Item *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Cartão de Visita"></div>
-    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required></div>
-    <div><label>Valor Unitário (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required></div>
-    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 9x5 cm"></div>
-    <div><label>Nº de Cores</label><input type="number" name="item_cores[]" step="1" placeholder="Ex: 2"></div>
-    <div><label>Observações do Item</label><textarea name="item_observacoes[]" rows="1"></textarea></div>
-    `;
-    container.appendChild(div);
+        const container = document.getElementById('itens-lista');
+        const div = document.createElement('div');
+        div.className = 'grid-3';
+        div.innerHTML = `
+            <div class="grid-item"><input type="text" name="item_titulo[]" required placeholder="Ex: Cartão de Visita"></div>
+            <div class="grid-item"><input type="number" name="item_quantidade[]" step="1" required placeholder="1"></div>
+            <div class="grid-item"><input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00"></div>
+            <div class="grid-item"><input type="text" name="item_dimensao[]" placeholder="Ex: 9x5"></div>
+            <div class="grid-item"><input type="number" name="item_cores[]" step="1" placeholder="4"></div>
+            <div style="padding-top: 5px;"></div>
+        `;
+        container.appendChild(div);
     }}
     </script>
     </body>
@@ -3050,7 +3127,7 @@ def pdf_orcamento(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,telefone)"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,telefone,responsavel)"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Orçamento não encontrado.")
@@ -3061,6 +3138,7 @@ def pdf_orcamento(id):
         itens = response_itens.json() if response_itens.status_code == 200 else []
         empresa = orcamento.get('empresas', {})
         empresa_nome = empresa.get('nome_empresa', '—')
+        responsavel = empresa.get('responsavel', '')
         nome_vendedor = session.get('usuario', 'Vendedor')
         telefone_vendedor = session.get('telefone', '(11) 95439-3025')
     except Exception as e:
@@ -3074,11 +3152,14 @@ def pdf_orcamento(id):
     itens_html = ""
     for item in itens:
         qtd = int(item['quantidade']) if item['quantidade'].is_integer() else item['quantidade']
+        dimensao = item.get('dimensao', '')
+        # ✅ Dimensão mostra "—" se estiver vazia
+        dimensao_display = dimensao if dimensao else "—"
         itens_html += f"""
         <tr>
-        <td style="text-align: center;">{qtd}</td>
+        <td style="text-align: center; font-weight: 600;">{qtd}</td>
         <td style="text-align: left; font-weight: 600;">{item['titulo']}</td>
-        <td style="text-align: center;">{item.get('dimensao', '—')}</td>
+        <td style="text-align: center; color: #666;">{dimensao_display}</td>
         <td style="text-align: center;">{item.get('numero_cores', '—')}x0</td>
         <td style="text-align: right;">R$ {item['valor_unitario']:.2f}</td>
         <td style="text-align: right; font-weight: 600;">R$ {item['valor_total']:.2f}</td>
@@ -3094,31 +3175,85 @@ def pdf_orcamento(id):
     <meta charset="UTF-8">
     <title>Orçamento {orcamento['codigo_servico']}</title>
     <style>
-    @page {{ size: A4; margin: 2.5cm; }}
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #222; line-height: 1.6; }}
-    .header {{ text-align: center; margin-bottom: 50px; border-bottom: 3px solid #2c3e50; padding-bottom: 30px; }}
-    .header img {{ max-width: 220px; margin-bottom: 15px; }}
-    .header h1 {{ margin: 0; font-size: 32px; color: #2c3e50; letter-spacing: 1px; }}
+    @page {{ size: A4; margin: 2cm 2.5cm; }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.5; }}
     
-    .info-block {{ display: flex; justify-content: space-between; margin: 40px 0 30px 0; }}
-    .orcamento-numero {{ font-size: 24px; font-weight: bold; color: #e74c3c; text-align: right; background: #fdf2f2; padding: 10px 20px; border-radius: 8px; border-left: 5px solid #e74c3c; }}
-    .data-local {{ font-size: 18px; color: #555; }}
+    /* Cabeçalho com logo */
+    .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a56db; padding-bottom: 20px; }}
+    .header img {{ max-width: 180px; margin-bottom: 10px; }}
+    .header h1 {{ margin: 0; font-size: 28px; color: #1a56db; letter-spacing: 1px; }}
     
-    .cliente-box {{ background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0; border: 2px dashed #3498db; }}
-    .cliente-box h3 {{ margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; text-transform: uppercase; }}
-    .cliente-nome {{ font-size: 26px; font-weight: bold; color: #2c3e50; }}
+    /* Número do orçamento em destaque */
+    .orcamento-numero {{ 
+        font-size: 22px; 
+        font-weight: bold; 
+        color: #1a56db; 
+        text-align: right; 
+        background: #e8f0fe; 
+        padding: 12px 20px; 
+        border-radius: 8px; 
+        border-left: 4px solid #1a56db;
+        margin: 20px 0;
+    }}
     
-    table {{ width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 16px; }}
-    th, td {{ border: 2px solid #333; padding: 18px 15px; }}
-    th {{ background-color: #2c3e50; color: white; font-size: 18px; text-transform: uppercase; }}
+    /* Data e local */
+    .data-local {{ font-size: 16px; color: #555; margin: 15px 0; }}
     
-    .totals {{ text-align: right; margin: 50px 0 80px 0; font-size: 20px; line-height: 1.8; }}
-    .totals .valor-final {{ font-size: 28px; font-weight: bold; color: #27ae60; margin-top: 10px; }}
+    /* ✅ Cliente: sem retângulo feio, apenas destaque elegante */
+    .cliente-box {{ 
+        background: #f8f9fa; 
+        padding: 20px 25px; 
+        border-radius: 8px; 
+        margin: 25px 0; 
+        border: 1px solid #e0e0e0;
+    }}
+    .cliente-box h3 {{ margin: 0 0 8px 0; color: #1a56db; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .cliente-nome {{ font-size: 24px; font-weight: bold; color: #2c3e50; }}
+    .cliente-responsavel {{ font-size: 16px; color: #666; margin-top: 5px; }}
     
-    .signature {{ margin-top: 100px; text-align: center; font-size: 18px; line-height: 2; }}
-    .signature .nome-vendedor {{ font-weight: bold; font-size: 20px; color: #2c3e50; }}
+    /* ✅ Tabela com cabeçalho azul Liraprint */
+    table {{ width: 100%; border-collapse: collapse; margin: 30px 0 40px 0; font-size: 14px; }}
+    th {{ 
+        background-color: #1a56db;  /* ✅ Azul da marca Liraprint */
+        color: white; 
+        font-size: 13px; 
+        text-transform: uppercase; 
+        padding: 14px 12px;
+        border: none;
+    }}
+    td {{ border: 1px solid #e0e0e0; padding: 14px 12px; }}
+    tr:nth-child(even) {{ background-color: #f8f9fa; }}
     
-    .footer {{ text-align: center; font-size: 14px; color: #777; margin-top: 60px; border-top: 1px solid #ddd; padding-top: 20px; }}
+    /* ✅ Informações editáveis (prazo e pagamento) */
+    .info-editaveis {{ 
+        display: flex; 
+        justify-content: space-between; 
+        margin: 30px 0; 
+        padding: 20px; 
+        background: #f0f7ff; 
+        border-radius: 8px; 
+        border: 1px solid #d0e3ff;
+    }}
+    .info-item {{ font-size: 15px; }}
+    .info-item strong {{ color: #1a56db; }}
+    
+    /* Valor total destacado */
+    .valor-total {{ 
+        text-align: right; 
+        font-size: 24px; 
+        font-weight: bold; 
+        color: #1a56db; 
+        margin: 30px 0;
+        padding: 15px 0;
+        border-top: 2px solid #1a56db;
+    }}
+    
+    /* Assinatura */
+    .assinatura {{ margin-top: 80px; text-align: center; font-size: 16px; line-height: 2; }}
+    .assinatura .nome-vendedor {{ font-weight: bold; font-size: 18px; color: #2c3e50; }}
+    .assinatura .telefone {{ color: #666; }}
+    
+    /* ✅ Sem rodapé de "documento gerado automaticamente" */
     </style>
     </head>
     <body>
@@ -3127,14 +3262,15 @@ def pdf_orcamento(id):
     <h1>PROPOSTA COMERCIAL</h1>
     </div>
     
-    <div class="info-block">
     <div class="data-local"><strong>São Paulo, {hoje}.</strong></div>
-    <div class="orcamento-numero">Orçamento: {orcamento['codigo_servico']}</div>
-    </div>
     
+    <div class="orcamento-numero">Orçamento: {orcamento['codigo_servico']}</div>
+    
+    <!-- ✅ Cliente: layout limpo sem retângulo feio -->
     <div class="cliente-box">
     <h3>Cliente</h3>
     <div class="cliente-nome">{empresa_nome}</div>
+    {f'<div class="cliente-responsavel">A/C: {responsavel}</div>' if responsavel else ''}
     </div>
     
     <table>
@@ -3153,30 +3289,30 @@ def pdf_orcamento(id):
     </tbody>
     </table>
     
-    <div class="totals">
-    <div><strong>Prazo de entrega:</strong> 07 dias úteis</div>
-    <div><strong>Pagamento:</strong> À vista</div>
-    <div class="valor-final">Valor Total: R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}</div>
+    <!-- ✅ Prazo e Pagamento editáveis (aparecem no PDF) -->
+    <div class="info-editaveis">
+    <div class="info-item"><strong>Prazo de entrega:</strong> {orcamento.get('previsao_entrega', '7 dias úteis')[:10] if orcamento.get('previsao_entrega') else '7 dias úteis'}</div>
+    <div class="info-item"><strong>Pagamento:</strong> {orcamento.get('observacoes', 'À vista')}</div>
     </div>
     
-    <div class="signature">
+    <div class="valor-total">
+    Valor Total: R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}
+    </div>
+    
+    <div class="assinatura">
     <div>Atenciosamente,</div>
     <div class="nome-vendedor">{nome_vendedor}</div>
-    <div>Tel: {telefone_vendedor}</div>
-    <div>São Paulo - SP</div>
-    </div>
-    
-    <div class="footer">
-    Sistema de Gestão Liraprint © 2025 | Documento gerado automaticamente
+    <div class="telefone">Tel: {telefone_vendedor}</div>
+    <div style="color: #666; font-size: 14px;">São Paulo - SP</div>
     </div>
     </body>
     </html>
     '''
     pdf = pdfkit.from_string(html, False)
-    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")
-# ========================
+    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")# ========================
+
 # MÓDULO DE RASTREAMENTO DE ENVIOS
-# ========================
+
 def buscar_envios():
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
