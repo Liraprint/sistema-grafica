@@ -303,7 +303,8 @@ def salvar_configuracoes(config):
     except Exception as e:
         print("Erro ao salvar configurações:", e)
         return False
-        # ========================
+
+# ========================
 # Páginas do sistema
 # ========================
 @app.route('/')
@@ -372,7 +373,6 @@ def logout():
 def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    # ✅ MENU LIMPO: Botões financeiros (Caixa, Receber, Despesas) REMOVIDOS
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -615,9 +615,9 @@ def cadastrar_cliente():
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
+    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
     function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
-    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
+    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
     </script>
     </body>
     </html>
@@ -876,18 +876,88 @@ def editar_empresa(id):
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
+    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
     function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
-    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
+    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
     </script>
     </body>
     </html>
     '''
+
+@app.route('/servicos_empresa/<int:id>')
+def servicos_empresa(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    try:
+        url_empresa = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        response = requests.get(url_empresa, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Empresa não encontrada.")
+            return redirect(url_for('listar_empresas'))
+        empresa = response.json()[0]
+        url_servicos = f"{SUPABASE_URL}/rest/v1/servicos?select=*,materiais_usados(*,materiais(denominacao))&empresa_id=eq.{id}&order=codigo_servico.desc"
+        response_serv = requests.get(url_servicos, headers=headers)
+        servicos = response_serv.json() if response_serv.status_code == 200 else []
+    except Exception as e:
+        print(f"Erro ao carregar serviços da empresa: {e}")
+        flash("Erro ao carregar serviços.")
+        return redirect(url_for('listar_empresas'))
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serviços - {empresa['nome_empresa']}</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 8px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📋 Serviços - {empresa['nome_empresa']}</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <a href="/empresa/{id}" class="back-link">← Voltar à empresa</a>
+    <div style="padding: 30px;">
+    <h2 style="margin-bottom: 20px;">Total de serviços: {len(servicos)}</h2>
+    <table>
+    <thead><tr><th>Código</th><th>Título</th><th>Status</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
+    <tbody>
+    {''.join(f"""
+    <tr>
+    <td>{s['codigo_servico']}</td>
+    <td>{s['titulo']}</td>
+    <td>{s.get('status', '—')}</td>
+    <td>R$ {float(s.get('valor_cobrado', 0) or 0):.2f}</td>
+    <td>{s.get('data_abertura', '—')[:10] if s.get('data_abertura') else '—'}</td>
+    <td><a href="/os/{s['id']}" class="btn">📄 Ver OS</a></td>
+    </tr>
+    """ for s in servicos)}
+    </tbody>
+    </table>
+    {f'<p style="text-align: center; color: #95a5a6; margin-top: 30px;">Nenhum serviço encontrado para esta empresa.</p>' if not servicos else ''}
+    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+    </div>
+    </body>
+    </html>
+    '''
     @app.route('/servicos')
-    def listar_servicos():
-        if 'usuario' not in session:
-            return redirect(url_for('login'))
-        busca = request.args.get('q', '').strip()
+def listar_servicos():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    busca = request.args.get('q', '').strip()
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc&tipo=neq.Orçamento"
         if busca:
@@ -901,7 +971,6 @@ def editar_empresa(id):
     except Exception as e:
         flash("Erro de conexão.")
         servicos = []
-
     def calcular_custo(servico_id):
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{servico_id}"
@@ -912,7 +981,6 @@ def editar_empresa(id):
             return 0.0
         except:
             return 0.0
-
     def calcular_prazo_restante(previsao, status):
         if not previsao:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Sem prazo"}
@@ -932,11 +1000,9 @@ def editar_empresa(id):
                 return {"dias": dias, "cor": "#27ae60", "texto": f"Faltam {dias} dias"}
         except:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Erro"}
-
     html_todos = ""
     html_andamento = ""
     html_concluidos = ""
-
     for s in servicos:
         empresa_nome = s['empresas']['nome_empresa'] if s.get('empresas') else "Sem cliente"
         custo_materiais = calcular_custo(s['id'])
@@ -949,7 +1015,6 @@ def editar_empresa(id):
             'Entregue': 'status-entregue'
         }.get(s.get('status', ''), 'status-pendente')
         prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
-
         linha = f'''
         <tr>
         <td>{s['codigo_servico']}</td>
@@ -974,7 +1039,6 @@ def editar_empresa(id):
             html_andamento += linha
         elif s.get('status') in ['Concluído', 'Entregue']:
             html_concluidos += linha
-
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -984,127 +1048,38 @@ def editar_empresa(id):
     <title>Serviços / Ordens de Serviço</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1400px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .btn {{
-        padding: 10px 15px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        text-decoration: none;
-        margin: 5px;
-    }}
-    .btn-blue {{ background: #3498db; }}
-    .btn-edit {{ background: #f39c12; }}
-    .btn-delete {{ background: #e74c3c; }}
-    .tabs {{
-        display: flex;
-        margin: 0 30px;
-        border-bottom: 1px solid #ddd;
-    }}
-    .tab {{
-        padding: 15px 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        cursor: pointer;
-        font-weight: 600;
-    }}
-    .tab.active {{
-        background: #3498db;
-        color: white;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 12px 15px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-    }}
-    tr:nth-child(even) {{
-        background: #f9f9f9;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }}
+    .btn-blue {{ background: #3498db; }} .btn-edit {{ background: #f39c12; }} .btn-delete {{ background: #e74c3c; }}
+    .tabs {{ display: flex; margin: 0 30px; border-bottom: 1px solid #ddd; }}
+    .tab {{ padding: 15px 20px; background: #ecf0f1; color: #7f8c8d; cursor: pointer; font-weight: 600; }}
+    .tab.active {{ background: #3498db; color: white; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
     .status-pendente {{ color: #e67e22; font-weight: bold; }}
     .status-producao {{ color: #3498db; font-weight: bold; }}
     .status-concluido {{ color: #27ae60; font-weight: bold; }}
     .status-entregue {{ color: #2c3e50; font-weight: bold; }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .tab-content {{ display: none; }}
     .tab-content.active {{ display: table-row-group; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📋 Todos os Serviços</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📋 Todos os Serviços</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
     <div class="search-box" style="text-align: center; padding: 20px;">
-    <form method="get" style="display: inline;">
-    <input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 12px; width: 300px; border: 1px solid #ddd; border-radius: 8px;">
-    <button type="submit" style="padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-    </form>
+    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 12px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
     </div>
     <div class="tabs">
     <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
@@ -1112,40 +1087,15 @@ def editar_empresa(id):
     <div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div>
     </div>
     <table>
-    <thead>
-    <tr>
-    <th>Código</th>
-    <th>Título</th>
-    <th>Cliente</th>
-    <th>Qtd</th>
-    <th>Dimensão</th>
-    <th>Custo Mat.</th>
-    <th>Valor Cobrado</th>
-    <th>Lucro</th>
-    <th>Status</th>
-    <th>Prazo Restante</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
-    <tbody id="tab-todos" class="tab-content active">
-    {html_todos}
-    </tbody>
-    <tbody id="tab-andamento" class="tab-content">
-    {html_andamento}
-    </tbody>
-    <tbody id="tab-concluidos" class="tab-content">
-    {html_concluidos}
-    </tbody>
+    <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
+    <tbody id="tab-todos" class="tab-content active">{html_todos}</tbody>
+    <tbody id="tab-andamento" class="tab-content">{html_andamento}</tbody>
+    <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>
     </table>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function mostrarTab(nome) {{
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-' + nome).classList.add('active');
-        document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active');
-    }}
+    function mostrarTab(nome) {{ document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById('tab-' + nome).classList.add('active'); document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); }}
     </script>
     </body>
     </html>
@@ -1168,17 +1118,13 @@ def adicionar_servico():
         previsao_entrega = request.form.get('previsao_entrega')
         valor_cobrado = request.form.get('valor_cobrado') or 0.0
         observacoes = request.form.get('observacoes')
-        # ✅ REMOVIDO: pagamento_fracionado e lógica de parcelas
-
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
             return redirect(url_for('adicionar_servico'))
-
         try:
             valor_cobrado = float(valor_cobrado)
         except:
             valor_cobrado = 0.0
-
         try:
             url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
             response = requests.get(url_seq, headers=headers)
@@ -1190,7 +1136,6 @@ def adicionar_servico():
             codigo_servico = f"OS-{numero:03d}"
         except:
             codigo_servico = "OS-001"
-
         try:
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados = {
@@ -1212,8 +1157,6 @@ def adicionar_servico():
             if response.status_code == 201:
                 servico_id = response.json()['id']
                 flash("✅ Serviço criado com sucesso!")
-                # ✅ REMOVIDO: Lógica de criação de parcelas
-
                 materiais_ids = request.form.getlist('material_id[]')
                 quantidades = request.form.getlist('quantidade_usada[]')
                 valores_unitarios = request.form.getlist('valor_unitario[]')
@@ -1238,7 +1181,6 @@ def adicionar_servico():
                 flash("❌ Erro ao salvar serviço.")
         except Exception as e:
             flash("❌ Erro de conexão.")
-
         empresas = buscar_empresas()
         materiais = buscar_materiais()
         return f'''
@@ -1250,189 +1192,54 @@ def adicionar_servico():
         <title>Adicionar Serviço</title>
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #333;
-            min-height: 100vh;
-            padding: 0;
-            margin: 0;
-        }}
-        .container {{
-            max-width: 1000px;
-            margin: 30px auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }}
-        .header {{
-            background: #2c3e50;
-            color: white;
-            text-align: center;
-            padding: 30px;
-        }}
-        h1 {{
-            font-size: 28px;
-            margin: 0;
-            font-weight: 600;
-        }}
-        .user-info {{
-            background: #34495e;
-            color: white;
-            padding: 15px 20px;
-            font-size: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }}
-        .form-container {{
-            padding: 30px;
-        }}
-        .grid-2 {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }}
-        .grid-3 {{
-            display: grid;
-            grid-template-columns: 1fr 1fr 2fr;
-            gap: 15px;
-        }}
-        .form-container label {{
-            display: block;
-            margin: 10px 0 5px 0;
-            font-weight: 600;
-            color: #2c3e50;
-        }}
-        .form-container input,
-        .form-container select,
-        .form-container textarea {{
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-        }}
-        .btn {{
-            padding: 12px 20px;
-            background: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-        }}
-        .back-link {{
-            display: inline-block;
-            margin: 20px 30px;
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 500;
-        }}
-        .footer {{
-            text-align: center;
-            padding: 20px;
-            background: #ecf0f1;
-            color: #7f8c8d;
-            font-size: 13px;
-            border-top: 1px solid #bdc3c7;
-        }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+        .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+        .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+        h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+        .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+        .form-container {{ padding: 30px; }}
+        .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+        .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
+        .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+        .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+        .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+        .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
         </style>
         </head>
         <body>
         <div class="container">
-        <div class="header">
-        <h1>➕ Adicionar Novo Serviço</h1>
-        </div>
-        <div class="user-info">
-        <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-        <a href="/logout">🚪 Sair</a>
-        </div>
+        <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
+        <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
         <a href="/servicos" class="back-link">← Voltar à lista</a>
         <form method="post" class="form-container">
-        <label>Código do Serviço (OS)</label>
-        <input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
-        <label>Título do Serviço *</label>
-        <input type="text" name="titulo" required>
-        <label>Cliente *</label>
-        <select name="empresa_id" required>
-        <option value="">Selecione uma empresa</option>
-        {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
-        </select>
+        <label>Código do Serviço (OS)</label><input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
+        <label>Título do Serviço *</label><input type="text" name="titulo" required>
+        <label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select>
         <div class="grid-2">
-            <div>
-            <label>Tipo</label>
-            <select name="tipo">
-            <option value="">Selecione</option>
-            <option value="Orçamento">Orçamento</option>
-            <option value="Produção">Produção</option>
-            <option value="Equipamento">Equipamento</option>
-            </select>
-            </div>
-            <div>
-            <label>Status</label>
-            <select name="status">
-            <option value="Pendente">Pendente</option>
-            <option value="Em Produção">Em Produção</option>
-            <option value="Concluído">Concluído</option>
-            <option value="Entregue">Entregue</option>
-            </select>
-            </div>
+            <div><label>Tipo</label><select name="tipo"><option value="">Selecione</option><option value="Orçamento">Orçamento</option><option value="Produção">Produção</option><option value="Equipamento">Equipamento</option></select></div>
+            <div><label>Status</label><select name="status"><option value="Pendente">Pendente</option><option value="Em Produção">Em Produção</option><option value="Concluído">Concluído</option><option value="Entregue">Entregue</option></select></div>
         </div>
         <div class="grid-2">
-            <div>
-            <label>Quantidade / Lote</label>
-            <input type="number" name="quantidade" step="1">
-            </div>
-            <div>
-            <label>Nº de Cores</label>
-            <input type="number" name="numero_cores" step="1">
-            </div>
+            <div><label>Quantidade / Lote</label><input type="number" name="quantidade" step="1"></div>
+            <div><label>Nº de Cores</label><input type="number" name="numero_cores" step="1"></div>
         </div>
         <div class="grid-2">
-            <div>
-            <label>Dimensão (ex: 60x90 cm)</label>
-            <input type="text" name="dimensao">
-            </div>
-            <div>
-            <label>Valor Cobrado (R$)</label>
-            <input type="number" name="valor_cobrado" step="0.01">
-            </div>
+            <div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao"></div>
+            <div><label>Valor Cobrado (R$)</label><input type="number" name="valor_cobrado" step="0.01"></div>
         </div>
         <div class="grid-2">
-            <div>
-            <label>Data de Abertura</label>
-            <input type="date" name="data_abertura">
-            </div>
-            <div>
-            <label>Previsão de Entrega</label>
-            <input type="date" name="previsao_entrega">
-            </div>
+            <div><label>Data de Abertura</label><input type="date" name="data_abertura"></div>
+            <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div>
         </div>
-        <label>Aplicação / Uso / Ambiente</label>
-        <textarea name="aplicacao" rows="3"></textarea>
-        <label>Observações</label>
-        <textarea name="observacoes" rows="3"></textarea>
+        <label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="3"></textarea>
+        <label>Observações</label><textarea name="observacoes" rows="3"></textarea>
         <h3>Materiais Usados</h3>
         <div id="materiais-lista">
             <div class="grid-3">
-                <div>
-                <label>Material</label>
-                <select name="material_id[]" required>
-                <option value="">Selecione</option>
-                {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-                </select>
-                </div>
-                <div>
-                <label>Qtd Usada</label>
-                <input type="number" name="quantidade_usada[]" step="0.01" required>
-                </div>
-                <div>
-                <label>Valor Unitário (R$)</label>
-                <input type="number" name="valor_unitario[]" step="0.01" required>
-                </div>
+                <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
+                <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
+                <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
             </div>
         </div>
         <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
@@ -1446,21 +1253,9 @@ def adicionar_servico():
             const div = document.createElement('div');
             div.className = 'grid-3';
             div.innerHTML = `
-            <div>
-            <label>Material</label>
-            <select name="material_id[]" required>
-            <option value="">Selecione</option>
-            {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-            </select>
-            </div>
-            <div>
-            <label>Qtd Usada</label>
-            <input type="number" name="quantidade_usada[]" step="0.01" required>
-            </div>
-            <div>
-            <label>Valor Unitário (R$)</label>
-            <input type="number" name="valor_unitario[]" step="0.01" required>
-            </div>
+            <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
+            <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
+            <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
             `;
             container.appendChild(div);
         }}
@@ -1483,14 +1278,12 @@ def editar_servico(id):
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
-
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
         response_mats = requests.get(url_mats, headers=headers)
         materiais_usados = response_mats.json() if response_mats.status_code == 200 else []
     except:
         materiais_usados = []
-
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         empresa_id = request.form.get('empresa_id')
@@ -1504,16 +1297,13 @@ def editar_servico(id):
         previsao_entrega = request.form.get('previsao_entrega')
         valor_cobrado = request.form.get('valor_cobrado') or 0.0
         observacoes = request.form.get('observacoes')
-
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
             return redirect(request.url)
-
         try:
             valor_cobrado = float(valor_cobrado)
         except:
             valor_cobrado = 0.0
-
         try:
             dados = {
                 "titulo": titulo,
@@ -1553,7 +1343,6 @@ def editar_servico(id):
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(request.url)
-
     empresas = buscar_empresas()
     materiais = buscar_materiais()
     return f'''
@@ -1565,180 +1354,53 @@ def editar_servico(id):
     <title>Editar Serviço</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1000px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .grid-2 {{
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #f39c12;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/servicos" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
-    <label>Título do Serviço *</label>
-    <input type="text" name="titulo" value="{servico['titulo']}" required>
-    <label>Cliente *</label>
-    <select name="empresa_id" required>
-    <option value="">Selecione uma empresa</option>
-    {''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}
-    </select>
+    <label>Título do Serviço *</label><input type="text" name="titulo" value="{servico['titulo']}" required>
+    <label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}</select>
     <div class="grid-2">
-        <div>
-        <label>Tipo</label>
-        <select name="tipo">
-        <option value="">Selecione</option>
-        <option value="Orçamento" {"selected" if servico["tipo"] == "Orçamento" else ""}>Orçamento</option>
-        <option value="Produção" {"selected" if servico["tipo"] == "Produção" else ""}>Produção</option>
-        <option value="Equipamento" {"selected" if servico["tipo"] == "Equipamento" else ""}>Equipamento</option>
-        </select>
-        </div>
-        <div>
-        <label>Status</label>
-        <select name="status">
-        <option value="Pendente" {"selected" if servico["status"] == "Pendente" else ""}>Pendente</option>
-        <option value="Em Produção" {"selected" if servico["status"] == "Em Produção" else ""}>Em Produção</option>
-        <option value="Concluído" {"selected" if servico["status"] == "Concluído" else ""}>Concluído</option>
-        <option value="Entregue" {"selected" if servico["status"] == "Entregue" else ""}>Entregue</option>
-        </select>
-        </div>
+        <div><label>Tipo</label><select name="tipo"><option value="">Selecione</option><option value="Orçamento" {"selected" if servico["tipo"] == "Orçamento" else ""}>Orçamento</option><option value="Produção" {"selected" if servico["tipo"] == "Produção" else ""}>Produção</option><option value="Equipamento" {"selected" if servico["tipo"] == "Equipamento" else ""}>Equipamento</option></select></div>
+        <div><label>Status</label><select name="status"><option value="Pendente" {"selected" if servico["status"] == "Pendente" else ""}>Pendente</option><option value="Em Produção" {"selected" if servico["status"] == "Em Produção" else ""}>Em Produção</option><option value="Concluído" {"selected" if servico["status"] == "Concluído" else ""}>Concluído</option><option value="Entregue" {"selected" if servico["status"] == "Entregue" else ""}>Entregue</option></select></div>
     </div>
     <div class="grid-2">
-        <div>
-        <label>Quantidade / Lote</label>
-        <input type="number" name="quantidade" value="{servico.get('quantidade', '')}" step="1">
-        </div>
-        <div>
-        <label>Nº de Cores</label>
-        <input type="number" name="numero_cores" value="{servico.get('numero_cores', '')}" step="1">
-        </div>
+        <div><label>Quantidade / Lote</label><input type="number" name="quantidade" value="{servico.get('quantidade', '')}" step="1"></div>
+        <div><label>Nº de Cores</label><input type="number" name="numero_cores" value="{servico.get('numero_cores', '')}" step="1"></div>
     </div>
     <div class="grid-2">
-        <div>
-        <label>Dimensão (ex: 60x90 cm)</label>
-        <input type="text" name="dimensao" value="{servico.get('dimensao', '')}">
-        </div>
-        <div>
-        <label>Valor Cobrado (R$)</label>
-        <input type="number" name="valor_cobrado" value="{servico.get('valor_cobrado', 0)}" step="0.01">
-        </div>
+        <div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao" value="{servico.get('dimensao', '')}"></div>
+        <div><label>Valor Cobrado (R$)</label><input type="number" name="valor_cobrado" value="{servico.get('valor_cobrado', 0)}" step="0.01"></div>
     </div>
     <div class="grid-2">
-        <div>
-        <label>Data de Abertura</label>
-        <input type="date" name="data_abertura" value="{servico.get('data_abertura', '')[:10] if servico.get('data_abertura') else ''}">
-        </div>
-        <div>
-        <label>Previsão de Entrega</label>
-        <input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}">
-        </div>
+        <div><label>Data de Abertura</label><input type="date" name="data_abertura" value="{servico.get('data_abertura', '')[:10] if servico.get('data_abertura') else ''}"></div>
+        <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}"></div>
     </div>
-    <label>Aplicação / Uso / Ambiente</label>
-    <textarea name="aplicacao" rows="3">{servico.get('aplicacao', '')}</textarea>
-    <label>Observações</label>
-    <textarea name="observacoes" rows="3">{servico.get('observacoes', '')}</textarea>
+    <label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="3">{servico.get('aplicacao', '')}</textarea>
+    <label>Observações</label><textarea name="observacoes" rows="3">{servico.get('observacoes', '')}</textarea>
     <h3>Materiais Usados</h3>
     {''.join(f'''
     <input type="hidden" name="material_usado_id[]" value="{m['id']}">
     <div class="grid-3">
-        <div>
-        <label>Material</label>
-        <input type="text" value="{m['materiais']['denominacao']} ({m['materiais']['unidade_medida']})" readonly>
-        </div>
-        <div>
-        <label>Qtd Usada</label>
-        <input type="number" name="quantidade_usada_{m['id']}" value="{m['quantidade_usada']}" step="0.01" required>
-        </div>
-        <div>
-        <label>Valor Unitário (R$)</label>
-        <input type="number" name="valor_unitario_{m['id']}" value="{m['valor_unitario']}" step="0.01" required>
-        </div>
+        <div><label>Material</label><input type="text" value="{m['materiais']['denominacao']} ({m['materiais']['unidade_medida']})" readonly></div>
+        <div><label>Qtd Usada</label><input type="number" name="quantidade_usada_{m['id']}" value="{m['quantidade_usada']}" step="0.01" required></div>
+        <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario_{m['id']}" value="{m['valor_unitario']}" step="0.01" required></div>
     </div>
     ''' for m in materiais_usados)}
     <button type="submit" class="btn">💾 Salvar Alterações</button>
@@ -1785,7 +1447,6 @@ def imprimir_os(id):
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
-
     def calcular_custo():
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
@@ -1796,13 +1457,11 @@ def imprimir_os(id):
             return 0.0
         except:
             return 0.0
-
     custo_materiais = calcular_custo()
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
     logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
-
     html = f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1811,75 +1470,19 @@ def imprimir_os(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OS {servico['codigo_servico']} - Impressão</title>
     <style>
-    body {{
-        font-family: Arial, sans-serif;
-        padding: 40px;
-        color: #333;
-        background: white;
-    }}
-    .header {{
-        text-align: center;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #2c3e50;
-        padding-bottom: 15px;
-    }}
-    .header img {{
-        max-width: 200px;
-        margin-bottom: 10px;
-    }}
-    .header h1 {{
-        margin: 0;
-        color: #2c3e50;
-        font-size: 24px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }}
-    .info-grid {{
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin-bottom: 20px;
-    }}
-    .info-item strong {{
-        display: block;
-        font-size: 14px;
-        color: #555;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-    }}
-    th, td {{
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: left;
-    }}
-    th {{
-        background-color: #ecf0f1;
-        color: #2c3e50;
-    }}
-    .total-box {{
-        text-align: right;
-        font-size: 16px;
-        margin-top: 20px;
-    }}
-    .status {{
-        font-weight: bold;
-        color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'};
-    }}
-    @media print {{
-        .no-print {{ display: none; }}
-        body {{ background: white; }}
-    }}
-    .footer {{
-        margin-top: 40px;
-        text-align: center;
-        padding: 20px;
-        border-top: 1px solid #ddd;
-        font-size: 12px;
-        color: #7f8c8d;
-    }}
+    body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; }}
+    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}
+    .header img {{ max-width: 200px; margin-bottom: 10px; }}
+    .header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}
+    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
+    .info-item strong {{ display: block; font-size: 14px; color: #555; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+    th {{ background-color: #ecf0f1; color: #2c3e50; }}
+    .total-box {{ text-align: right; font-size: 16px; margin-top: 20px; }}
+    .status {{ font-weight: bold; color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'}; }}
+    @media print {{ .no-print {{ display: none; }} body {{ background: white; }} }}
+    .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
     <body>
@@ -1889,48 +1492,20 @@ def imprimir_os(id):
     <p><strong>Código:</strong> {servico['codigo_servico']}</p>
     </div>
     <div class="info-grid">
-    <div class="info-item">
-    <strong>Cliente:</strong> {empresa_nome}
-    </div>
-    <div class="info-item">
-    <strong>Status:</strong> <span class="status">{servico['status']}</span>
-    </div>
-    <div class="info-item">
-    <strong>Título:</strong> {servico['titulo']}
-    </div>
-    <div class="info-item">
-    <strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}
-    </div>
-    <div class="info-item">
-    <strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}
-    </div>
-    <div class="info-item">
-    <strong>Quantidade:</strong> {servico.get('quantidade', '-')}
-    </div>
-    <div class="info-item">
-    <strong>Dimensão:</strong> {servico.get('dimensao', '-')}
-    </div>
-    <div class="info-item">
-    <strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}
-    </div>
-    <div class="info-item">
-    <strong>Aplicação:</strong> {servico.get('aplicacao', '-')}
-    </div>
-    <div class="info-item">
-    <strong>Observações:</strong> {servico.get('observacoes', '-')}
-    </div>
+    <div class="info-item"><strong>Cliente:</strong> {empresa_nome}</div>
+    <div class="info-item"><strong>Status:</strong> <span class="status">{servico['status']}</span></div>
+    <div class="info-item"><strong>Título:</strong> {servico['titulo']}</div>
+    <div class="info-item"><strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}</div>
+    <div class="info-item"><strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}</div>
+    <div class="info-item"><strong>Quantidade:</strong> {servico.get('quantidade', '-')}</div>
+    <div class="info-item"><strong>Dimensão:</strong> {servico.get('dimensao', '-')}</div>
+    <div class="info-item"><strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}</div>
+    <div class="info-item"><strong>Aplicação:</strong> {servico.get('aplicacao', '-')}</div>
+    <div class="info-item"><strong>Observações:</strong> {servico.get('observacoes', '-')}</div>
     </div>
     <h3>Materiais Utilizados</h3>
     <table>
-    <thead>
-    <tr>
-    <th>Material</th>
-    <th>Unidade</th>
-    <th>Qtd Usada</th>
-    <th>Valor Unit.</th>
-    <th>Valor Total</th>
-    </tr>
-    </thead>
+    <thead><tr><th>Material</th><th>Unidade</th><th>Qtd Usada</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
     <tbody>
     {''.join(f'''
     <tr>
@@ -1948,9 +1523,7 @@ def imprimir_os(id):
     <p><strong>Valor Cobrado:</strong> R$ {valor_cobrado:.2f}</p>
     <p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p>
     </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     <div style="text-align: center; margin-top: 40px;">
     <button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button>
     <a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a>
@@ -1975,7 +1548,6 @@ def pdf_os(id):
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
-
     def calcular_custo():
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
@@ -1986,13 +1558,11 @@ def pdf_os(id):
             return 0.0
         except:
             return 0.0
-
     custo_materiais = calcular_custo()
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
     logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
-
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -2000,55 +1570,15 @@ def pdf_os(id):
     <meta charset="UTF-8">
     <title>OS {servico['codigo_servico']}</title>
     <style>
-    body {{
-        font-family: Arial, sans-serif;
-        padding: 40px;
-        background: white;
-    }}
-    .header {{
-        text-align: center;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #2c3e50;
-        padding-bottom: 15px;
-    }}
-    .header img {{
-        max-width: 200px;
-        margin-bottom: 10px;
-    }}
-    .header h1 {{
-        margin: 0;
-        color: #2c3e50;
-        font-size: 24px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-    }}
-    th, td {{
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: left;
-    }}
-    th {{
-        background-color: #ecf0f1;
-        color: #2c3e50;
-    }}
-    .total-box {{
-        text-align: right;
-        font-size: 18px;
-        margin-top: 20px;
-    }}
-    .footer {{
-        margin-top: 40px;
-        text-align: center;
-        padding: 20px;
-        border-top: 1px solid #ddd;
-        font-size: 12px;
-        color: #7f8c8d;
-    }}
+    body {{ font-family: Arial, sans-serif; padding: 40px; background: white; }}
+    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}
+    .header img {{ max-width: 200px; margin-bottom: 10px; }}
+    .header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+    th {{ background-color: #ecf0f1; color: #2c3e50; }}
+    .total-box {{ text-align: right; font-size: 18px; margin-top: 20px; }}
+    .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
     <body>
@@ -2074,14 +1604,7 @@ def pdf_os(id):
     </table>
     <h3>Materiais Utilizados</h3>
     <table>
-    <thead>
-    <tr>
-    <th>Material</th>
-    <th>Qtd</th>
-    <th>Valor Unit.</th>
-    <th>Valor Total</th>
-    </tr>
-    </thead>
+    <thead><tr><th>Material</th><th>Qtd</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
     <tbody>
     {''.join(f"""
     <tr>
@@ -2093,22 +1616,14 @@ def pdf_os(id):
     """ for m in servico.get('materiais_usados', []) if m.get('materiais'))}
     </tbody>
     </table>
-    <div class="total-box">
-    <p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p>
-    </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="total-box"><p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p></div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </body>
     </html>
     '''
     pdf = pdfkit.from_string(html, False)
-    return send_file(
-        BytesIO(pdf),
-        as_attachment=True,
-        download_name=f"os_{servico['codigo_servico']}.pdf",
-        mimetype="application/pdf"
-    )
+    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"os_{servico['codigo_servico']}.pdf", mimetype="application/pdf")
+
 @app.route('/configuracoes')
 def configuracoes():
     if 'usuario' not in session or session['nivel'] != 'administrador':
@@ -2124,126 +1639,35 @@ def configuracoes():
     <title>Configurações do Sistema</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>⚙️ Configurações do Sistema</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <form method="post" action="/salvar_configuracoes" class="form-container">
     <h3>Remetente (Etiquetas)</h3>
-    <div>
-    <label>Nome do Remetente</label>
-    <input type="text" name="nome_remetente" value="{config['nome_remetente']}" required>
-    </div>
-    <div>
-    <label>Endereço Completo</label>
-    <input type="text" name="endereco_remetente" value="{config['endereco_remetente']}" required>
-    </div>
-    <div>
-    <label>Bairro</label>
-    <input type="text" name="bairro_remetente" value="{config['bairro_remetente']}" required>
-    </div>
-    <div>
-    <label>Cidade</label>
-    <input type="text" name="cidade_remetente" value="{config['cidade_remetente']}" required>
-    </div>
-    <div>
-    <label>Estado</label>
-    <input type="text" name="estado_remetente" value="{config['estado_remetente']}" required maxlength="2">
-    </div>
-    <div>
-    <label>CEP</label>
-    <input type="text" name="cep_remetente" value="{config['cep_remetente']}" required>
-    </div>
+    <div><label>Nome do Remetente</label><input type="text" name="nome_remetente" value="{config['nome_remetente']}" required></div>
+    <div><label>Endereço Completo</label><input type="text" name="endereco_remetente" value="{config['endereco_remetente']}" required></div>
+    <div><label>Bairro</label><input type="text" name="bairro_remetente" value="{config['bairro_remetente']}" required></div>
+    <div><label>Cidade</label><input type="text" name="cidade_remetente" value="{config['cidade_remetente']}" required></div>
+    <div><label>Estado</label><input type="text" name="estado_remetente" value="{config['estado_remetente']}" required maxlength="2"></div>
+    <div><label>CEP</label><input type="text" name="cep_remetente" value="{config['cep_remetente']}" required></div>
     <button type="submit" class="btn">💾 Salvar Configurações</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -2296,120 +1720,31 @@ def listar_materiais():
     <title>Materiais Cadastrados</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1100px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .search-box {{
-        padding: 20px 30px;
-        text-align: center;
-    }}
-    .search-box input {{
-        width: 70%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 16px;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 16px 20px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 14px;
-    }}
-    tr:nth-child(even) {{
-        background: #f9f9f9;
-    }}
-    tr:hover {{
-        background: #f1f7fb;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .search-box {{ padding: 20px 30px; text-align: center; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 16px 20px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📦 Materiais Cadastrados</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
-    <div class="search-box">
-    <form method="get" style="display: inline;">
-    <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
-    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-    </form>
-    </div>
+    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table>
-    <thead>
-    <tr>
-    <th>ID</th>
-    <th>Denominação</th>
-    <th>Marca</th>
-    <th>Grupo</th>
-    <th>Unidade</th>
-    <th>Fornecedor</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
+    <thead><tr><th>ID</th><th>Denominação</th><th>Marca</th><th>Grupo</th><th>Unidade</th><th>Fornecedor</th><th>Ações</th></tr></thead>
     <tbody>
     {''.join(f'''
     <tr>
@@ -2427,9 +1762,7 @@ def listar_materiais():
     ''' for m in materiais)}
     </tbody>
     </table>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -2461,89 +1794,23 @@ def detalhes_material(id):
     <title>{material['denominacao']} - Detalhes</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .details {{
-        padding: 30px;
-    }}
-    .details p {{
-        margin: 10px 0;
-        font-size: 16px;
-    }}
-    .details strong {{
-        color: #2c3e50;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        text-decoration: none;
-        margin: 10px 30px;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .details {{ padding: 30px; }}
+    .details p {{ margin: 10px 0; font-size: 16px; }}
+    .details strong {{ color: #2c3e50; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📦 {material['denominacao']}</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📦 {material['denominacao']}</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/materiais" class="back-link">← Voltar à Lista</a>
     <div class="details">
     <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
@@ -2557,9 +1824,7 @@ def detalhes_material(id):
     <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
     <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
     </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -2646,110 +1911,28 @@ def editar_material(id):
     <title>Editar Material</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>✏️ Editar {material['denominacao']}</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/material/{id}" class="back-link">← Voltar aos Detalhes</a>
     <form method="post" class="form-container">
-    <div>
-    <label>Denominação *</label>
-    <input type="text" name="denominacao" value="{material['denominacao']}" required>
-    </div>
-    <div>
-    <label>Marca</label>
-    <input type="text" name="marca" value="{material['marca']}">
-    </div>
-    <div>
-    <label>Grupo de Material</label>
-    <input type="text" name="grupo_material" value="{material['grupo_material']}">
-    </div>
+    <div><label>Denominação *</label><input type="text" name="denominacao" value="{material['denominacao']}" required></div>
+    <div><label>Marca</label><input type="text" name="marca" value="{material['marca']}"></div>
+    <div><label>Grupo de Material</label><input type="text" name="grupo_material" value="{material['grupo_material']}"></div>
     <div>
     <label>Unidade de Medida *</label>
     <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
@@ -2770,14 +1953,8 @@ def editar_material(id):
     </select>
     <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}">
     </div>
-    <div>
-    <label>Valor Unitário *</label>
-    <input type="number" name="valor_unitario" step="0.01" value="{material['valor_unitario']}" required>
-    </div>
-    <div>
-    <label>Especificação</label>
-    <textarea name="especificacao" rows="3">{material['especificacao']}</textarea>
-    </div>
+    <div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" value="{material['valor_unitario']}" required></div>
+    <div><label>Especificação</label><textarea name="especificacao" rows="3">{material['especificacao']}</textarea></div>
     <div>
     <label>Fornecedor</label>
     <select name="fornecedor_id" id="fornecedor_id">
@@ -2787,9 +1964,7 @@ def editar_material(id):
     </div>
     <button type="submit" class="btn">💾 Salvar Alterações</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
     function toggleOutro() {{
@@ -2875,138 +2050,38 @@ def cadastrar_material():
     <title>Cadastrar Material</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>➕ Cadastrar Novo Material</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/materiais" class="back-link">← Voltar à Lista</a>
     <form method="post" class="form-container">
-    <div>
-    <label>Denominação *</label>
-    <input type="text" name="denominacao" required>
-    </div>
-    <div>
-    <label>Marca</label>
-    <input type="text" name="marca">
-    </div>
-    <div>
-    <label>Grupo de Material</label>
-    <input type="text" name="grupo_material">
-    </div>
+    <div><label>Denominação *</label><input type="text" name="denominacao" required></div>
+    <div><label>Marca</label><input type="text" name="marca"></div>
+    <div><label>Grupo de Material</label><input type="text" name="grupo_material"></div>
     <div>
     <label>Unidade de Medida *</label>
     <select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required>
     <option value="">Selecione</option>
-    <option value="folha">folha</option>
-    <option value="metro">metro</option>
-    <option value="centímetro">centímetro</option>
-    <option value="milímetro">milímetro</option>
-    <option value="grama">grama</option>
-    <option value="quilograma">quilograma</option>
-    <option value="rolo">rolo</option>
-    <option value="litro">litro</option>
-    <option value="unidade">unidade</option>
-    <option value="conjunto">conjunto</option>
-    <option value="m²">m²</option>
-    <option value="cm²">cm²</option>
-    <option value="outro">Outro (especifique)</option>
+    <option value="folha">folha</option><option value="metro">metro</option><option value="centímetro">centímetro</option><option value="milímetro">milímetro</option><option value="grama">grama</option><option value="quilograma">quilograma</option><option value="rolo">rolo</option><option value="litro">litro</option><option value="unidade">unidade</option><option value="conjunto">conjunto</option><option value="m²">m²</option><option value="cm²">cm²</option><option value="outro">Outro (especifique)</option>
     </select>
     <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()">
     </div>
-    <div>
-    <label>Valor Unitário *</label>
-    <input type="number" name="valor_unitario" step="0.01" required>
-    </div>
-    <div>
-    <label>Especificação</label>
-    <textarea name="especificacao" rows="3"></textarea>
-    </div>
+    <div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" required></div>
+    <div><label>Especificação</label><textarea name="especificacao" rows="3"></textarea></div>
     <div>
     <label>Fornecedor</label>
     <select name="fornecedor_id" id="fornecedor_id">
@@ -3016,9 +2091,7 @@ def cadastrar_material():
     </div>
     <button type="submit" class="btn">💾 Salvar Material</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
     function toggleOutro() {{
@@ -3125,179 +2198,46 @@ def estoque():
     <title>Meu Estoque</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1200px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .section {{
-        padding: 20px 30px;
-    }}
-    .section-title {{
-        font-size: 20px;
-        margin: 0 0 15px 0;
-        color: #2c3e50;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 10px;
-    }}
-    .search-box {{
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-    .search-box input {{
-        width: 70%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 16px;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 12px 15px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 14px;
-    }}
-    tr:nth-child(even) {{
-        background: #f9f9f9;
-    }}
-    tr:hover {{
-        background: #f1f7fb;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .btn {{
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-        margin-right: 5px;
-    }}
-    .btn-green {{ background: #27ae60; color: white; }}
-    .btn-red {{ background: #e74c3c; color: white; }}
-    .btn-delete {{ background: #95a5a6; color: white; }}
-    .btn-edit {{ background: #f39c12; color: white; }}
-    .estoque-baixo {{ color: #e74c3c; font-weight: bold; }}
-    .tipo-entrada {{ color: #27ae60; font-weight: bold; }}
-    .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .section {{ padding: 20px 30px; }}
+    .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
+    .search-box {{ text-align: center; margin-bottom: 20px; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
+    .btn-green {{ background: #27ae60; color: white; }} .btn-red {{ background: #e74c3c; color: white; }} .btn-delete {{ background: #95a5a6; color: white; }} .btn-edit {{ background: #f39c12; color: white; }}
+    .estoque-baixo {{ color: #e74c3c; font-weight: bold; }} .tipo-entrada {{ color: #27ae60; font-weight: bold; }} .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📊 Meu Estoque</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📊 Meu Estoque</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <div class="section">
     <h2 class="section-title">Adicionar ao Estoque</h2>
-    <p style="margin: 10px 0;">
-    <a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a>
-    <a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a>
-    </p>
+    <p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a></p>
     </div>
     <div class="section">
     <h2 class="section-title">Itens em Estoque</h2>
-    <table>
-    <thead>
-    <tr>
-    <th>ID</th>
-    <th>Material</th>
-    <th>Unidade</th>
-    <th>Qtd. em Estoque</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
-    <tbody>
-    {materiais_html}
-    </tbody>
-    </table>
+    <table><thead><tr><th>ID</th><th>Material</th><th>Unidade</th><th>Qtd. em Estoque</th><th>Ações</th></tr></thead><tbody>{materiais_html}</tbody></table>
     </div>
     <div class="section">
     <h2 class="section-title">Últimas Movimentações</h2>
-    <div class="search-box">
-    <form method="get" style="display: inline;">
-    <input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}">
-    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-    </form>
+    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Ações</th></tr></thead><tbody>{movimentacoes_html}</tbody></table>
     </div>
-    <table>
-    <thead>
-    <tr>
-    <th>Data</th>
-    <th>Material</th>
-    <th>Tipo</th>
-    <th>Quantidade</th>
-    <th>Valor Unit.</th>
-    <th>Valor Total</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
-    <tbody>
-    {movimentacoes_html}
-    </tbody>
-    </table>
-    </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -3330,186 +2270,43 @@ def registrar_entrada_form():
     <title>Registrar Entrada</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 900px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .grid-2 {{
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📥 Registrar Entrada de Material</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📥 Registrar Entrada de Material</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <div class="form-container">
     <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
-    <div>
-    <label>Material *</label>
-    <select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required>
-    <option value="">Selecione um material</option>
-    {''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in materiais)}
-    </select>
-    </div>
-    <div class="grid-2">
-    <div>
-    <label>Unidade de Medida (do cadastro)</label>
-    <input type="text" id="unidade_medida" readonly>
-    </div>
-    <div>
-    <label>Valor Unitário Cadastrado</label>
-    <input type="text" id="valor_unitario_cadastrado" readonly>
-    </div>
-    </div>
-    <div class="grid-2">
-    <div>
-    <label>Quantidade Comprada *</label>
-    <input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="calcularValorUnitario()">
-    </div>
-    <div>
-    <label>Tamanho (ex: 66x96 cm)</label>
-    <input type="text" name="tamanho" placeholder="Opcional">
-    </div>
-    </div>
-    <div>
-    <label>Valor Total Pago *</label>
-    <input type="number" name="valor_total" id="valor_total" step="0.01" required oninput="calcularValorUnitario()">
-    </div>
-    <div>
-    <label>Valor Unitário Calculado</label>
-    <input type="text" id="valor_unitario_calculado" readonly>
-    </div>
+    <div><label>Material *</label><select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required><option value="">Selecione um material</option>{''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in materiais)}</select></div>
+    <div class="grid-2"><div><label>Unidade de Medida (do cadastro)</label><input type="text" id="unidade_medida" readonly></div><div><label>Valor Unitário Cadastrado</label><input type="text" id="valor_unitario_cadastrado" readonly></div></div>
+    <div class="grid-2"><div><label>Quantidade Comprada *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="calcularValorUnitario()"></div><div><label>Tamanho (ex: 66x96 cm)</label><input type="text" name="tamanho" placeholder="Opcional"></div></div>
+    <div><label>Valor Total Pago *</label><input type="number" name="valor_total" id="valor_total" step="0.01" required oninput="calcularValorUnitario()"></div>
+    <div><label>Valor Unitário Calculado</label><input type="text" id="valor_unitario_calculado" readonly></div>
     <button type="submit" class="btn">➕ Registrar Entrada</button>
     </form>
     </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
     const materiais = {materiais_js};
-    function carregarDadosMaterial() {{
-        const select = document.getElementById('material_id');
-        const id = select.value;
-        const material = materiais.find(m => m.id == id);
-        if (material) {{
-            document.getElementById('unidade_medida').value = material.unidade_medida;
-            document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2);
-            document.getElementById('quantidade').value = '';
-            document.getElementById('valor_total').value = '';
-            document.getElementById('valor_unitario_calculado').value = '';
-        }} else {{
-            document.getElementById('unidade_medida').value = '';
-            document.getElementById('valor_unitario_cadastrado').value = '';
-        }}
-    }}
-    function calcularValorUnitario() {{
-        const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
-        const valor_total = parseFloat(document.getElementById('valor_total').value) || 0;
-        if (quantidade > 0 && valor_total > 0) {{
-            const valor_calculado = (valor_total / quantidade).toFixed(2);
-            document.getElementById('valor_unitario_calculado').value = valor_calculado;
-        }} else {{
-            document.getElementById('valor_unitario_calculado').value = '';
-        }}
-    }}
-    function validarFormulario() {{
-        const quantidade = parseFloat(document.getElementById('quantidade').value);
-        const valor_total = parseFloat(document.getElementById('valor_total').value);
-        if (quantidade <= 0 || valor_total <= 0) {{
-            alert('Quantidade e valor total devem ser maiores que zero.');
-            return false;
-        }}
-        return true;
-    }}
-    window.onload = function() {{
-        if ('{material_id}') {{
-            carregarDadosMaterial();
-        }}
-    }};
+    function carregarDadosMaterial() {{ const select = document.getElementById('material_id'); const id = select.value; const material = materiais.find(m => m.id == id); if (material) {{ document.getElementById('unidade_medida').value = material.unidade_medida; document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2); document.getElementById('quantidade').value = ''; document.getElementById('valor_total').value = ''; document.getElementById('valor_unitario_calculado').value = ''; }} else {{ document.getElementById('unidade_medida').value = ''; document.getElementById('valor_unitario_cadastrado').value = ''; }} }}
+    function calcularValorUnitario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value) || 0; const valor_total = parseFloat(document.getElementById('valor_total').value) || 0; if (quantidade > 0 && valor_total > 0) {{ const valor_calculado = (valor_total / quantidade).toFixed(2); document.getElementById('valor_unitario_calculado').value = valor_calculado; }} else {{ document.getElementById('valor_unitario_calculado').value = ''; }} }}
+    function validarFormulario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value); const valor_total = parseFloat(document.getElementById('valor_total').value); if (quantidade <= 0 || valor_total <= 0) {{ alert('Quantidade e valor total devem ser maiores que zero.'); return false; }} return true; }}
+    window.onload = function() {{ if ('{material_id}') {{ carregarDadosMaterial(); }} }};
     </script>
     </body>
     </html>
@@ -3592,163 +2389,42 @@ def registrar_saida_form():
     <title>Registrar Saída</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 900px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #e74c3c;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
-    .alert {{
-        background: #fdf3cd;
-        color: #856404;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 15px 0;
-        font-size: 14px;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📤 Registrar Saída de Material</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📤 Registrar Saída de Material</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <div class="form-container">
     <form method="post" action="/registrar_saida" onsubmit="return validarSaida()">
     <input type="hidden" name="material_id" value="{material['id']}">
-    <div>
-    <label>Material</label>
-    <input type="text" value="{material['denominacao']}" readonly>
-    </div>
-    <div>
-    <label>Unidade de Medida</label>
-    <input type="text" value="{material['unidade_medida']}" readonly>
-    </div>
-    <div>
-    <label>Saldo Atual em Estoque</label>
-    <input type="text" id="saldo_atual" value="{saldo_atual}" readonly style="font-weight: bold;">
-    </div>
-    <div>
-    <label>Quantidade a Retirar *</label>
-    <input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="verificarSaldo()">
-    </div>
-    <div>
-    <label>Motivo da Saída *</label>
-    <textarea name="motivo" rows="3" required></textarea>
-    </div>
-    <div id="alerta_saldo" class="alert" style="display: none;">
-    ⚠️ A quantidade retirada é maior que o saldo em estoque!
-    </div>
+    <div><label>Material</label><input type="text" value="{material['denominacao']}" readonly></div>
+    <div><label>Unidade de Medida</label><input type="text" value="{material['unidade_medida']}" readonly></div>
+    <div><label>Saldo Atual em Estoque</label><input type="text" id="saldo_atual" value="{saldo_atual}" readonly style="font-weight: bold;"></div>
+    <div><label>Quantidade a Retirar *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="verificarSaldo()"></div>
+    <div><label>Motivo da Saída *</label><textarea name="motivo" rows="3" required></textarea></div>
+    <div id="alerta_saldo" class="alert" style="display: none;">⚠️ A quantidade retirada é maior que o saldo em estoque!</div>
     <button type="submit" class="btn">📤 Registrar Saída</button>
     </form>
     </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function verificarSaldo() {{
-        const saldo = parseFloat(document.getElementById('saldo_atual').value);
-        const qtd = parseFloat(document.getElementById('quantidade').value) || 0;
-        const alerta = document.getElementById('alerta_saldo');
-        if (qtd > saldo) {{
-            alerta.style.display = 'block';
-        }} else {{
-            alerta.style.display = 'none';
-        }}
-    }}
-    function validarSaida() {{
-        const saldo = parseFloat(document.getElementById('saldo_atual').value);
-        const qtd = parseFloat(document.getElementById('quantidade').value) || 0;
-        if (qtd <= 0) {{
-            alert('A quantidade deve ser maior que zero.');
-            return false;
-        }}
-        if (qtd > saldo) {{
-            if (!confirm('⚠️ A quantidade é maior que o saldo. Deseja continuar mesmo assim?')) {{
-                return false;
-            }}
-        }}
-        return true;
-    }}
+    function verificarSaldo() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; const alerta = document.getElementById('alerta_saldo'); if (qtd > saldo) {{ alerta.style.display = 'block'; }} else {{ alerta.style.display = 'none'; }} }}
+    function validarSaida() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; if (qtd <= 0) {{ alert('A quantidade deve ser maior que zero.'); return false; }} if (qtd > saldo) {{ if (!confirm('⚠️ A quantidade é maior que o saldo. Deseja continuar mesmo assim?')) {{ return false; }} }} return true; }}
     </script>
     </body>
     </html>
@@ -3833,142 +2509,36 @@ def listar_fornecedores():
     <title>Fornecedores Cadastrados</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1100px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .search-box {{
-        padding: 20px 30px;
-        text-align: center;
-    }}
-    .search-box input {{
-        width: 70%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 16px;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 16px 20px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 14px;
-    }}
-    tr:nth-child(even) {{
-        background: #f9f9f9;
-    }}
-    tr:hover {{
-        background: #f1f7fb;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .search-box {{ padding: 20px 30px; text-align: center; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 16px 20px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📋 Fornecedores Cadastrados</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
-    <div class="search-box">
-    <form method="get" style="display: inline;">
-    <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
-    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-    </form>
-    </div>
-    <table>
-    <thead>
+    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
     <tr>
-    <th>ID</th>
-    <th>Nome</th>
-    <th>CNPJ</th>
-    <th>Contato</th>
-    <th>Telefone</th>
-    <th>E-mail</th>
-    <th>Ações</th>
+    <td>{f["id"]}</td><td>{f["nome"]}</td><td>{f["cnpj"]}</td><td>{f.get("contato", "—")}</td><td>{f.get("telefone", "—")}</td><td>{f.get("email", "—")}</td>
+    <td><div style="display: flex; gap: 10px;"><a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a><a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a></div></td>
     </tr>
-    </thead>
-    <tbody>
-    {''.join(f"""
-    <tr>
-    <td>{f["id"]}</td>
-    <td>{f["nome"]}</td>
-    <td>{f["cnpj"]}</td>
-    <td>{f.get("contato", "—")}</td>
-    <td>{f.get("telefone", "—")}</td>
-    <td>{f.get("email", "—")}</td>
-    <td>
-    <div style="display: flex; gap: 10px;">
-    <a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>
-    <a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-    </div>
-    </td>
-    </tr>
-    """ for f in fornecedores)}
-    </tbody>
-    </table>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    """ for f in fornecedores)}</tbody></table>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -4005,126 +2575,34 @@ def cadastrar_fornecedor():
     <title>Cadastrar Fornecedor</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>➕ Cadastrar Novo Fornecedor</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/fornecedores" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
-    <div>
-    <label>Nome *</label>
-    <input type="text" name="nome" required>
-    </div>
-    <div>
-    <label>CNPJ</label>
-    <input type="text" name="cnpj">
-    </div>
-    <div>
-    <label>Contato</label>
-    <input type="text" name="contato">
-    </div>
-    <div>
-    <label>Telefone</label>
-    <input type="text" name="telefone">
-    </div>
-    <div>
-    <label>E-mail</label>
-    <input type="email" name="email">
-    </div>
-    <div>
-    <label>Endereço</label>
-    <textarea name="endereco" rows="3"></textarea>
-    </div>
+    <div><label>Nome *</label><input type="text" name="nome" required></div>
+    <div><label>CNPJ</label><input type="text" name="cnpj"></div>
+    <div><label>Contato</label><input type="text" name="contato"></div>
+    <div><label>Telefone</label><input type="text" name="telefone"></div>
+    <div><label>E-mail</label><input type="email" name="email"></div>
+    <div><label>Endereço</label><textarea name="endereco" rows="3"></textarea></div>
     <button type="submit" class="btn">💾 Salvar Fornecedor</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -4171,126 +2649,34 @@ def editar_fornecedor(id):
     <title>Editar Fornecedor</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 800px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #f39c12;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/fornecedores" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
-    <div>
-    <label>Nome *</label>
-    <input type="text" name="nome" value="{fornecedor['nome']}" required>
-    </div>
-    <div>
-    <label>CNPJ</label>
-    <input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}">
-    </div>
-    <div>
-    <label>Contato</label>
-    <input type="text" name="contato" value="{fornecedor.get('contato', '')}">
-    </div>
-    <div>
-    <label>Telefone</label>
-    <input type="text" name="telefone" value="{fornecedor.get('telefone', '')}">
-    </div>
-    <div>
-    <label>E-mail</label>
-    <input type="email" name="email" value="{fornecedor.get('email', '')}">
-    </div>
-    <div>
-    <label>Endereço</label>
-    <textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea>
-    </div>
+    <div><label>Nome *</label><input type="text" name="nome" value="{fornecedor['nome']}" required></div>
+    <div><label>CNPJ</label><input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}"></div>
+    <div><label>Contato</label><input type="text" name="contato" value="{fornecedor.get('contato', '')}"></div>
+    <div><label>Telefone</label><input type="text" name="telefone" value="{fornecedor.get('telefone', '')}"></div>
+    <div><label>E-mail</label><input type="email" name="email" value="{fornecedor.get('email', '')}"></div>
+    <div><label>Endereço</label><textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea></div>
     <button type="submit" class="btn">💾 Salvar Alterações</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -4309,7 +2695,8 @@ def excluir_fornecedor_view(id):
     else:
         flash("❌ Erro ao excluir fornecedor.")
     return redirect(url_for('listar_fornecedores'))
-    # ========================
+
+# ========================
 # ROTAS DE ORÇAMENTOS
 # ========================
 @app.route('/orcamentos')
@@ -4339,132 +2726,34 @@ def listar_orcamentos():
     <title>Orçamentos</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1400px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .btn {{
-        padding: 10px 15px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        text-decoration: none;
-        margin: 5px;
-    }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 12px 15px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>💰 Orçamentos</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>💰 Orçamentos</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
-    <div style="text-align: center; padding: 20px;">
-    <form method="get" style="display: inline;">
-    <input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;">
-    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
-    </form>
-    </div>
-    <table>
-    <thead>
+    <div style="text-align: center; padding: 20px;"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
     <tr>
-    <th>Código</th>
-    <th>Título</th>
-    <th>Cliente</th>
-    <th>Valor</th>
-    <th>Data</th>
-    <th>Ações</th>
+    <td>{o['codigo_servico']}</td><td>{o['titulo']}</td><td>{o['empresas']['nome_empresa'] if o.get('empresas') else '—'}</td>
+    <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td><td>{format_data(o.get('data_abertura'))}</td>
+    <td><a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a><a href="/complementar_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a><a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a><a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td>
     </tr>
-    </thead>
-    <tbody>
-    {''.join(f"""
-    <tr>
-    <td>{o['codigo_servico']}</td>
-    <td>{o['titulo']}</td>
-    <td>{o['empresas']['nome_empresa'] if o.get('empresas') else '—'}</td>
-    <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
-    <td>{format_data(o.get('data_abertura'))}</td>
-    <td>
-    <a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a>
-    <a href="/complementar_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a>
-    <a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a>
-    <a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
-    </td>
-    </tr>
-    """ for o in orcamentos)}
-    </tbody>
-    </table>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    """ for o in orcamentos)}</tbody></table>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -4553,11 +2842,7 @@ def adicionar_orcamento():
                 except Exception as e:
                     print(f"❌ Exceção ao salvar item {i+1}:", str(e))
                     continue
-            requests.patch(
-                f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}",
-                json={"valor_cobrado": valor_total_orcamento},
-                headers=headers
-            )
+            requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}", json={"valor_cobrado": valor_total_orcamento}, headers=headers)
             flash("✅ Orçamento criado com sucesso!")
             return redirect(url_for('listar_orcamentos'))
         except Exception as e:
@@ -4573,153 +2858,45 @@ def adicionar_orcamento():
     <title>Adicionar Orçamento com Múltiplos Itens</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1000px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .grid-3 {{
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 15px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>➕ Orçamento com Múltiplos Itens</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>➕ Orçamento com Múltiplos Itens</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/orcamentos" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
-    <label>Código do Orçamento</label>
-    <input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
-    <label>Cliente *</label>
-    <select name="empresa_id" required>
-    <option value="">Selecione uma empresa</option>
-    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
-    </select>
-    <div>
-    <label>Data de Abertura</label>
-    <input type="date" name="data_abertura">
-    </div>
+    <label>Código do Orçamento</label><input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
+    <label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select>
+    <div><label>Data de Abertura</label><input type="date" name="data_abertura"></div>
     <h3>Itens do Orçamento</h3>
     <div id="itens-lista">
     <div class="grid-3" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #ccc;">
-    <div>
-    <label>Título do Item *</label>
-    <input type="text" name="item_titulo[]" required placeholder="Ex: Banner 3x1m">
-    </div>
-    <div>
-    <label>Quantidade *</label>
-    <input type="number" name="item_quantidade[]" step="1" required>
-    </div>
-    <div>
-    <label>Valor Unitário (R$) *</label>
-    <input type="number" name="item_valor_unit[]" step="0.01" required>
-    </div>
-    <div>
-    <label>Dimensão</label>
-    <input type="text" name="item_dimensao[]" placeholder="Ex: 60x90 cm">
-    </div>
-    <div>
-    <label>Nº de Cores</label>
-    <input type="number" name="item_cores[]" step="1" placeholder="Ex: 4">
-    </div>
-    <div>
-    <label>Observações do Item</label>
-    <textarea name="item_observacoes[]" rows="1"></textarea>
-    </div>
+    <div><label>Título do Item *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Banner 3x1m"></div>
+    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required></div>
+    <div><label>Valor Unitário (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required></div>
+    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 60x90 cm"></div>
+    <div><label>Nº de Cores</label><input type="number" name="item_cores[]" step="1" placeholder="Ex: 4"></div>
+    <div><label>Observações do Item</label><textarea name="item_observacoes[]" rows="1"></textarea></div>
     </div>
     </div>
     <button type="button" onclick="adicionarItem()" style="margin: 10px 0; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">+ Adicionar outro item</button>
-    <div style="margin-top: 30px;">
-    <label>Observações Gerais</label>
-    <textarea name="observacoes_gerais" rows="3"></textarea>
-    </div>
+    <div style="margin-top: 30px;"><label>Observações Gerais</label><textarea name="observacoes_gerais" rows="3"></textarea></div>
     <button type="submit" class="btn">💾 Salvar Orçamento</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
     function adicionarItem() {{
@@ -4728,30 +2905,12 @@ def adicionar_orcamento():
     div.className = 'grid-3';
     div.style = 'margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #ccc;';
     div.innerHTML = `
-    <div>
-    <label>Título do Item *</label>
-    <input type="text" name="item_titulo[]" required placeholder="Ex: Cartão de Visita">
-    </div>
-    <div>
-    <label>Quantidade *</label>
-    <input type="number" name="item_quantidade[]" step="1" required>
-    </div>
-    <div>
-    <label>Valor Unitário (R$) *</label>
-    <input type="number" name="item_valor_unit[]" step="0.01" required>
-    </div>
-    <div>
-    <label>Dimensão</label>
-    <input type="text" name="item_dimensao[]" placeholder="Ex: 9x5 cm">
-    </div>
-    <div>
-    <label>Nº de Cores</label>
-    <input type="number" name="item_cores[]" step="1" placeholder="Ex: 2">
-    </div>
-    <div>
-    <label>Observações do Item</label>
-    <textarea name="item_observacoes[]" rows="1"></textarea>
-    </div>
+    <div><label>Título do Item *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Cartão de Visita"></div>
+    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required></div>
+    <div><label>Valor Unitário (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required></div>
+    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 9x5 cm"></div>
+    <div><label>Nº de Cores</label><input type="number" name="item_cores[]" step="1" placeholder="Ex: 2"></div>
+    <div><label>Observações do Item</label><textarea name="item_observacoes[]" rows="1"></textarea></div>
     `;
     container.appendChild(div);
     }}
@@ -4785,147 +2944,42 @@ def complementar_orcamento(id):
     <title>Complementar Orçamento</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1000px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .grid-3 {{
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 15px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>✅ Complementar Orçamento</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>✅ Complementar Orçamento</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/orcamentos" class="back-link">← Voltar à lista</a>
     <form method="post" action="/salvar_como_servico/{id}" class="form-container">
     <h3>Campos a Preencher</h3>
-    <div>
-    <label>Status</label>
-    <select name="status">
-    <option value="Pendente" {"selected" if orcamento.get('status') == 'Pendente' else ""}>Pendente</option>
-    <option value="Em Produção">Em Produção</option>
-    <option value="Concluído">Concluído</option>
-    <option value="Entregue">Entregue</option>
-    </select>
-    </div>
-    <div>
-    <label>Previsão de Entrega</label>
-    <input type="date" name="previsao_entrega">
-    </div>
-    <div>
-    <label>Observações</label>
-    <textarea name="observacoes" rows="3">{orcamento.get('observacoes', '')}</textarea>
-    </div>
+    <div><label>Status</label><select name="status"><option value="Pendente" {"selected" if orcamento.get('status') == 'Pendente' else ""}>Pendente</option><option value="Em Produção">Em Produção</option><option value="Concluído">Concluído</option><option value="Entregue">Entregue</option></select></div>
+    <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div>
+    <div><label>Observações</label><textarea name="observacoes" rows="3">{orcamento.get('observacoes', '')}</textarea></div>
     <h3 style="margin-top: 30px;">Materiais Usados</h3>
     <div id="materiais-lista">
     <div class="grid-3">
-    <div>
-    <label>Material</label>
-    <select name="material_id[]" required>
-    <option value="">Selecione</option>
-    {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-    </select>
-    </div>
-    <div>
-    <label>Qtd Usada</label>
-    <input type="number" name="quantidade_usada[]" step="0.01" required>
-    </div>
-    <div>
-    <label>Valor Unitário (R$)</label>
-    <input type="number" name="valor_unitario[]" step="0.01" required>
-    </div>
+    <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
+    <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
+    <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
     </div>
     </div>
     <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
     <button type="submit" class="btn">💾 Salvar como Serviço</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
     function adicionarMaterial() {{
@@ -4933,21 +2987,9 @@ def complementar_orcamento(id):
     const div = document.createElement('div');
     div.className = 'grid-3';
     div.innerHTML = `
-    <div>
-    <label>Material</label>
-    <select name="material_id[]" required>
-    <option value="">Selecione</option>
-    {''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}
-    </select>
-    </div>
-    <div>
-    <label>Qtd Usada</label>
-    <input type="number" name="quantidade_usada[]" step="0.01" required>
-    </div>
-    <div>
-    <label>Valor Unitário (R$)</label>
-    <input type="number" name="valor_unitario[]" step="0.01" required>
-    </div>
+    <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
+    <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
+    <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
     `;
     container.appendChild(div);
     }}
@@ -5099,12 +3141,7 @@ def pdf_orcamento(id):
     </html>
     '''
     pdf = pdfkit.from_string(html, False)
-    return send_file(
-        BytesIO(pdf),
-        as_attachment=True,
-        download_name=f"orcamento_{orcamento['codigo_servico']}.pdf",
-        mimetype="application/pdf"
-    )
+    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")
 
 # ========================
 # MÓDULO DE RASTREAMENTO DE ENVIOS
@@ -5170,144 +3207,36 @@ def registrar_envio():
     <title>Registrar Envio - Rastreamento</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 900px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📦 Registrar Envio para Rastreamento</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/envios" class="back-link">← Voltar à Lista de Envios</a>
     <form method="post" action="/salvar_envio" class="form-container">
-    <div>
-    <label>Tipo de Envio *</label>
-    <select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required>
-    <option value="">Selecione</option>
-    <option value="Serviço">Serviço (vinculado a OS)</option>
-    <option value="Amostra">Amostra Grátis</option>
-    </select>
-    </div>
-    <div id="servico-campo" style="display: none;">
-    <label>Serviço *</label>
-    <select name="servico_id">
-    <option value="">Selecione um serviço</option>
-    {''.join(f'<option value="{s["id"]}">{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
-    </select>
-    </div>
-    <div>
-    <label>Cliente *</label>
-    <select name="empresa_id" required>
-    <option value="">Selecione uma empresa</option>
-    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
-    </select>
-    </div>
-    <div>
-    <label>O que foi enviado? *</label>
-    <textarea name="descricao" rows="3" placeholder="Ex: Amostra de papel couché 300g" required></textarea>
-    </div>
-    <div>
-    <label>Código de Rastreio *</label>
-    <input type="text" name="codigo_rastreio" placeholder="Ex: PQ123456789BR" required>
-    </div>
+    <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço">Serviço (vinculado a OS)</option><option value="Amostra">Amostra Grátis</option></select></div>
+    <div id="servico-campo" style="display: none;"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}">{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select></div>
+    <div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" placeholder="Ex: Amostra de papel couché 300g" required></textarea></div>
+    <div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" placeholder="Ex: PQ123456789BR" required></div>
     <button type="submit" class="btn">💾 Registrar Envio</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function toggleServico() {{
-    const tipo = document.getElementById('tipo_envio').value;
-    const campo = document.getElementById('servico-campo');
-    if (tipo === 'Serviço') {{
-    campo.style.display = 'block';
-    }} else {{
-    campo.style.display = 'none';
-    }}
-    }}
+    function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); if (tipo === 'Serviço') {{ campo.style.display = 'block'; }} else {{ campo.style.display = 'none'; }} }}
     </script>
     </body>
     </html>
@@ -5416,149 +3345,37 @@ def envios():
     <title>Rastreamento de Envios</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 1400px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .btn {{
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-        margin-right: 5px;
-    }}
-    .btn-blue {{ background: #3498db; color: white; }}
-    .btn-green {{ background: #27ae60; color: white; }}
-    .btn-yellow {{ background: #f39c12; color: white; }}
-    .btn-red {{ background: #e74c3c; color: white; }}
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-    }}
-    th, td {{
-        padding: 12px 15px;
-        text-align: left;
-    }}
-    th {{
-        background: #ecf0f1;
-        color: #2c3e50;
-        font-weight: 600;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
-    .section {{
-        padding: 20px 30px;
-    }}
-    .section-title {{
-        font-size: 20px;
-        margin: 0 0 15px 0;
-        color: #2c3e50;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 10px;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
+    .btn-blue {{ background: #3498db; color: white; }} .btn-green {{ background: #27ae60; color: white; }} .btn-yellow {{ background: #f39c12; color: white; }} .btn-red {{ background: #e74c3c; color: white; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .section {{ padding: 20px 30px; }}
+    .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>📦 Rastreamento de Envios</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
     <div class="section">
     <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
-    <table>
-    <thead>
-    <tr>
-    <th>Data Envio</th>
-    <th>Cliente</th>
-    <th>Tipo</th>
-    <th>O que foi enviado</th>
-    <th>Código Rastreio</th>
-    <th>Status</th>
-    <th>Data Entrega</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
-    <tbody>
-    {html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}
-    </tbody>
-    </table>
+    <table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}</tbody></table>
     </div>
     <div class="section">
     <h2 class="section-title">✅ Envios Entregues</h2>
-    <table>
-    <thead>
-    <tr>
-    <th>Data Envio</th>
-    <th>Cliente</th>
-    <th>Tipo</th>
-    <th>O que foi enviado</th>
-    <th>Código Rastreio</th>
-    <th>Status</th>
-    <th>Data Entrega</th>
-    <th>Ações</th>
-    </tr>
-    </thead>
-    <tbody>
-    {html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center;">Nenhum envio entregue ainda</td></tr>'}
-    </tbody>
-    </table>
+    <table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center;">Nenhum envio entregue ainda</td></tr>'}</tbody></table>
     </div>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -5632,144 +3449,36 @@ def editar_envio(id):
     <title>Editar Envio</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-        color: #333;
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-    }}
-    .container {{
-        max-width: 900px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }}
-    .header {{
-        background: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 30px;
-    }}
-    h1 {{
-        font-size: 28px;
-        margin: 0;
-        font-weight: 600;
-    }}
-    .user-info {{
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        font-size: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    .form-container {{
-        padding: 30px;
-    }}
-    .form-container label {{
-        display: block;
-        margin: 10px 0 5px 0;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .form-container input,
-    .form-container select,
-    .form-container textarea {{
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 14px;
-    }}
-    .btn {{
-        padding: 12px 20px;
-        background: #f39c12;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-    }}
-    .back-link {{
-        display: inline-block;
-        margin: 20px 30px;
-        color: #3498db;
-        text-decoration: none;
-        font-weight: 500;
-    }}
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        background: #ecf0f1;
-        color: #7f8c8d;
-        font-size: 13px;
-        border-top: 1px solid #bdc3c7;
-    }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header">
-    <h1>✏️ Editar Envio</h1>
-    </div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
+    <div class="header"><h1>✏️ Editar Envio</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     <a href="/envios" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
-    <div>
-    <label>Tipo de Envio *</label>
-    <select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required>
-    <option value="">Selecione</option>
-    <option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option>
-    <option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option>
-    </select>
-    </div>
-    <div id="servico-campo" style="display: {'block' if envio['tipo_envio'] == 'Serviço' else 'none'};">
-    <label>Serviço *</label>
-    <select name="servico_id">
-    <option value="">Selecione um serviço</option>
-    {''.join(f'<option value="{s["id"]}" {"selected" if s.get("id") == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}
-    </select>
-    </div>
-    <div>
-    <label>Cliente *</label>
-    <select name="empresa_id" required>
-    <option value="">Selecione uma empresa</option>
-    {''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == envio["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}
-    </select>
-    </div>
-    <div>
-    <label>O que foi enviado? *</label>
-    <textarea name="descricao" rows="3" required>{envio['descricao']}</textarea>
-    </div>
-    <div>
-    <label>Código de Rastreio *</label>
-    <input type="text" name="codigo_rastreio" value="{envio['codigo_rastreio']}" required>
-    </div>
+    <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option><option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option></select></div>
+    <div id="servico-campo" style="display: {'block' if envio['tipo_envio'] == 'Serviço' else 'none'};"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}" {"selected" if s.get("id") == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == envio["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}</select></div>
+    <div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" required>{envio['descricao']}</textarea></div>
+    <div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" value="{envio['codigo_rastreio']}" required></div>
     <button type="submit" class="btn">💾 Salvar Alterações</button>
     </form>
-    <div class="footer">
-    Sistema de Gestão para Gráfica Rápida | © 2025
-    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function toggleServico() {{
-    const tipo = document.getElementById('tipo_envio').value;
-    const campo = document.getElementById('servico-campo');
-    if (tipo === 'Serviço') {{
-    campo.style.display = 'block';
-    }} else {{
-    campo.style.display = 'none';
-    }}
-    }}
+    function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); if (tipo === 'Serviço') {{ campo.style.display = 'block'; }} else {{ campo.style.display = 'none'; }} }}
     </script>
     </body>
     </html>
@@ -5789,7 +3498,8 @@ def excluir_envio(id):
     except Exception as e:
         flash("❌ Erro de conexão.")
     return redirect(url_for('envios'))
-    # ========================
+
+# ========================
 # Exportação e Importação Excel
 # ========================
 @app.route('/exportar_excel')
@@ -5799,84 +3509,53 @@ def exportar_excel():
         return redirect(url_for('clientes'))
     output = BytesIO()
     wb = Workbook()
-    
     # Empresas
     ws_empresas = wb.active
     ws_empresas.title = "Empresas"
     empresas = buscar_empresas()
     ws_empresas.append(["ID", "Nome da Empresa", "CNPJ", "Responsável", "WhatsApp", "Email", "Endereço", "Bairro", "Cidade", "Estado", "CEP", "Número", "Entrega Endereço", "Entrega Número", "Entrega Bairro", "Entrega Cidade", "Entrega Estado", "Entrega CEP"])
     for e in empresas:
-        ws_empresas.append([
-            e.get("id"), e.get("nome_empresa", ""), e.get("cnpj", ""),
-            e.get("responsavel", ""), e.get("whatsapp", ""), e.get("email", ""),
-            e.get("endereco", ""), e.get("bairro", ""), e.get("cidade", ""),
-            e.get("estado", ""), e.get("cep", ""), e.get("numero", ""),
-            e.get("entrega_endereco", ""), e.get("entrega_numero", ""),
-            e.get("entrega_bairro", ""), e.get("entrega_cidade", ""),
-            e.get("entrega_estado", ""), e.get("entrega_cep", "")
-        ])
+        ws_empresas.append([e.get("id"), e.get("nome_empresa", ""), e.get("cnpj", ""), e.get("responsavel", ""), e.get("whatsapp", ""), e.get("email", ""), e.get("endereco", ""), e.get("bairro", ""), e.get("cidade", ""), e.get("estado", ""), e.get("cep", ""), e.get("numero", ""), e.get("entrega_endereco", ""), e.get("entrega_numero", ""), e.get("entrega_bairro", ""), e.get("entrega_cidade", ""), e.get("entrega_estado", ""), e.get("entrega_cep", "")])
     for cell in ws_empresas[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Materiais
     ws_materiais = wb.create_sheet("Materiais")
     materiais = buscar_materiais()
     ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor", "Especificação"])
     for m in materiais:
-        ws_materiais.append([
-            m.get("id"), m.get("denominacao", ""), m.get("marca", ""),
-            m.get("grupo_material", ""), m.get("unidade_medida", ""),
-            m.get("valor_unitario", 0), m.get("fornecedor", ""),
-            m.get("especificacao", "")
-        ])
+        ws_materiais.append([m.get("id"), m.get("denominacao", ""), m.get("marca", ""), m.get("grupo_material", ""), m.get("unidade_medida", ""), m.get("valor_unitario", 0), m.get("fornecedor", ""), m.get("especificacao", "")])
     for cell in ws_materiais[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Estoque (movimentações)
     ws_estoque = wb.create_sheet("Estoque")
     movimentacoes = buscar_movimentacoes_com_materiais()
     ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo", "Tamanho"])
     for m in movimentacoes:
         material_nome = m["materiais"]["denominacao"] if m.get("materiais") else "Excluído"
-        ws_estoque.append([
-            m.get("id"), material_nome, m.get("tipo", "").upper(),
-            m.get("quantidade", 0), m.get("valor_unitario", 0),
-            m.get("valor_total", 0), m.get("data_movimentacao", "")[:16].replace("T", " "),
-            m.get("motivo", ""), m.get("tamanho", "")
-        ])
+        ws_estoque.append([m.get("id"), material_nome, m.get("tipo", "").upper(), m.get("quantidade", 0), m.get("valor_unitario", 0), m.get("valor_total", 0), m.get("data_movimentacao", "")[:16].replace("T", " "), m.get("motivo", ""), m.get("tamanho", "")])
     for cell in ws_estoque[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Usuários
     ws_usuarios = wb.create_sheet("Usuários")
     usuarios = buscar_usuarios()
     ws_usuarios.append(["ID", "Nome de Usuário", "Nível", "Telefone"])
     for u in usuarios:
-        ws_usuarios.append([
-            u.get("id"), u.get("nome de usuario", ""),
-            u.get("NÍVEL", "").upper(), u.get("telefone", "")
-        ])
+        ws_usuarios.append([u.get("id"), u.get("nome de usuario", ""), u.get("NÍVEL", "").upper(), u.get("telefone", "")])
     for cell in ws_usuarios[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Fornecedores
     ws_fornecedores = wb.create_sheet("Fornecedores")
     fornecedores = buscar_fornecedores()
     ws_fornecedores.append(["ID", "Nome", "CNPJ", "Contato", "Telefone", "Email", "Endereço"])
     for f in fornecedores:
-        ws_fornecedores.append([
-            f.get("id"), f.get("nome", ""), f.get("cnpj", ""),
-            f.get("contato", ""), f.get("telefone", ""),
-            f.get("email", ""), f.get("endereco", "")
-        ])
+        ws_fornecedores.append([f.get("id"), f.get("nome", ""), f.get("cnpj", ""), f.get("contato", ""), f.get("telefone", ""), f.get("email", ""), f.get("endereco", "")])
     for cell in ws_fornecedores[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Serviços e Orçamentos
     ws_servicos = wb.create_sheet("Serviços")
     try:
@@ -5887,20 +3566,10 @@ def exportar_excel():
         servicos = []
     ws_servicos.append(["ID", "Código", "Título", "Cliente", "Tipo", "Status", "Quantidade", "Dimensão", "Nº Cores", "Valor Cobrado", "Data Abertura", "Previsão Entrega", "Observações"])
     for s in servicos:
-        ws_servicos.append([
-            s.get("id"), s.get("codigo_servico", ""), s.get("titulo", ""),
-            s.get("empresas", {}).get("nome_empresa", "") if s.get("empresas") else "",
-            s.get("tipo", ""), s.get("status", ""), s.get("quantidade", ""),
-            s.get("dimensao", ""), s.get("numero_cores", ""),
-            s.get("valor_cobrado", 0),
-            s.get("data_abertura", "")[:10] if s.get("data_abertura") else "",
-            s.get("previsao_entrega", "")[:10] if s.get("previsao_entrega") else "",
-            s.get("observacoes", "")
-        ])
+        ws_servicos.append([s.get("id"), s.get("codigo_servico", ""), s.get("titulo", ""), s.get("empresas", {}).get("nome_empresa", "") if s.get("empresas") else "", s.get("tipo", ""), s.get("status", ""), s.get("quantidade", ""), s.get("dimensao", ""), s.get("numero_cores", ""), s.get("valor_cobrado", 0), s.get("data_abertura", "")[:10] if s.get("data_abertura") else "", s.get("previsao_entrega", "")[:10] if s.get("previsao_entrega") else "", s.get("observacoes", "")])
     for cell in ws_servicos[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Envios (Rastreamento)
     ws_envios = wb.create_sheet("Envios")
     try:
@@ -5911,18 +3580,10 @@ def exportar_excel():
         envios = []
     ws_envios.append(["ID", "Tipo", "Cliente", "Descrição", "Código Rastreio", "Data Envio", "Data Entrega", "Status"])
     for e in envios:
-        ws_envios.append([
-            e.get("id"), e.get("tipo_envio", ""),
-            e.get("empresas", {}).get("nome_empresa", "") if e.get("empresas") else "",
-            e.get("descricao", ""), e.get("codigo_rastreio", ""),
-            e.get("data_envio", "")[:16].replace("T", " ") if e.get("data_envio") else "",
-            e.get("data_entrega", "")[:16].replace("T", " ") if e.get("data_entrega") else "",
-            e.get("status", "")
-        ])
+        ws_envios.append([e.get("id"), e.get("tipo_envio", ""), e.get("empresas", {}).get("nome_empresa", "") if e.get("empresas") else "", e.get("descricao", ""), e.get("codigo_rastreio", ""), e.get("data_envio", "")[:16].replace("T", " ") if e.get("data_envio") else "", e.get("data_entrega", "")[:16].replace("T", " ") if e.get("data_entrega") else "", e.get("status", "")])
     for cell in ws_envios[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    
     # Ajustar largura das colunas
     for ws in wb.worksheets:
         for col in ws.columns:
@@ -5936,15 +3597,9 @@ def exportar_excel():
                     pass
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column].width = adjusted_width
-    
     wb.save(output)
     output.seek(0)
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name="backup_sistema_grafica.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    return send_file(output, as_attachment=True, download_name="backup_sistema_grafica.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 @app.route('/importar_excel', methods=['GET', 'POST'])
 def importar_excel():
@@ -5965,41 +3620,18 @@ def importar_excel():
         try:
             df = pd.read_excel(arquivo, sheet_name=None)
             log = []
-            
             if 'Empresas' in df:
                 for _, row in df['Empresas'].iterrows():
                     try:
-                        criar_empresa(
-                            nome=row['Nome da Empresa'], cnpj=row.get('CNPJ', ''),
-                            responsavel=row.get('Responsável', ''), telefone=row.get('Telefone', ''),
-                            whatsapp=row.get('WhatsApp', ''), email=row.get('Email', ''),
-                            endereco=row.get('Endereço', ''), bairro=row.get('Bairro', ''),
-                            cidade=row.get('Cidade', ''), estado=row.get('Estado', ''),
-                            cep=row.get('CEP', ''), numero=row.get('Número', ''),
-                            entrega_endereco=row.get('Entrega Endereço', ''),
-                            entrega_numero=row.get('Entrega Número', ''),
-                            entrega_bairro=row.get('Entrega Bairro', ''),
-                            entrega_cidade=row.get('Entrega Cidade', ''),
-                            entrega_estado=row.get('Entrega Estado', ''),
-                            entrega_cep=row.get('Entrega CEP', '')
-                        )
+                        criar_empresa(nome=row['Nome da Empresa'], cnpj=row.get('CNPJ', ''), responsavel=row.get('Responsável', ''), telefone=row.get('Telefone', ''), whatsapp=row.get('WhatsApp', ''), email=row.get('Email', ''), endereco=row.get('Endereço', ''), bairro=row.get('Bairro', ''), cidade=row.get('Cidade', ''), estado=row.get('Estado', ''), cep=row.get('CEP', ''), numero=row.get('Número', ''), entrega_endereco=row.get('Entrega Endereço', ''), entrega_numero=row.get('Entrega Número', ''), entrega_bairro=row.get('Entrega Bairro', ''), entrega_cidade=row.get('Entrega Cidade', ''), entrega_estado=row.get('Entrega Estado', ''), entrega_cep=row.get('Entrega CEP', ''))
                         log.append(f"✅ Empresa '{row['Nome da Empresa']}' importada.")
                     except Exception as e:
                         log.append(f"❌ Erro ao importar empresa: {str(e)}")
-            
             if 'Materiais' in df:
                 for _, row in df['Materiais'].iterrows():
                     try:
                         url = f"{SUPABASE_URL}/rest/v1/materiais"
-                        dados = {
-                            "denominacao": row['Denominação'],
-                            "marca": row.get('Marca', ''),
-                            "grupo_material": row.get('Grupo', ''),
-                            "unidade_medida": row.get('Unidade', 'unidade'),
-                            "valor_unitario": float(row.get('Valor Unitário', 0)),
-                            "fornecedor": row.get('Fornecedor', ''),
-                            "especificacao": row.get('Especificação', '')
-                        }
+                        dados = {"denominacao": row['Denominação'], "marca": row.get('Marca', ''), "grupo_material": row.get('Grupo', ''), "unidade_medida": row.get('Unidade', 'unidade'), "valor_unitario": float(row.get('Valor Unitário', 0)), "fornecedor": row.get('Fornecedor', ''), "especificacao": row.get('Especificação', '')}
                         response = requests.post(url, json=dados, headers=headers)
                         if response.status_code == 201:
                             log.append(f"✅ Material '{row['Denominação']}' cadastrado.")
@@ -6007,19 +3639,13 @@ def importar_excel():
                             log.append(f"❌ Erro ao cadastrar material: {response.text}")
                     except Exception as e:
                         log.append(f"❌ Erro ao processar material: {str(e)}")
-            
             if 'Fornecedores' in df:
                 for _, row in df['Fornecedores'].iterrows():
                     try:
-                        criar_fornecedor(
-                            nome=row['Nome'], cnpj=row.get('CNPJ', ''),
-                            contato=row.get('Contato', ''), telefone=row.get('Telefone', ''),
-                            email=row.get('Email', ''), endereco=row.get('Endereço', '')
-                        )
+                        criar_fornecedor(nome=row['Nome'], cnpj=row.get('CNPJ', ''), contato=row.get('Contato', ''), telefone=row.get('Telefone', ''), email=row.get('Email', ''), endereco=row.get('Endereço', ''))
                         log.append(f"✅ Fornecedor '{row['Nome']}' cadastrado.")
                     except Exception as e:
                         log.append(f"❌ Erro ao cadastrar fornecedor: {str(e)}")
-            
             if 'Serviços' in df:
                 for _, row in df['Serviços'].iterrows():
                     try:
@@ -6031,20 +3657,7 @@ def importar_excel():
                                     empresa_id = emp['id']
                                     break
                         url = f"{SUPABASE_URL}/rest/v1/servicos"
-                        dados = {
-                            "codigo_servico": row['Código'],
-                            "titulo": row['Título'],
-                            "empresa_id": empresa_id,
-                            "tipo": row['Tipo'],
-                            "status": row['Status'],
-                            "quantidade": row.get('Quantidade', ''),
-                            "dimensao": row.get('Dimensão', ''),
-                            "numero_cores": row.get('Nº Cores'),
-                            "valor_cobrado": float(row.get('Valor Cobrado', 0)),
-                            "data_abertura": row.get('Data Abertura'),
-                            "previsao_entrega": row.get('Previsão Entrega'),
-                            "observacoes": row.get('Observações', '')
-                        }
+                        dados = {"codigo_servico": row['Código'], "titulo": row['Título'], "empresa_id": empresa_id, "tipo": row['Tipo'], "status": row['Status'], "quantidade": row.get('Quantidade', ''), "dimensao": row.get('Dimensão', ''), "numero_cores": row.get('Nº Cores'), "valor_cobrado": float(row.get('Valor Cobrado', 0)), "data_abertura": row.get('Data Abertura'), "previsao_entrega": row.get('Previsão Entrega'), "observacoes": row.get('Observações', '')}
                         response = requests.post(url, json=dados, headers=headers)
                         if response.status_code == 201:
                             log.append(f"✅ Serviço '{row['Código']}' cadastrado.")
@@ -6052,7 +3665,6 @@ def importar_excel():
                             log.append(f"❌ Erro ao cadastrar serviço: {response.text}")
                     except Exception as e:
                         log.append(f"❌ Erro ao processar serviço: {str(e)}")
-            
             if 'Envios' in df:
                 for _, row in df['Envios'].iterrows():
                     try:
@@ -6067,15 +3679,7 @@ def importar_excel():
                             log.append(f"⚠️ Empresa '{row['Cliente']}' não encontrada para envio. Pulando...")
                             continue
                         url = f"{SUPABASE_URL}/rest/v1/envios"
-                        dados = {
-                            "tipo_envio": row['Tipo'],
-                            "empresa_id": empresa_id,
-                            "descricao": row['Descrição'],
-                            "codigo_rastreio": row['Código Rastreio'],
-                            "data_envio": row['Data Envio'],
-                            "data_entrega": row.get('Data Entrega'),
-                            "status": row['Status']
-                        }
+                        dados = {"tipo_envio": row['Tipo'], "empresa_id": empresa_id, "descricao": row['Descrição'], "codigo_rastreio": row['Código Rastreio'], "data_envio": row['Data Envio'], "data_entrega": row.get('Data Entrega'), "status": row['Status']}
                         response = requests.post(url, json=dados, headers=headers)
                         if response.status_code == 201:
                             log.append(f"✅ Envio '{row['Código Rastreio']}' cadastrado.")
@@ -6083,7 +3687,6 @@ def importar_excel():
                             log.append(f"❌ Erro ao cadastrar envio: {response.text}")
                     except Exception as e:
                         log.append(f"❌ Erro ao processar envio: {str(e)}")
-            
             return render_template('importar_excel.html', log=log)
         except Exception as e:
             flash(f"❌ Erro ao ler o arquivo: {str(e)}")
