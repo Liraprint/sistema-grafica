@@ -2851,55 +2851,42 @@ def adicionar_orcamento():
             flash("Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        # Calcula data de entrega
-        from datetime import datetime
+        # Calcula data de entrega pulando FDS e feriados
+        from datetime import timedelta
+        feriados = ["2026-01-01", "2026-02-17", "2026-04-03", "2026-04-21", "2026-05-01", "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02", "2026-11-15", "2026-11-20", "2026-12-25"]
         data_inicio = datetime.strptime(data_abertura, "%Y-%m-%d") if data_abertura else datetime.now()
-        data_entrega = adicionar_dias_uteis(data_inicio, prazo_dias)
-        data_entrega_str = data_entrega.strftime("%Y-%m-%d")
+        data_atual, dias_adicionados = data_inicio, 0
+        while dias_adicionados < prazo_dias:
+            data_atual += timedelta(days=1)
+            if data_atual.weekday() < 5 and data_atual.strftime("%Y-%m-%d") not in feriados:
+                dias_adicionados += 1
+        data_entrega_str = data_atual.strftime("%Y-%m-%d")
         
+        # Gera código OR-001, OR-002...
         try:
             url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
             response = requests.get(url_seq, headers=headers)
-            if response.status_code == 200 and response.json():
-                ultimo = response.json()[0]['codigo_servico']
-                numero = int(ultimo.split('-')[1]) + 1
-            else:
-                numero = 1
+            numero = int(response.json()[0]['codigo_servico'].split('-')[1]) + 1 if response.status_code == 200 and response.json() else 1
             codigo_servico = f"OR-{numero:03d}"
-        except Exception as e:
-            print("Erro ao gerar código:", e)
+        except:
             codigo_servico = "OR-001"
         
         try:
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados_orc = {
-                "codigo_servico": codigo_servico,
-                "titulo": "Orçamento Múltiplo",
-                "empresa_id": int(empresa_id),
-                "tipo": "Orçamento",
-                "status": "Pendente",
-                "data_abertura": data_abertura,
-                "previsao_entrega": data_entrega_str,  # Data calculada
-                "valor_cobrado": 0.0,
-                "observacoes": request.form.get('observacoes_gerais', '')
+                "codigo_servico": codigo_servico, "titulo": "Orçamento Múltiplo",
+                "empresa_id": int(empresa_id), "tipo": "Orçamento", "status": "Pendente",
+                "data_abertura": data_abertura, "previsao_entrega": data_entrega_str,
+                "valor_cobrado": 0.0, "observacoes": request.form.get('observacoes_gerais', '')
             }
             response = requests.post(url, json=dados_orc, headers=headers)
             if response.status_code != 201:
-                flash("❌ Erro ao criar orçamento.")
-                return redirect(url_for('adicionar_orcamento'))
+                flash("❌ Erro ao criar orçamento."); return redirect(url_for('adicionar_orcamento'))
             
             url_busca = f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1"
             resp_busca = requests.get(url_busca, headers=headers)
-            if resp_busca.status_code == 200:
-                orc_data = resp_busca.json()
-                if len(orc_data) > 0:
-                    orcamento_id = orc_data[0]['id']
-                else:
-                    flash("❌ Orçamento criado, mas ID não encontrado.")
-                    return redirect(url_for('adicionar_orcamento'))
-            else:
-                flash("❌ Falha ao buscar o ID do orçamento.")
-                return redirect(url_for('adicionar_orcamento'))
+            orcamento_id = resp_busca.json()[0]['id'] if resp_busca.status_code == 200 and resp_busca.json() else None
+            if not orcamento_id: flash("❌ ID não encontrado."); return redirect(url_for('adicionar_orcamento'))
             
             valor_total_orcamento = 0.0
             titulos = request.form.getlist('item_titulo[]')
@@ -2911,38 +2898,23 @@ def adicionar_orcamento():
             for i in range(len(titulos)):
                 try:
                     titulo = titulos[i].strip()
-                    if not titulo:
-                        continue
+                    if not titulo: continue
                     qtd = float(quantidades[i]) if quantidades[i] else 0
-                    dim = dimensoes[i].strip() if dimensoes[i] else ""
-                    cor = int(cores[i]) if cores[i] else None
                     vlr_unit = float(valores_unit[i]) if valores_unit[i] else 0
                     vlr_total = qtd * vlr_unit
                     valor_total_orcamento += vlr_total
                     dados_item = {
-                        "orcamento_id": orcamento_id,
-                        "titulo": titulo,
-                        "quantidade": qtd,
-                        "dimensao": dim,
-                        "numero_cores": cor,
-                        "valor_unitario": vlr_unit,
-                        "valor_total": vlr_total
+                        "orcamento_id": orcamento_id, "titulo": titulo, "quantidade": qtd,
+                        "dimensao": dimensoes[i].strip() if dimensoes[i] else "",
+                        "numero_cores": int(cores[i]) if cores[i] else None,
+                        "valor_unitario": vlr_unit, "valor_total": vlr_total
                     }
                     requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
-                except Exception as e:
-                    print(f"❌ Exceção ao salvar item {i+1}:", str(e))
-                    continue
-            
-            requests.patch(
-                f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}",
-                json={"valor_cobrado": valor_total_orcamento},
-                headers=headers
-            )
-            flash("✅ Orçamento criado com sucesso!")
-            return redirect(url_for('listar_orcamentos'))
-        except Exception as e:
-            print("❌ Erro geral:", e)
-            flash("❌ Erro de conexão.")
+                except: continue
+                
+            requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}", json={"valor_cobrado": valor_total_orcamento}, headers=headers)
+            flash("✅ Orçamento criado com sucesso!"); return redirect(url_for('listar_orcamentos'))
+        except: flash("❌ Erro de conexão.")
     
     empresas = buscar_empresas()
     return f'''
@@ -2974,9 +2946,10 @@ def adicionar_orcamento():
     </style>
     </head>
     <body>
+    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>➕ Novo Orçamento</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']}</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {{session['usuario']}}</span><a href="/logout">🚪 Sair</a></div>
     <a href="/orcamentos" class="back-link">← Voltar à lista</a>
     
     <form method="post" class="form-container" id="formOrcamento">
@@ -2985,7 +2958,7 @@ def adicionar_orcamento():
                 <label>Cliente *</label>
                 <select name="empresa_id" id="empresa_id" required onchange="calcularDataEntrega()">
                     <option value="">Selecione uma empresa</option>
-                    {''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}
+                    {{''.join(f'<option value="{{e["id"]}}">{{e["nome_empresa"]}}</option>' for e in empresas)}}
                 </select>
             </div>
             <div>
@@ -3026,10 +2999,9 @@ def adicionar_orcamento():
     </div>
     
     <script>
-    
     let itemCounter = 0;
-
-    function adicionarItem() {
+    
+    function adicionarItem() {{
         itemCounter++;
         const container = document.getElementById('itens-container');
         const div = document.createElement('div');
@@ -3038,15 +3010,15 @@ def adicionar_orcamento():
         div.innerHTML = `
             <div>
                 <label>Material/Descrição *</label>
-                <input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona" oninput="recalcularTotal()">
+                <input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona">
             </div>
             <div>
                 <label>Quantidade *</label>
-                <input type="number" name="item_quantidade[]" step="1" required placeholder="1" min="1" oninput="recalcularTotal()">
+                <input type="number" name="item_quantidade[]" step="1" required placeholder="1" min="1">
             </div>
             <div>
                 <label>Valor Unit. (R$) *</label>
-                <input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00" min="0" oninput="recalcularTotal()">
+                <input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00" min="0">
             </div>
             <div>
                 <label>Dimensão</label>
@@ -3057,45 +3029,30 @@ def adicionar_orcamento():
                 <input type="number" name="item_cores[]" step="1" placeholder="4" min="1">
             </div>
             <div style="display: flex; align-items: center; gap: 5px;">
-                <button type="button" onclick="removerItem('item-${itemCounter}')" class="btn btn-red" style="padding: 10px; font-size: 12px; margin-top: 22px;" title="Excluir este item">🗑️</button>
+                <button type="button" onclick="removerItem('item-${{itemCounter}}')" class="btn btn-red" style="padding: 10px; font-size: 12px; margin-top: 22px;" title="Excluir este item">🗑️</button>
             </div>
         `;
         container.appendChild(div);
-        recalcularTotal();
-    }
-
-    function removerItem(itemId) {
-        if (confirm('Deseja realmente remover este item do orçamento?')) {
+    }}
+    
+    function removerItem(itemId) {{
+        if (confirm('Deseja realmente remover este item do orçamento?')) {{
             const item = document.getElementById(itemId);
-            if (item) {
+            if (item) {{
                 item.remove();
-                recalcularTotal();
                 calcularDataEntrega();
-            }
-        }
-    }
-
-    function recalcularTotal() {
-        console.log('Itens atualizados - total será calculado no servidor');
-    }
-
-    document.addEventListener('change', function(e) {
-        if (e.target.name && (e.target.name.includes('quantidade') || e.target.name.includes('valor_unit'))) {
-            recalcularTotal();
-        }
-    });
-
+            }}
+        }}
+    }}
+    
     function calcularDataEntrega() {{
         const dataAbertura = document.getElementById('data_abertura').value;
         const prazoDias = parseInt(document.getElementById('prazo_dias').value) || 7;
-        
         if (!dataAbertura) {{
             document.getElementById('data_entrega_display').textContent = 'Preencha a data de abertura';
             document.getElementById('preview_entrega').style.display = 'none';
             return;
         }}
-        
-        // Chama o backend para calcular
         fetch('/calcular_data_entrega', {{
             method: 'POST',
             headers: {{'Content-Type': 'application/json'}},
@@ -3103,18 +3060,13 @@ def adicionar_orcamento():
         }})
         .then(response => response.json())
         .then(data => {{
-            const dataFormatada = data.data_entrega.split('-').reverse().join('/');
-            document.getElementById('data_entrega_display').textContent = dataFormatada;
-            document.getElementById('texto_entrega').textContent = dataFormatada + ' (' + prazoDias + ' dias úteis)';
+            document.getElementById('data_entrega_display').textContent = data.data_entrega.split('-').reverse().join('/');
+            document.getElementById('texto_entrega').textContent = data.data_entrega.split('-').reverse().join('/') + ' (' + prazoDias + ' dias úteis)';
             document.getElementById('preview_entrega').style.display = 'block';
         }})
-        .catch(error => {{
-            console.error('Erro:', error);
-            document.getElementById('data_entrega_display').textContent = 'Erro ao calcular';
-        }});
+        .catch(error => {{ console.error('Erro:', error); document.getElementById('data_entrega_display').textContent = 'Erro ao calcular'; }});
     }}
     
-    // Adiciona primeiro item automaticamente
     window.onload = function() {{
         adicionarItem();
         const hoje = new Date().toISOString().split('T')[0];
@@ -3809,6 +3761,58 @@ def pdf_orcamento(id):
             BytesIO(pdf),
             as_attachment=True,
             download_name=f"orc
+
+            # ========================
+# 🆕 ROTA NOVA: PDF DO ORÇAMENTO COM DATA DE ENTREGA (PULA FDS/FERIADOS)
+# ========================
+@app.route('/pdf_orcamento/<int:id>')
+def pdf_orcamento(id):
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    try:
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),itens_orcamento(*)&order=codigo_servico.desc"
+        response = requests.get(url_serv, headers=headers)
+        if response.status_code != 200 or not response.json():
+            flash("Orçamento não encontrado.")
+            return redirect(url_for('listar_orcamentos'))
+        orcamento = response.json()[0]
+    except Exception as e:
+        flash("Erro ao carregar orçamento.")
+        return redirect(url_for('listar_orcamentos'))
+    
+    def formatar_data_br(data_str):
+        if not data_str: return "—"
+        try: return data_str[:10].split("-")[::-1]
+        except: return data_str[:10]
+        
+    total_itens, itens_html = 0.0, ""
+    for item in orcamento.get('itens_orcamento', []):
+        total_item = float(item.get('valor_total', 0) or 0)
+        total_itens += total_item
+        itens_html += f'<tr><td>{item.get("titulo", "—")}</td><td>{item.get("quantidade", "—")}</td><td>{item.get("dimensao", "—")}</td><td>{item.get("numero_cores", "—")}</td><td>R$ {float(item.get("valor_unitario", 0) or 0):.2f}</td><td>R$ {total_item:.2f}</td></tr>'
+        
+    cliente_nome = orcamento.get('empresas', {}).get('nome_empresa', '—') if orcamento.get('empresas') else '—'
+    data_entrega = formatar_data_br(orcamento.get('previsao_entrega'))
+    data_abertura = formatar_data_br(orcamento.get('data_abertura'))
+    
+    html = f'''
+    <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento {orcamento.get('codigo_servico', '')}</title>
+    <style>body{{font-family:Arial,sans-serif;padding:40px;color:#333;}}.header{{text-align:center;border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:30px;}}.header h1{{margin:0;color:#2c3e50;font-size:26px;}}.info{{margin:20px 0;}}.info p{{margin:8px 0;font-size:14px;}}.info strong{{color:#2c3e50;}}.destaque{{background:#e8f5e9;padding:15px;border-radius:8px;margin:15px 0;border-left:4px solid #27ae60;}}.destaque strong{{color:#27ae60;font-size:16px;}}table{{width:100%;border-collapse:collapse;margin:20px 0;}}th,td{{border:1px solid #ccc;padding:10px;text-align:left;font-size:13px;}}th{{background-color:#ecf0f1;color:#2c3e50;}}.total{{text-align:right;font-size:18px;margin-top:20px;font-weight:bold;}}.footer{{margin-top:50px;text-align:center;padding-top:20px;border-top:1px solid #ddd;font-size:11px;color:#7f8c8d;}}</style></head><body>
+    <div class="header"><h1>ORÇAMENTO</h1><p><strong>Código:</strong> {orcamento.get('codigo_servico', '—')}</p></div>
+    <div class="info"><p><strong>Cliente:</strong> {cliente_nome}</p><p><strong>Data de Abertura:</strong> {data_abertura}</p><p><strong>Status:</strong> {orcamento.get('status', '—')}</p></div>
+    <div class="destaque"><strong>📅 Entrega Prevista:</strong> {data_entrega} <small style="color:#666;display:block;margin-top:5px;">(Cálculo considera apenas dias úteis, excluindo sábados, domingos e feriados)</small></div>
+    <h3 style="margin-top:30px;">Itens Orçados</h3>
+    <table><thead><tr><th>Descrição</th><th>Qtd</th><th>Dimensão</th><th>Cores</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead><tbody>{itens_html if itens_html else '<tr><td colspan="6" style="text-align:center;">Nenhum item adicionado</td></tr>'}</tbody></table>
+    <div class="total"><p>TOTAL DO ORÇAMENTO: R$ {total_itens:.2f}</p></div>
+    {f'<p><strong>Observações:</strong><br>{orcamento.get("observacoes", "—")}</p>' if orcamento.get('observacoes') else ''}
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025<br>Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</div></body></html>'''
+    
+    try:
+        pdf = pdfkit.from_string(html, False, options={"quiet": ""})
+        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento.get('codigo_servico', 'sem_codigo')}.pdf", mimetype="application/pdf")
+    except Exception as e:
+        flash("❌ Erro ao gerar PDF. Verifique se o wkhtmltopdf está instalado.")
+        return redirect(url_for('listar_orcamentos'))
 
 # ========================
 # Iniciar o app
