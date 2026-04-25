@@ -7,28 +7,26 @@ from openpyxl.styles import Font, PatternFill
 from io import BytesIO
 from datetime import datetime, timedelta
 import pdfkit
-import json
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'minha_chave_secreta_123')
 
 # ========================
-# CSS & MENU SUSPENSO GLOBAL (NOVO)
+# ✅ MENU SUSPENSO GLOBAL (NOVO)
 # ========================
 CSS_MENU = """
-.top-bar { background: #2c3e50; color: white; padding: 12px 20px; display: flex; justify-content: flex-end; align-items: center; border-radius: 0 0 8px 8px; }
-.user-area { display: flex; align-items: center; gap: 15px; position: relative; }
-.dropdown { position: relative; }
-.menu-btn { background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.user-menu { background: #34495e; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+.dropdown { position: relative; display: inline-block; }
+.menu-btn { background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
 .menu-btn:hover { background: #2980b9; }
 .dropdown-content { display: none; position: absolute; right: 0; top: 110%; background: #fff; min-width: 200px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); border-radius: 8px; z-index: 1000; overflow: hidden; border: 1px solid #ddd; }
 .dropdown-content a { color: #333; padding: 10px 15px; text-decoration: none; display: block; font-size: 14px; border-bottom: 1px solid #eee; transition: 0.2s; }
 .dropdown-content a:hover { background: #f1f5f9; color: #2c3e50; }
-.logout-link { background: #ffebee !important; color: #c62828 !important; font-weight: bold; }
 .dropdown:hover .dropdown-content { display: block; }
+.logout-link { background: #ffebee !important; color: #c62828 !important; font-weight: bold; }
 """
 
-def menu_superior():
+def menu_suspenso():
     nivel = session.get('nivel', '')
     itens = """
     <a href="/clientes">🏠 Menu Principal</a>
@@ -47,15 +45,13 @@ def menu_superior():
         <a href="/importar_excel">📤 Importar Excel</a>
         """
     return f"""
-    <div class="top-bar">
-      <div class="user-area">
-        <span style="font-size:14px; opacity:0.9;">👤 {session.get('usuario', 'Usuário')} ({nivel.upper()})</span>
-        <div class="dropdown">
-          <button class="menu-btn">☰ Menu</button>
-          <div class="dropdown-content">
-            {itens}
-            <a href="/logout" class="logout-link">🚪 Sair</a>
-          </div>
+    <div class="user-menu">
+      <span>👤 {session['usuario']} ({nivel.upper()})</span>
+      <div class="dropdown">
+        <button class="menu-btn">☰ Menu</button>
+        <div class="dropdown-content">
+          {itens}
+          <a href="/logout" class="logout-link">🚪 Sair</a>
         </div>
       </div>
     </div>
@@ -67,9 +63,9 @@ def menu_superior():
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json"
+"apikey": SUPABASE_KEY,
+"Authorization": f"Bearer {SUPABASE_KEY}",
+"Content-Type": "application/json"
 }
 
 # ========================
@@ -131,7 +127,8 @@ def excluir_usuario(id):
         print("Erro de conexão:", e)
         return False
 
-def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero, entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
+def criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
+entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
     try:
         url = f"{SUPABASE_URL}/rest/v1/empresas"
         dados = {"nome_empresa": nome, "cnpj": cnpj, "responsavel": responsavel, "telefone": telefone, "whatsapp": whatsapp, "email": email, "endereco": endereco, "bairro": bairro, "cidade": cidade, "estado": estado, "cep": cep, "numero": numero, "entrega_endereco": entrega_endereco, "entrega_numero": entrega_numero, "entrega_bairro": entrega_bairro, "entrega_cidade": entrega_cidade, "entrega_estado": entrega_estado, "entrega_cep": entrega_cep}
@@ -191,6 +188,7 @@ def calcular_estoque_atual():
                 print(f"⚠️ Tipo desconhecido: {tipo}")
         for mat_id in saldo:
             saldo[mat_id] = max(0, saldo[mat_id])
+        print("✅ Saldo final calculado:", saldo)
         return saldo
     except Exception as e:
         print("❌ Erro ao calcular estoque:", str(e))
@@ -325,7 +323,7 @@ def login():
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
-    return f'''
+    return '''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
@@ -334,16 +332,16 @@ def login():
     <title>Login - Gráfica Rápida</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; }}
-    .login-container {{ background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
-    h1 {{ font-size: 24px; margin: 0; font-weight: 600; }}
-    .form-container {{ padding: 30px; }}
-    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 20px; }}
-    .btn {{ width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .flash {{ background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 30px; font-size: 14px; }}
-    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; }
+    .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; overflow: hidden; }
+    .header { background: #2c3e50; color: white; text-align: center; padding: 30px; }
+    h1 { font-size: 24px; margin: 0; font-weight: 600; }
+    .form-container { padding: 30px; }
+    .form-container label { display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }
+    .form-container input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 20px; }
+    .btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 30px; font-size: 14px; }
+    .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
     </style>
     </head>
     <body>
@@ -377,6 +375,7 @@ def clientes():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menu da Gráfica</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 900px; margin: 50px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
@@ -393,7 +392,7 @@ def clientes():
     <body>
     <div class="container">
     <div class="header"><h1>📋 Menu da Gráfica</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <div class="btn-grid">
     <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
     <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
@@ -461,7 +460,7 @@ def gerenciar_usuarios():
         <table>
         <thead><tr><th>ID</th><th>Usuário</th><th>Nível</th><th>Telefone</th><th>Ações</th></tr></thead>
         <tbody>
-        {''.join(f"<tr><td>{u['id']}</td><td>{u['nome de usuario']}</td><td>{u['NÍVEL']}</td><td>{u.get('telefone', '—')}</td><td><a href=\"/excluir_usuario/{u['id']}\" onclick=\"return confirm('Tem certeza?')\">🗑️ Excluir</a></td></tr>" for u in usuarios)}
+        {''.join(f"""<tr><td>{u['id']}</td><td>{u['nome de usuario']}</td><td>{u['NÍVEL']}</td><td>{u.get('telefone', '—')}</td><td><a href="/excluir_usuario/{u['id']}" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td></tr>""" for u in usuarios)}
         </tbody>
         </table>
         </div>
@@ -539,7 +538,8 @@ def cadastrar_cliente():
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('cadastrar_cliente'))
-        if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero, entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
+        if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
+        entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
             flash("✅ Empresa cadastrada com sucesso!")
             return redirect(url_for('listar_empresas'))
         else:
@@ -553,6 +553,7 @@ def cadastrar_cliente():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastrar Empresa - Sua Gráfica</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -571,7 +572,7 @@ def cadastrar_cliente():
     <body>
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/empresas" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div class="grid-2"><div><label>Nome da Empresa *</label><input type="text" name="nome" required></div><div><label>CNPJ *</label><input type="text" name="cnpj" required></div></div>
@@ -624,6 +625,7 @@ def listar_empresas():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Empresas Cadastradas</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
@@ -643,7 +645,7 @@ def listar_empresas():
     <body>
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <div class="search-box">
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
@@ -651,7 +653,7 @@ def listar_empresas():
     <table>
     <thead><tr><th>ID</th><th>Empresa</th><th>CNPJ</th><th>Responsável</th><th>WhatsApp</th><th>Ações</th></tr></thead>
     <tbody>
-    {''.join(f'<tr><td>{e["id"]}</td><td>{e["nome_empresa"]}</td><td>{e["cnpj"]}</td><td>{e["responsavel"]}</td><td>{e["whatsapp"]}</td><td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td></tr>' for e in empresas)}
+    {''.join(f'''<tr><td>{e["id"]}</td><td>{e["nome_empresa"]}</td><td>{e["cnpj"]}</td><td>{e["responsavel"]}</td><td>{e["whatsapp"]}</td><td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td></tr>''' for e in empresas)}
     </tbody>
     </table>
     <div style="text-align: center; padding: 20px;"><a href="/cadastrar_cliente" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">➕ Cadastrar Nova Empresa</a></div>
@@ -693,6 +695,7 @@ def detalhes_empresa(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{empresa['nome_empresa']} - Detalhes</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
@@ -715,7 +718,7 @@ def detalhes_empresa(id):
     <body>
     <div class="container">
     <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/empresas" class="back-link">← Voltar à Lista</a>
     <div class="details">
     <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
@@ -736,7 +739,7 @@ def detalhes_empresa(id):
     <table>
     <thead><tr><th>Data Envio</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Ações</th></tr></thead>
     <tbody>
-    {''.join(f"<tr><td>{format_data(a.get('data_envio'))}</td><td>{a['descricao']}</td><td>{a['codigo_rastreio']}</td><td><span style=\"color: {'#27ae60' if a['status'] == 'Entregue' else '#e67e22'}; font-weight: bold;\">{a['status']}</span></td><td><a href=\"https://www.linkcorreios.com.br/{a['codigo_rastreio']}\" target=\"_blank\" class=\"btn btn-blue\" style=\"padding: 5px 10px; font-size: 12px;\">🔍 Rastrear</a></td></tr>" for a in amostras)}
+    {''.join(f"""<tr><td>{format_data(a.get('data_envio'))}</td><td>{a['descricao']}</td><td>{a['codigo_rastreio']}</td><td><span style="color: {'#27ae60' if a['status'] == 'Entregue' else '#e67e22'}; font-weight: bold;">{a['status']}</span></td><td><a href="https://www.linkcorreios.com.br/{a['codigo_rastreio']}" target="_blank" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px;">🔍 Rastrear</a></td></tr>""" for a in amostras)}
     </tbody>
     </table>
     {f'<p style="text-align: center; color: #95a5a6;">Nenhuma amostra enviada ainda.</p>' if not amostras else ''}
@@ -804,6 +807,7 @@ def editar_empresa(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Empresa - Sua Gráfica</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
@@ -822,7 +826,7 @@ def editar_empresa(id):
     <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar {empresa['nome_empresa']}</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/empresa/{id}" class="back-link">← Voltar aos Detalhes</a>
     <form method="post" class="form-container">
     <div class="grid-2"><div><label>Nome da Empresa *</label><input type="text" name="nome" value="{empresa['nome_empresa']}" required></div><div><label>CNPJ *</label><input type="text" name="cnpj" value="{empresa['cnpj']}" required></div></div>
@@ -874,6 +878,7 @@ def servicos_empresa(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Serviços - {empresa['nome_empresa']}</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -890,14 +895,14 @@ def servicos_empresa(id):
     <body>
     <div class="container">
     <div class="header"><h1>📋 Serviços - {empresa['nome_empresa']}</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/empresa/{id}" class="back-link">← Voltar à empresa</a>
     <div style="padding: 30px;">
     <h2 style="margin-bottom: 20px;">Total de serviços: {len(servicos)}</h2>
     <table>
     <thead><tr><th>Código</th><th>Título</th><th>Status</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
     <tbody>
-    {''.join(f"<tr><td>{s['codigo_servico']}</td><td>{s['titulo']}</td><td>{s.get('status', '—')}</td><td>R$ {float(s.get('valor_cobrado', 0) or 0):.2f}</td><td>{s.get('data_abertura', '—')[:10] if s.get('data_abertura') else '—'}</td><td><a href=\"/os/{s['id']}\" class=\"btn\">📄 Ver OS</a></td></tr>" for s in servicos)}
+    {''.join(f"""<tr><td>{s['codigo_servico']}</td><td>{s['titulo']}</td><td>{s.get('status', '—')}</td><td>R$ {float(s.get('valor_cobrado', 0) or 0):.2f}</td><td>{s.get('data_abertura', '—')[:10] if s.get('data_abertura') else '—'}</td><td><a href="/os/{s['id']}" class="btn">📄 Ver OS</a></td></tr>""" for s in servicos)}
     </tbody>
     </table>
     {f'<p style="text-align: center; color: #95a5a6; margin-top: 30px;">Nenhum serviço encontrado para esta empresa.</p>' if not servicos else ''}
@@ -965,8 +970,16 @@ def listar_servicos():
         lucro = valor_cobrado - custo_materiais
         status_class = {'Pendente': 'status-pendente', 'Em Produção': 'status-producao', 'Concluído': 'status-concluido', 'Entregue': 'status-entregue'}.get(s.get('status', ''), 'status-pendente')
         prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
-        botoes_html = f'<div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;"><a href="/os/{s["id"]}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">📄 OS</a><a href="/editar_servico/{s["id"]}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a><a href="/excluir_servico/{s["id"]}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm(\'Tem certeza?\')">🗑️ Excluir</a></div>'
-        linha = f'<tr><td>{s["codigo_servico"]}</td><td>{s["titulo"]}</td><td>{empresa_nome}</td><td>{s.get("quantidade", "-")}</td><td>{s.get("dimensao", "-")}</td><td>R$ {custo_materiais:.2f}</td><td>R$ {valor_cobrado:.2f}</td><td>R$ {lucro:.2f}</td><td><span class="{status_class}">{s.get("status", "Pendente")}</span></td><td><span style="color: {prazo["cor"]}; font-weight: bold;">{prazo["texto"]}</span></td><td>{botoes_html}</td></tr>'
+        botoes_html = f'''
+        <div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;">
+        <a href="/os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">📄 OS</a>
+        <a href="/editar_servico/{s['id']}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a>
+        <a href="/excluir_servico/{s['id']}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
+        </div>
+        '''
+        linha = f'''
+        <tr><td>{s['codigo_servico']}</td><td>{s['titulo']}</td><td>{empresa_nome}</td><td>{s.get('quantidade', '-')}</td><td>{s.get('dimensao', '-')}</td><td>R$ {custo_materiais:.2f}</td><td>R$ {valor_cobrado:.2f}</td><td>R$ {lucro:.2f}</td><td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td><td><span style="color: {prazo['cor']}; font-weight: bold;">{prazo['texto']}</span></td><td>{botoes_html}</td></tr>
+        '''
         html_todos += linha
         if s.get('status') in ['Pendente', 'Em Produção']:
             html_andamento += linha
@@ -980,6 +993,7 @@ def listar_servicos():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Serviços / Ordens de Serviço</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -1004,24 +1018,17 @@ def listar_servicos():
     <body>
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <div class="tabs"><div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div><div class="tab" onclick="mostrarTab('andamento')">Em Andamento</div><div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div></div>
     <div style="overflow-x: auto;">
-    <table>
-    <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
-    <tbody id="tab-todos" class="tab-content active">{html_todos}</tbody>
-    <tbody id="tab-andamento" class="tab-content">{html_andamento}</tbody>
-    <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>
-    </table>
-    </div>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    </div>
+    <table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
+    <tbody id="tab-todos" class="tab-content active">{html_todos}</tbody><tbody id="tab-andamento" class="tab-content">{html_andamento}</tbody><tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody></table></div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div>
     <script>function mostrarTab(nome) {{ document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById('tab-' + nome).classList.add('active'); document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); }}</script>
-    </body>
-    </html>
+    </body></html>
     '''
 
 @app.route('/adicionar_servico', methods=['GET', 'POST'])
@@ -1067,7 +1074,12 @@ def adicionar_servico():
                 valores_unitarios = request.form.getlist('valor_unitario[]')
                 for i in range(len(materiais_ids)):
                     try:
-                        requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json={"servico_id": servico_id, "material_id": int(materiais_ids[i]), "quantidade_usada": float(quantidades[i]), "valor_unitario": float(valores_unitarios[i]), "valor_total": float(quantidades[i]) * float(valores_unitarios[i])}, headers=headers)
+                        material_id = int(materiais_ids[i])
+                        qtd = float(quantidades[i])
+                        vlr = float(valores_unitarios[i])
+                        total = qtd * vlr
+                        dados_mat = {"servico_id": servico_id, "material_id": material_id, "quantidade_usada": qtd, "valor_unitario": vlr, "valor_total": total}
+                        requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
                     except: continue
                 return redirect(url_for('listar_servicos'))
             else: flash("❌ Erro ao salvar serviço.")
@@ -1082,6 +1094,7 @@ def adicionar_servico():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adicionar Serviço</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -1100,7 +1113,7 @@ def adicionar_servico():
     <body>
     <div class="container">
     <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/servicos" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <label>Código do Serviço (OS)</label><input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
@@ -1111,16 +1124,11 @@ def adicionar_servico():
     <div class="grid-2"><div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao"></div><div><label>Valor Cobrado (R$)</label><input type="number" name="valor_cobrado" step="0.01"></div></div>
     <div class="grid-2"><div><label>Data de Abertura</label><input type="date" name="data_abertura"></div><div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div></div>
     <label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="3"></textarea><label>Observações</label><textarea name="observacoes" rows="3"></textarea>
-    <h3>Materiais Usados</h3>
-    <div id="materiais-lista"><div class="grid-3"><div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div></div></div>
-    <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
-    <button type="submit" class="btn">💾 Salvar Serviço</button>
-    </form>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    </div>
-    <script>function adicionarMaterial() {{ const container = document.getElementById('materiais-lista'); const div = document.createElement('div'); div.className = 'grid-3'; div.innerHTML = `<div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>`; container.appendChild(div); }}</script>
-    </body>
-    </html>
+    <h3>Materiais Usados</h3><div id="materiais-lista"><div class="grid-3"><div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div></div></div>
+    <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button><button type="submit" class="btn">💾 Salvar Serviço</button></form>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div>
+    <script>function adicionarMaterial() {{const container = document.getElementById('materiais-lista');const div = document.createElement('div');div.className = 'grid-3';div.innerHTML = `<div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>`;container.appendChild(div);}}</script>
+    </body></html>
     '''
 
 @app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
@@ -1134,12 +1142,14 @@ def editar_servico(id):
             flash("Serviço não encontrado.")
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
-        url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
-        response_mats = requests.get(url_mats, headers=headers)
-        materiais_usados = response_mats.json() if response_mats.status_code == 200 else []
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
+    try:
+        url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
+        response_mats = requests.get(url_mats, headers=headers)
+        materiais_usados = response_mats.json() if response_mats.status_code == 200 else []
+    except: materiais_usados = []
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         empresa_id = request.form.get('empresa_id')
@@ -1169,7 +1179,9 @@ def editar_servico(id):
                         mat_id = ids_materiais[i]
                         qtd = float(request.form[f'quantidade_usada_{mat_id}'])
                         vlr = float(request.form[f'valor_unitario_{mat_id}'])
-                        requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json={"quantidade_usada": qtd, "valor_unitario": vlr, "valor_total": qtd * vlr}, headers=headers)
+                        total = qtd * vlr
+                        dados_mat = {"quantidade_usada": qtd, "valor_unitario": vlr, "valor_total": total}
+                        requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json=dados_mat, headers=headers)
                     except: continue
                 return redirect(url_for('listar_servicos'))
             else: flash("❌ Erro ao atualizar serviço.")
@@ -1185,6 +1197,7 @@ def editar_servico(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Serviço</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -1202,7 +1215,7 @@ def editar_servico(id):
     <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/servicos" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <label>Título do Serviço *</label><input type="text" name="titulo" value="{servico['titulo']}" required>
@@ -1212,14 +1225,8 @@ def editar_servico(id):
     <div class="grid-2"><div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao" value="{servico.get('dimensao', '')}"></div><div><label>Valor Cobrado (R$)</label><input type="number" name="valor_cobrado" value="{servico.get('valor_cobrado', 0)}" step="0.01"></div></div>
     <div class="grid-2"><div><label>Data de Abertura</label><input type="date" name="data_abertura" value="{servico.get('data_abertura', '')[:10] if servico.get('data_abertura') else ''}"></div><div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}"></div></div>
     <label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="3">{servico.get('aplicacao', '')}</textarea><label>Observações</label><textarea name="observacoes" rows="3">{servico.get('observacoes', '')}</textarea>
-    <h3>Materiais Usados</h3>
-    {''.join(f'<input type="hidden" name="material_usado_id[]" value="{m["id"]}"><div class="grid-3"><div><label>Material</label><input type="text" value="{m["materiais"]["denominacao"]} ({m["materiais"]["unidade_medida"]})" readonly></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada_{m["id"]}" value="{m["quantidade_usada"]}" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario_{m["id"]}" value="{m["valor_unitario"]}" step="0.01" required></div></div>' for m in materiais_usados)}
-    <button type="submit" class="btn">💾 Salvar Alterações</button>
-    </form>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    </div>
-    </body>
-    </html>
+    <h3>Materiais Usados</h3>{''.join(f'''<input type="hidden" name="material_usado_id[]" value="{m['id']}"><div class="grid-3"><div><label>Material</label><input type="text" value="{m['materiais']['denominacao']} ({m['materiais']['unidade_medida']})" readonly></div><div><label>Qtd Usada</label><input type="number" name="quantidade_usada_{m['id']}" value="{m['quantidade_usada']}" step="0.01" required></div><div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario_{m['id']}" value="{m['valor_unitario']}" step="0.01" required></div></div>''' for m in materiais_usados)}
+    <button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/excluir_servico/<int:id>')
@@ -1229,7 +1236,9 @@ def excluir_servico(id):
         return redirect(url_for('listar_servicos'))
     try:
         url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
-        requests.delete(url_itens, headers=headers)
+        response_itens = requests.delete(url_itens, headers=headers)
+        if response_itens.status_code not in [204, 200]:
+            print(f"⚠️ Erro ao excluir itens: {response_itens.status_code} - {response_itens.text}")
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
         requests.delete(url_mats, headers=headers)
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
@@ -1260,7 +1269,9 @@ def imprimir_os(id):
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
             resp = requests.get(url_mat, headers=headers)
-            if resp.status_code == 200: return sum(float(i['valor_total']) for i in resp.json())
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
             return 0.0
         except: return 0.0
     custo_materiais = calcular_custo()
@@ -1268,10 +1279,7 @@ def imprimir_os(id):
     lucro = valor_cobrado - custo_materiais
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
     logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
-    html = f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OS {servico['codigo_servico']} - Impressão</title>
-    <style>body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; }}.header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}.header img {{ max-width: 200px; margin-bottom: 10px; }}.header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}.info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}.info-item strong {{ display: block; font-size: 14px; color: #555; }}table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}th {{ background-color: #ecf0f1; color: #2c3e50; }}.total-box {{ text-align: right; font-size: 16px; margin-top: 20px; }}.status {{ font-weight: bold; color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'}; }}@media print {{ .no-print {{ display: none; }} body {{ background: white; }} }}.footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}</style></head><body><div class="header"><img src="{logo_url}" alt="Logo da Empresa"><h1>ORDEM DE SERVIÇO</h1><p><strong>Código:</strong> {servico['codigo_servico']}</p></div><div class="info-grid"><div class="info-item"><strong>Cliente:</strong> {empresa_nome}</div><div class="info-item"><strong>Status:</strong> <span class="status">{servico['status']}</span></div><div class="info-item"><strong>Título:</strong> {servico['titulo']}</div><div class="info-item"><strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}</div><div class="info-item"><strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}</div><div class="info-item"><strong>Quantidade:</strong> {servico.get('quantidade', '-')}</div><div class="info-item"><strong>Dimensão:</strong> {servico.get('dimensao', '-')}</div><div class="info-item"><strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}</div><div class="info-item"><strong>Aplicação:</strong> {servico.get('aplicacao', '-')}</div><div class="info-item"><strong>Observações:</strong> {servico.get('observacoes', '-')}</div></div><h3>Materiais Utilizados</h3><table><thead><tr><th>Material</th><th>Unidade</th><th>Qtd Usada</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead><tbody>{''.join(f'<tr><td>{m["materiais"]["denominacao"]}</td><td>{m["materiais"]["unidade_medida"]}</td><td>{m["quantidade_usada"]}</td><td>R$ {m["valor_unitario"]:.2f}</td><td>R$ {m["valor_total"]:.2f}</td></tr>' for m in servico.get('materiais_usados', []) if m.get('materiais'))}</tbody></table><div class="total-box"><p><strong>Custo com Materiais:</strong> R$ {custo_materiais:.2f}</p><p><strong>Valor Cobrado:</strong> R$ {valor_cobrado:.2f}</p><p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div><div style="text-align: center; margin-top: 40px;"><button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button><a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a><a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a></div></body></html>
-    '''
+    html = f'''<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OS {servico['codigo_servico']} - Impressão</title><style>body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; }}.header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}.header img {{ max-width: 200px; margin-bottom: 10px; }}.header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}.info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}.info-item strong {{ display: block; font-size: 14px; color: #555; }}table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}th {{ background-color: #ecf0f1; color: #2c3e50; }}.total-box {{ text-align: right; font-size: 16px; margin-top: 20px; }}.status {{ font-weight: bold; color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'}; }}@media print {{ .no-print {{ display: none; }} body {{ background: white; }} }}.footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}</style></head><body><div class="header"><img src="{logo_url}" alt="Logo da Empresa"><h1>ORDEM DE SERVIÇO</h1><p><strong>Código:</strong> {servico['codigo_servico']}</p></div><div class="info-grid"><div class="info-item"><strong>Cliente:</strong> {empresa_nome}</div><div class="info-item"><strong>Status:</strong> <span class="status">{servico['status']}</span></div><div class="info-item"><strong>Título:</strong> {servico['titulo']}</div><div class="info-item"><strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}</div><div class="info-item"><strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}</div><div class="info-item"><strong>Quantidade:</strong> {servico.get('quantidade', '-')}</div><div class="info-item"><strong>Dimensão:</strong> {servico.get('dimensao', '-')}</div><div class="info-item"><strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}</div><div class="info-item"><strong>Aplicação:</strong> {servico.get('aplicacao', '-')}</div><div class="info-item"><strong>Observações:</strong> {servico.get('observacoes', '-')}</div></div><h3>Materiais Utilizados</h3><table><thead><tr><th>Material</th><th>Unidade</th><th>Qtd Usada</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead><tbody>{''.join(f'<tr><td>{m["materiais"]["denominacao"]}</td><td>{m["materiais"]["unidade_medida"]}</td><td>{m["quantidade_usada"]}</td><td>R$ {m["valor_unitario"]:.2f}</td><td>R$ {m["valor_total"]:.2f}</td></tr>' for m in servico.get('materiais_usados', []) if m.get('materiais'))}</tbody></table><div class="total-box"><p><strong>Custo com Materiais:</strong> R$ {custo_materiais:.2f}</p><p><strong>Valor Cobrado:</strong> R$ {valor_cobrado:.2f}</p><p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div><div style="text-align: center; margin-top: 40px;"><button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button><a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a><a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a></div></body></html>'''
     return html
 
 @app.route('/pdf_os/<int:id>')
@@ -1281,14 +1289,20 @@ def pdf_os(id):
     try:
         url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
-        if response.status_code != 200 or not response.json(): return "Serviço não encontrado", 404
+        if response.status_code != 200 or not response.json():
+            flash("Serviço não encontrado.")
+            return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
-    except: return "Erro", 404
+    except Exception as e:
+        flash("Erro ao carregar serviço.")
+        return redirect(url_for('listar_servicos'))
     def calcular_custo():
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
             resp = requests.get(url_mat, headers=headers)
-            if resp.status_code == 200: return sum(float(i['valor_total']) for i in resp.json())
+            if resp.status_code == 200:
+                itens = resp.json()
+                return sum(float(i['valor_total']) for i in itens)
             return 0.0
         except: return 0.0
     custo_materiais = calcular_custo()
@@ -1314,6 +1328,7 @@ def configuracoes():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configurações do Sistema</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
@@ -1330,7 +1345,7 @@ def configuracoes():
     <body>
     <div class="container">
     <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <form method="post" action="/salvar_configuracoes" class="form-container">
     <h3>Remetente (Etiquetas)</h3>
@@ -1360,13 +1375,23 @@ def salvar_configuracoes_view():
 
 @app.route('/materiais')
 def listar_materiais():
-    if 'usuario' not in session: return redirect(url_for('login'))
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
     busca = request.args.get('q', '').strip()
     try:
-        url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*" if busca else f"{SUPABASE_URL}/rest/v1/materiais?select=*"
+        if busca:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*"
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
-        materiais = response.json() if response.status_code == 200 else []
-    except: materiais = []
+        if response.status_code == 200:
+            materiais = response.json()
+        else:
+            flash("Erro ao carregar materiais.")
+            materiais = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        materiais = []
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1375,14 +1400,19 @@ def listar_materiais():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Materiais Cadastrados</title>
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     {CSS_MENU}
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
     .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
-    .search-box {{ padding: 20px 30px; text-align: center; }} .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
-    table {{ width: 100%; border-collapse: collapse; }} th, td {{ padding: 16px 20px; text-align: left; }} th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
-    tr:nth-child(even) {{ background: #f9f9f9; }} tr:hover {{ background: #f1f7fb; }}
+    .search-box {{ padding: 20px 30px; text-align: center; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 16px 20px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
     .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
@@ -1390,20 +1420,18 @@ def listar_materiais():
     <body>
     <div class="container">
     <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
-    {menu_superior()}
+    {menu_suspenso()}
     <a href="/clientes" class="back-link">← Voltar ao Menu</a>
     <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
-    <table><thead><tr><th>ID</th><th>Denominação</th><th>Marca</th><th>Grupo</th><th>Unidade</th><th>Fornecedor</th><th>Ações</th></tr></thead><tbody>{''.join(f'<tr><td>{m["id"]}</td><td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td><td>{m["marca"] or "—"}</td><td>{m["grupo_material"] or "—"}</td><td>{m["unidade_medida"]}</td><td>{m["fornecedor"] or "—"}</td><td>{f\'<a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>\' if session[\'nivel\'] in [\'administrador\', \'vendedor\'] else \'\'}{f\'<a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm(\'Tem certeza que deseja excluir?\')\">🗑️ Excluir</a>\' if session[\'nivel\'] == \'administrador\' else \'\')}</td></tr>' for m in materiais)}</tbody></table>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    </div>
-    </body>
-    </html>
+    <table><thead><tr><th>ID</th><th>Denominação</th><th>Marca</th><th>Grupo</th><th>Unidade</th><th>Fornecedor</th><th>Ações</th></tr></thead><tbody>{''.join(f'''<tr><td>{m["id"]}</td><td><a href="/material/{m["id"]}" style="color: #3498db; text-decoration: none;">{m["denominacao"]}</a></td><td>{m["marca"] or "—"}</td><td>{m["grupo_material"] or "—"}</td><td>{m["unidade_medida"]}</td><td>{m["fornecedor"] or "—"}</td><td>{f'<a href="/editar_material/{m["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}{f'<a href="/excluir_material/{m["id"]}" style="color: #e74c3c; text-decoration: none; margin-left: 10px;" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>' if session['nivel'] == 'administrador' else ''}</td></tr>''' for m in materiais)}</tbody></table>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/material/<int:id>')
 def detalhes_material(id):
-    if 'usuario' not in session: return redirect(url_for('login'))
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
     try:
         url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1414,14 +1442,58 @@ def detalhes_material(id):
         if not material:
             flash("Material não encontrado.")
             return redirect(url_for('listar_materiais'))
-    except: flash("Erro ao carregar material."); return redirect(url_for('listar_materiais'))
+    except Exception as e:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('listar_materiais'))
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{material['denominacao']} - Detalhes</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.details {{ padding: 30px; }}.details p {{ margin: 10px 0; font-size: 16px; }}.details strong {{ color: #2c3e50; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>📦 {material['denominacao']}</h1></div>{menu_superior()}<a href="/materiais" class="back-link">← Voltar à Lista</a><div class="details"><p><strong>Marca:</strong> {material['marca'] or "—"}</p><p><strong>Grupo de Material:</strong> {material['grupo_material'] or "—"}</p><p><strong>Unidade de Medida:</strong> {material['unidade_medida']}</p><p><strong>Valor Unitário:</strong> R$ {material['valor_unitario']:.2f}</p><p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p><p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p></div><div style="display: flex; gap: 15px; margin: 20px 0;"><a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a><a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{material['denominacao']} - Detalhes</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .details {{ padding: 30px; }}
+    .details p {{ margin: 10px 0; font-size: 16px; }}
+    .details strong {{ color: #2c3e50; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📦 {material['denominacao']}</h1></div>
+    {menu_suspenso()}
+    <a href="/materiais" class="back-link">← Voltar à Lista</a>
+    <div class="details">
+    <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
+    <p><strong>Grupo de Material:</strong> {material['grupo_material'] or "—"}</p>
+    <p><strong>Unidade de Medida:</strong> {material['unidade_medida']}</p>
+    <p><strong>Valor Unitário:</strong> R$ {material['valor_unitario']:.2f}</p>
+    <p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p>
+    <p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p>
+    </div>
+    <div style="display: flex; gap: 15px; margin: 20px 0;">
+    <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
+    <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
+    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+    </div>
+    </body>
+    </html>
     '''
-
 @app.route('/editar_material/<int:id>', methods=['GET', 'POST'])
 def editar_material(id):
-    if 'usuario' not in session or session['nivel'] not in ['administrador', 'vendedor']:
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    if session['nivel'] not in ['administrador', 'vendedor']:
         flash("Acesso negado!")
         return redirect(url_for('listar_materiais'))
     try:
@@ -1431,71 +1503,185 @@ def editar_material(id):
             flash("Material não encontrado.")
             return redirect(url_for('listar_materiais'))
         material = response.json()[0]
-    except: flash("Erro ao carregar material."); return redirect(url_for('listar_materiais'))
+    except Exception as e:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('listar_materiais'))
     if request.method == 'POST':
-        denominacao, marca, grupo_material, unidade_medida, unidade_outro, valor_unitario, especificacao, fornecedor_id = request.form.get('denominacao'), request.form.get('marca'), request.form.get('grupo_material'), request.form.get('unidade_medida'), request.form.get('unidade_outro'), request.form.get('valor_unitario'), request.form.get('especificacao'), request.form.get('fornecedor_id')
-        if unidade_medida == 'outro' and unidade_outro: unidade_medida = unidade_outro.strip()
-        elif not unidade_medida: flash("Unidade de Medida é obrigatória!"); return redirect(request.url)
-        if not denominacao or not valor_unitario: flash("Denominação e Valor Unitário são obrigatórios!"); return redirect(request.url)
+        denominacao = request.form.get('denominacao')
+        marca = request.form.get('marca')
+        grupo_material = request.form.get('grupo_material')
+        unidade_medida = request.form.get('unidade_medida')
+        unidade_outro = request.form.get('unidade_outro')
+        valor_unitario = request.form.get('valor_unitario')
+        especificacao = request.form.get('especificacao')
+        fornecedor_id = request.form.get('fornecedor_id')
+        if unidade_medida == 'outro' and unidade_outro:
+            unidade_medida = unidade_outro.strip()
+        elif not unidade_medida:
+            flash("Unidade de Medida é obrigatória!")
+            return redirect(request.url)
+        if not denominacao or not valor_unitario:
+            flash("Denominação e Valor Unitário são obrigatórios!")
+            return redirect(request.url)
         try: valor_unitario = float(valor_unitario)
-        except: flash("Valor unitário deve ser um número!"); return redirect(request.url)
+        except:
+            flash("Valor unitário deve ser um número!")
+            return redirect(request.url)
         try:
             url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
             dados = {"denominacao": denominacao, "marca": marca, "grupo_material": grupo_material, "unidade_medida": unidade_medida, "valor_unitario": valor_unitario, "especificacao": especificacao, "fornecedor": None}
             if fornecedor_id:
-                for f in buscar_fornecedores():
-                    if f['id'] == int(fornecedor_id): dados["fornecedor"] = f["nome"]; break
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor: dados["fornecedor"] = fornecedor["nome"]
             response = requests.patch(url, json=dados, headers=headers)
-            if response.status_code == 204: flash("✅ Material atualizado com sucesso!"); return redirect(url_for('detalhes_material', id=id))
+            if response.status_code == 204:
+                flash("✅ Material atualizado com sucesso!")
+                return redirect(url_for('detalhes_material', id=id))
             else: flash("❌ Erro ao atualizar material.")
-        except: flash("❌ Erro de conexão.")
-        return redirect(request.url)
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+            return redirect(request.url)
     fornecedores = buscar_fornecedores()
-    fornecedor_selecionado = next((f for f in fornecedores if f.get('nome') == material.get('fornecedor')), None) if material.get('fornecedor') else None
-    def get_selected_attr(f_id): return 'selected' if fornecedor_selecionado and f_id == fornecedor_selecionado['id'] else ''
+    fornecedor_selecionado = None
+    if material.get('fornecedor'):
+        fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
+    def get_selected_attr(f_id):
+        if fornecedor_selecionado and f_id == fornecedor_selecionado['id']: return 'selected'
+        return ''
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Editar Material</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>{menu_superior()}<a href="/material/{id}" class="back-link">← Voltar aos Detalhes</a><form method="post" class="form-container"><div><label>Denominação *</label><input type="text" name="denominacao" value="{material['denominacao']}" required></div><div><label>Marca</label><input type="text" name="marca" value="{material['marca']}"></div><div><label>Grupo de Material</label><input type="text" name="grupo_material" value="{material['grupo_material']}"></div><div><label>Unidade de Medida *</label><select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required><option value="">Selecione</option><option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ""}>folha</option><option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ""}>metro</option><option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ""}>centímetro</option><option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ""}>milímetro</option><option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ""}>grama</option><option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ""}>quilograma</option><option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ""}>rolo</option><option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ""}>litro</option><option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ""}>unidade</option><option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ""}>conjunto</option><option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ""}>m²</option><option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ""}>cm²</option><option value="outro" {"selected" if material['unidade_medida'] == 'outro' else ""}>Outro (especifique)</option></select><input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}"></div><div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" value="{material['valor_unitario']}" required></div><div><label>Especificação</label><textarea name="especificacao" rows="3">{material['especificacao']}</textarea></div><div><label>Fornecedor</label><select name="fornecedor_id" id="fornecedor_id"><option value="">Selecione um fornecedor</option>{''.join(f'<option value="{f["id"]}" {get_selected_attr(f["id"])}>{f["nome"]}</option>' for f in fornecedores)}</select></div><button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleOutro() {{ const s=document.getElementById('unidade_medida'), i=document.getElementById('unidade_outro'); i.style.display=s.value==='outro'?'block':'none'; i.required=s.value==='outro'; }} window.onload=toggleOutro;</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Material</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>
+    {menu_suspenso()}
+    <a href="/material/{id}" class="back-link">← Voltar aos Detalhes</a>
+    <form method="post" class="form-container">
+    <div><label>Denominação *</label><input type="text" name="denominacao" value="{material['denominacao']}" required></div>
+    <div><label>Marca</label><input type="text" name="marca" value="{material['marca']}"></div>
+    <div><label>Grupo de Material</label><input type="text" name="grupo_material" value="{material['grupo_material']}"></div>
+    <div><label>Unidade de Medida *</label><select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required><option value="">Selecione</option><option value="folha" {"selected" if material['unidade_medida'] == 'folha' else ""}>folha</option><option value="metro" {"selected" if material['unidade_medida'] == 'metro' else ""}>metro</option><option value="centímetro" {"selected" if material['unidade_medida'] == 'centímetro' else ""}>centímetro</option><option value="milímetro" {"selected" if material['unidade_medida'] == 'milímetro' else ""}>milímetro</option><option value="grama" {"selected" if material['unidade_medida'] == 'grama' else ""}>grama</option><option value="quilograma" {"selected" if material['unidade_medida'] == 'quilograma' else ""}>quilograma</option><option value="rolo" {"selected" if material['unidade_medida'] == 'rolo' else ""}>rolo</option><option value="litro" {"selected" if material['unidade_medida'] == 'litro' else ""}>litro</option><option value="unidade" {"selected" if material['unidade_medida'] == 'unidade' else ""}>unidade</option><option value="conjunto" {"selected" if material['unidade_medida'] == 'conjunto' else ""}>conjunto</option><option value="m²" {"selected" if material['unidade_medida'] == 'm²' else ""}>m²</option><option value="cm²" {"selected" if material['unidade_medida'] == 'cm²' else ""}>cm²</option><option value="outro" {"selected" if material['unidade_medida'] == 'outro' else ""}>Outro (especifique)</option></select><input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()" value="{material['unidade_medida'] if material['unidade_medida'] not in ['folha', 'metro', 'centímetro', 'milímetro', 'grama', 'quilograma', 'rolo', 'litro', 'unidade', 'conjunto', 'm²', 'cm²'] else ''}"></div>
+    <div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" value="{material['valor_unitario']}" required></div>
+    <div><label>Especificação</label><textarea name="especificacao" rows="3">{material['especificacao']}</textarea></div>
+    <div><label>Fornecedor</label><select name="fornecedor_id" id="fornecedor_id"><option value="">Selecione um fornecedor</option>{''.join(f'<option value="{f["id"]}" {get_selected_attr(f["id"])}>{f["nome"]}</option>' for f in fornecedores)}</select></div>
+    <button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleOutro() {{const select = document.getElementById('unidade_medida');const input = document.getElementById('unidade_outro');if (select.value === 'outro') {{input.style.display = 'block';input.setAttribute('required', 'required');}} else {{input.style.display = 'none';input.removeAttribute('required');}}}window.onload = function() {{const select = document.getElementById('unidade_medida');if (select.value === 'outro') {{document.getElementById('unidade_outro').style.display = 'block';}}}};</script></body></html>
     '''
 
 @app.route('/cadastrar_material', methods=['GET', 'POST'])
 def cadastrar_material():
     if 'usuario' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
-        denominacao, marca, grupo_material, unidade_medida, unidade_outro, valor_unitario, especificacao, fornecedor_id = request.form.get('denominacao'), request.form.get('marca'), request.form.get('grupo_material'), request.form.get('unidade_medida'), request.form.get('unidade_outro'), request.form.get('valor_unitario'), request.form.get('especificacao'), request.form.get('fornecedor_id')
+        denominacao = request.form.get('denominacao')
+        marca = request.form.get('marca')
+        grupo_material = request.form.get('grupo_material')
+        unidade_medida = request.form.get('unidade_medida')
+        unidade_outro = request.form.get('unidade_outro')
+        valor_unitario = request.form.get('valor_unitario')
+        especificacao = request.form.get('especificacao')
+        fornecedor_id = request.form.get('fornecedor_id')
         if unidade_medida == 'outro' and unidade_outro: unidade_medida = unidade_outro.strip()
-        elif not unidade_medida: flash("Unidade de Medida é obrigatória!"); return redirect(request.url)
-        if not denominacao or not valor_unitario: flash("Denominação e Valor Unitário são obrigatórios!"); return redirect(request.url)
+        elif not unidade_medida:
+            flash("Unidade de Medida é obrigatória!")
+            return redirect(request.url)
+        if not denominacao or not valor_unitario:
+            flash("Denominação e Valor Unitário são obrigatórios!")
+            return redirect(request.url)
         try: valor_unitario = float(valor_unitario)
-        except: flash("Valor unitário deve ser um número!"); return redirect(request.url)
+        except:
+            flash("Valor unitário deve ser um número!")
+            return redirect(request.url)
         try:
             url = f"{SUPABASE_URL}/rest/v1/materiais"
             dados = {"denominacao": denominacao, "marca": marca, "grupo_material": grupo_material, "unidade_medida": unidade_medida, "valor_unitario": valor_unitario, "especificacao": especificacao, "fornecedor": None}
             if fornecedor_id:
-                for f in buscar_fornecedores():
-                    if f['id'] == int(fornecedor_id): dados["fornecedor"] = f["nome"]; break
+                fornecedores = buscar_fornecedores()
+                fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
+                if fornecedor: dados["fornecedor"] = fornecedor["nome"]
             response = requests.post(url, json=dados, headers=headers)
-            if response.status_code == 201: flash("✅ Material cadastrado com sucesso!"); return redirect(url_for('listar_materiais'))
+            if response.status_code == 201:
+                flash("✅ Material cadastrado com sucesso!")
+                return redirect(url_for('listar_materiais'))
             else: flash("❌ Erro ao cadastrar material.")
-        except: flash("❌ Erro de conexão.")
-        return redirect(request.url)
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+            return redirect(request.url)
     fornecedores = buscar_fornecedores()
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cadastrar Material</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>➕ Cadastrar Novo Material</h1></div>{menu_superior()}<a href="/materiais" class="back-link">← Voltar à Lista</a><form method="post" class="form-container"><div><label>Denominação *</label><input type="text" name="denominacao" required></div><div><label>Marca</label><input type="text" name="marca"></div><div><label>Grupo de Material</label><input type="text" name="grupo_material"></div><div><label>Unidade de Medida *</label><select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required><option value="">Selecione</option><option value="folha">folha</option><option value="metro">metro</option><option value="centímetro">centímetro</option><option value="milímetro">milímetro</option><option value="grama">grama</option><option value="quilograma">quilograma</option><option value="rolo">rolo</option><option value="litro">litro</option><option value="unidade">unidade</option><option value="conjunto">conjunto</option><option value="m²">m²</option><option value="cm²">cm²</option><option value="outro">Outro (especifique)</option></select><input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;"></div><div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" required></div><div><label>Especificação</label><textarea name="especificacao" rows="3"></textarea></div><div><label>Fornecedor</label><select name="fornecedor_id" id="fornecedor_id"><option value="">Selecione um fornecedor</option>{''.join(f'<option value="{f["id"]}">{f["nome"]}</option>' for f in fornecedores)}</select></div><button type="submit" class="btn">💾 Salvar Material</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleOutro() {{ const s=document.getElementById('unidade_medida'), i=document.getElementById('unidade_outro'); i.style.display=s.value==='outro'?'block':'none'; i.required=s.value==='outro'; }}</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Material</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
+    {menu_suspenso()}
+    <a href="/materiais" class="back-link">← Voltar à Lista</a>
+    <form method="post" class="form-container">
+    <div><label>Denominação *</label><input type="text" name="denominacao" required></div>
+    <div><label>Marca</label><input type="text" name="marca"></div>
+    <div><label>Grupo de Material</label><input type="text" name="grupo_material"></div>
+    <div><label>Unidade de Medida *</label><select name="unidade_medida" id="unidade_medida" onchange="toggleOutro()" required><option value="">Selecione</option><option value="folha">folha</option><option value="metro">metro</option><option value="centímetro">centímetro</option><option value="milímetro">milímetro</option><option value="grama">grama</option><option value="quilograma">quilograma</option><option value="rolo">rolo</option><option value="litro">litro</option><option value="unidade">unidade</option><option value="conjunto">conjunto</option><option value="m²">m²</option><option value="cm²">cm²</option><option value="outro">Outro (especifique)</option></select><input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()"></div>
+    <div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" required></div>
+    <div><label>Especificação</label><textarea name="especificacao" rows="3"></textarea></div>
+    <div><label>Fornecedor</label><select name="fornecedor_id" id="fornecedor_id"><option value="">Selecione um fornecedor</option>{''.join(f'<option value="{f["id"]}">{f["nome"]}</option>' for f in fornecedores)}</select></div>
+    <button type="submit" class="btn">💾 Salvar Material</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleOutro() {{const select = document.getElementById('unidade_medida');const input = document.getElementById('unidade_outro');if (select.value === 'outro') {{input.style.display = 'block';input.setAttribute('required', 'required');}} else {{input.style.display = 'none';input.removeAttribute('required');}}}}</script></body></html>
     '''
 
 @app.route('/excluir_material/<int:id>')
 def excluir_material(id):
     if 'usuario' not in session: return redirect(url_for('login'))
     try:
-        response = requests.delete(f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}", headers=headers)
+        url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
         if response.status_code == 204: flash("🗑️ Material excluído com sucesso!")
         else: flash("❌ Erro ao excluir material.")
-    except: flash("❌ Erro de conexão.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
     return redirect(url_for('listar_materiais'))
 
 @app.route('/estoque')
 def estoque():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     busca_mov = request.args.get('q', '').strip()
     try:
         materiais_catalogo = buscar_materiais()
@@ -1506,120 +1692,374 @@ def estoque():
             m['quantidade_estoque'] = qtd
             materiais_em_estoque.append(m)
         movimentacoes = buscar_movimentacoes_com_materiais(busca_mov)
-    except: materiais_em_estoque, movimentacoes = [], []
-    movimentacoes_html, materiais_html = "", ""
+    except Exception as e:
+        flash("Erro de conexão.")
+        materiais_em_estoque = []
+        movimentacoes = []
+    movimentacoes_html = ""
     for m in movimentacoes:
         data = format_data(m.get("data_movimentacao"))
         tipo = m["tipo"]
         classe_tipo = "tipo-entrada" if tipo == "entrada" else "tipo-saida"
-        nome_material = m.get("materiais", {}).get("denominacao", "<em>Material excluído</em>")
-        unidade = m.get("materiais", {}).get("unidade_medida", "")
+        material_info = m.get("materiais")
+        if material_info is None:
+            nome_material = "<em>Material excluído</em>"
+            unidade = ""
+        else:
+            nome_material = material_info.get("denominacao", "Desconhecido")
+            unidade = material_info.get("unidade_medida", "")
         valor_unitario = m.get("valor_unitario", 0.0) or 0.0
         valor_total = m.get("valor_total", 0.0) or 0.0
         qtd = m.get("quantidade", 0) or 0
-        movimentacoes_html += f'<tr><td>{data}</td><td>{nome_material}</td><td class="{classe_tipo}">{tipo.upper()}</td><td>{qtd} {unidade}</td><td>R$ {valor_unitario:.2f}</td><td>R$ {valor_total:.2f}</td><td><a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a></td></tr>'
+        acoes = f'<a href="/excluir_movimentacao/{m["id"]}" class="btn btn-delete" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a>'
+        movimentacoes_html += f'''<tr data-id="{m["id"]}"><td>{data}</td><td>{nome_material}</td><td class="{classe_tipo}">{tipo.upper()}</td><td>{qtd} {unidade}</td><td>R$ {valor_unitario:.2f}</td><td>R$ {valor_total:.2f}</td><td>{acoes}</td></tr>'''
+    materiais_html = ""
     for m in materiais_em_estoque:
         classe_estoque = "estoque-baixo" if m["quantidade_estoque"] < 5 else ""
-        materiais_html += f'<tr><td>{m["id"]}</td><td>{m["denominacao"]}</td><td>{m["unidade_medida"]}</td><td class="{classe_estoque}">{m["quantidade_estoque"]}</td><td>{f\'<a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a> <a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>\' if session[\'nivel\'] == \'administrador\' else \'\'}{f\'<a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>\' if session[\'nivel\'] in [\'administrador\', \'vendedor\'] else \'\'}</td></tr>'
+        materiais_html += f'''<tr><td>{m["id"]}</td><td>{m["denominacao"]}</td><td>{m["unidade_medida"]}</td><td class="{classe_estoque}">{m["quantidade_estoque"]}</td><td>{f'<a href="/registrar_entrada_form?material_id={m["id"]}" class="btn btn-green">📥 Entrada</a>' if session['nivel'] == 'administrador' else ''}{f'<a href="/registrar_saida_form?material_id={m["id"]}" class="btn btn-red">📤 Saída</a>' if session['nivel'] == 'administrador' else ''}{f'<a href="/editar_material/{m["id"]}" class="btn btn-edit">✏️ Editar</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}</td></tr>'''
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Meu Estoque</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.section {{ padding: 20px 30px; }} .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}.search-box {{ text-align: center; margin-bottom: 20px; }} .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }} table {{ width: 100%; border-collapse: collapse; }} th, td {{ padding: 12px 15px; text-align: left; }} th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }} tr:nth-child(even) {{ background: #f9f9f9; }} tr:hover {{ background: #f1f7fb; }} .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }} .btn-green {{ background: #27ae60; color: white; }} .btn-red {{ background: #e74c3c; color: white; }} .btn-delete {{ background: #95a5a6; color: white; }} .btn-edit {{ background: #f39c12; color: white; }}.estoque-baixo {{ color: #e74c3c; font-weight: bold; }} .tipo-entrada {{ color: #27ae60; font-weight: bold; }} .tipo-saida {{ color: #e74c3c; font-weight: bold; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>📊 Meu Estoque</h1></div>{menu_superior()}<a href="/clientes" class="back-link">← Voltar ao Menu</a><div class="section"><h2 class="section-title">Adicionar ao Estoque</h2><p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue" style="background:#3498db;color:white;">📦 Cadastrar Novo Material</a></p></div><div class="section"><h2 class="section-title">Itens em Estoque</h2><table><thead><tr><th>ID</th><th>Material</th><th>Unidade</th><th>Qtd. em Estoque</th><th>Ações</th></tr></thead><tbody>{materiais_html}</tbody></table></div><div class="section"><h2 class="section-title">Últimas Movimentações</h2><div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Ações</th></tr></thead><tbody>{movimentacoes_html}</tbody></table></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Estoque</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .section {{ padding: 20px 30px; }}
+    .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
+    .search-box {{ text-align: center; margin-bottom: 20px; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
+    .btn-green {{ background: #27ae60; color: white; }} .btn-red {{ background: #e74c3c; color: white; }} .btn-delete {{ background: #95a5a6; color: white; }} .btn-edit {{ background: #f39c12; color: white; }}
+    .estoque-baixo {{ color: #e74c3c; font-weight: bold; }} .tipo-entrada {{ color: #27ae60; font-weight: bold; }} .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📊 Meu Estoque</h1></div>
+    {menu_suspenso()}
+    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <div class="section"><h2 class="section-title">Adicionar ao Estoque</h2><p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a></p></div>
+    <div class="section"><h2 class="section-title">Itens em Estoque</h2><table><thead><tr><th>ID</th><th>Material</th><th>Unidade</th><th>Qtd. em Estoque</th><th>Ações</th></tr></thead><tbody>{materiais_html}</tbody></table></div>
+    <div class="section"><h2 class="section-title">Últimas Movimentações</h2><div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Ações</th></tr></thead><tbody>{movimentacoes_html}</tbody></table></div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/registrar_entrada_form')
 def registrar_entrada_form():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     material_id = request.args.get('material_id')
+    material = None
     try:
         materiais = buscar_materiais()
-        material = next((m for m in materiais if m['id'] == int(material_id)), None) if material_id else None
-    except: flash("Erro ao carregar material."); return redirect(url_for('estoque'))
+        if material_id: material = next((m for m in materiais if m['id'] == int(material_id)), None)
+    except:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('estoque'))
+    import json
+    materiais_js = json.dumps(materiais, ensure_ascii=False)
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Registrar Entrada</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>📥 Registrar Entrada de Material</h1></div>{menu_superior()}<a href="/estoque" class="back-link">← Voltar ao Estoque</a><div class="form-container"><form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()"><div><label>Material *</label><select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required><option value="">Selecione um material</option>{''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in materiais)}</select></div><div class="grid-2"><div><label>Unidade de Medida (do cadastro)</label><input type="text" id="unidade_medida" readonly></div><div><label>Valor Unitário Cadastrado</label><input type="text" id="valor_unitario_cadastrado" readonly></div></div><div class="grid-2"><div><label>Quantidade Comprada *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="calcularValorUnitario()"></div><div><label>Tamanho (ex: 66x96 cm)</label><input type="text" name="tamanho" placeholder="Opcional"></div></div><div><label>Valor Total Pago *</label><input type="number" name="valor_total" id="valor_total" step="0.01" required oninput="calcularValorUnitario()"></div><div><label>Valor Unitário Calculado</label><input type="text" id="valor_unitario_calculado" readonly></div><button type="submit" class="btn">➕ Registrar Entrada</button></form></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>const materiais = {json.dumps(materiais, ensure_ascii=False)};function carregarDadosMaterial() {{ const select = document.getElementById('material_id'); const id = select.value; const material = materiais.find(m => m.id == id); if (material) {{ document.getElementById('unidade_medida').value = material.unidade_medida; document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2); document.getElementById('quantidade').value = ''; document.getElementById('valor_total').value = ''; document.getElementById('valor_unitario_calculado').value = ''; }} }}function calcularValorUnitario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value) || 0; const valor_total = parseFloat(document.getElementById('valor_total').value) || 0; if (quantidade > 0 && valor_total > 0) {{ document.getElementById('valor_unitario_calculado').value = (valor_total / quantidade).toFixed(2); }} else {{ document.getElementById('valor_unitario_calculado').value = ''; }} }}function validarFormulario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value); const valor_total = parseFloat(document.getElementById('valor_total').value); if (quantidade <= 0 || valor_total <= 0) {{ alert('Quantidade e valor total devem ser maiores que zero.'); return false; }} return true; }}window.onload = function() {{ if ('{material_id}') {{ carregarDadosMaterial(); }} }};</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Entrada</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📥 Registrar Entrada de Material</h1></div>
+    {menu_suspenso()}
+    <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
+    <div class="form-container">
+    <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
+    <div><label>Material *</label><select name="material_id" id="material_id" onchange="carregarDadosMaterial()" required><option value="">Selecione um material</option>{''.join(f'<option value="{m["id"]}" {"selected" if material and m["id"] == material["id"] else ""}>{m["denominacao"]}</option>' for m in materiais)}</select></div>
+    <div class="grid-2"><div><label>Unidade de Medida (do cadastro)</label><input type="text" id="unidade_medida" readonly></div><div><label>Valor Unitário Cadastrado</label><input type="text" id="valor_unitario_cadastrado" readonly></div></div>
+    <div class="grid-2"><div><label>Quantidade Comprada *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="calcularValorUnitario()"></div><div><label>Tamanho (ex: 66x96 cm)</label><input type="text" name="tamanho" placeholder="Opcional"></div></div>
+    <div><label>Valor Total Pago *</label><input type="number" name="valor_total" id="valor_total" step="0.01" required oninput="calcularValorUnitario()"></div>
+    <div><label>Valor Unitário Calculado</label><input type="text" id="valor_unitario_calculado" readonly></div>
+    <button type="submit" class="btn">➕ Registrar Entrada</button></form></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>const materiais = {materiais_js};function carregarDadosMaterial() {{ const select = document.getElementById('material_id'); const id = select.value; const material = materiais.find(m => m.id == id); if (material) {{ document.getElementById('unidade_medida').value = material.unidade_medida; document.getElementById('valor_unitario_cadastrado').value = parseFloat(material.valor_unitario).toFixed(2); document.getElementById('quantidade').value = ''; document.getElementById('valor_total').value = ''; document.getElementById('valor_unitario_calculado').value = ''; }} else {{ document.getElementById('unidade_medida').value = ''; document.getElementById('valor_unitario_cadastrado').value = ''; }} }}function calcularValorUnitario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value) || 0; const valor_total = parseFloat(document.getElementById('valor_total').value) || 0; if (quantidade > 0 && valor_total > 0) {{ const valor_calculado = (valor_total / quantidade).toFixed(2); document.getElementById('valor_unitario_calculado').value = valor_calculado; }} else {{ document.getElementById('valor_unitario_calculado').value = ''; }} }}function validarFormulario() {{ const quantidade = parseFloat(document.getElementById('quantidade').value); const valor_total = parseFloat(document.getElementById('valor_total').value); if (quantidade <= 0 || valor_total <= 0) {{ alert('Quantidade e valor total devem ser maiores que zero.'); return false; }} return true; }}window.onload = function() {{ if ('{material_id}') {{ carregarDadosMaterial(); }} }};</script></body></html>
     '''
 
 @app.route('/registrar_entrada', methods=['POST'])
 def registrar_entrada():
-    if 'usuario' not in session or session['nivel'] not in ['administrador', 'vendedor']: flash("Acesso negado!"); return redirect(url_for('estoque'))
-    material_id, quantidade, valor_total, tamanho = request.form.get('material_id'), request.form.get('quantidade'), request.form.get('valor_total'), request.form.get('tamanho')
-    if not material_id or not quantidade or not valor_total: flash("Preencha todos os campos obrigatórios!"); return redirect(url_for('estoque'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] not in ['administrador', 'vendedor']:
+        flash("Acesso negado!")
+        return redirect(url_for('estoque'))
+    material_id = request.form.get('material_id')
+    quantidade = request.form.get('quantidade')
+    valor_total = request.form.get('valor_total')
+    tamanho = request.form.get('tamanho')
+    if not material_id or not quantidade or not valor_total:
+        flash("Preencha todos os campos obrigatórios!")
+        return redirect(url_for('estoque'))
     try:
-        quantidade, valor_total = float(quantidade), float(valor_total)
-        if quantidade <= 0 or valor_total <= 0: flash("Quantidade e valor total devem ser maiores que zero."); return redirect(url_for('estoque'))
+        quantidade = float(quantidade)
+        valor_total = float(valor_total)
+        if quantidade <= 0 or valor_total <= 0:
+            flash("Quantidade e valor total devem ser maiores que zero.")
+            return redirect(url_for('estoque'))
         valor_unitario = round(valor_total / quantidade, 2)
-    except: flash("Quantidade e valor devem ser números válidos."); return redirect(url_for('estoque'))
+    except:
+        flash("Quantidade e valor devem ser números válidos.")
+        return redirect(url_for('estoque'))
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {"material_id": int(material_id), "tipo": "entrada", "quantidade": quantidade, "valor_unitario": valor_unitario, "valor_total": valor_total, "tamanho": tamanho, "data_movimentacao": datetime.now().isoformat(), "motivo": None}
         response = requests.post(url, json=dados, headers=headers)
         if response.status_code == 201: flash("✅ Entrada registrada com sucesso!")
         else: flash("❌ Erro ao registrar entrada. Verifique os dados.")
-    except: flash("❌ Erro ao conectar ao banco de dados.")
+    except Exception as e:
+        flash("❌ Erro ao conectar ao banco de dados.")
     return redirect(url_for('estoque'))
 
 @app.route('/registrar_saida_form')
 def registrar_saida_form():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     material_id = request.args.get('material_id')
+    material = None
+    saldo_atual = 0
     try:
-        material = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}", headers=headers).json()[0]
-        saldo_atual = calcular_estoque_atual().get(int(material_id), 0)
-    except: flash("Erro ao carregar material."); return redirect(url_for('estoque'))
+        if material_id:
+            url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200 and response.json():
+                material = response.json()[0]
+                saldo = calcular_estoque_atual()
+                saldo_atual = saldo.get(int(material_id), 0)
+    except:
+        flash("Erro ao carregar material.")
+        return redirect(url_for('estoque'))
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Registrar Saída</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}.alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}</style></head><body><div class="container"><div class="header"><h1>📤 Registrar Saída de Material</h1></div>{menu_superior()}<a href="/estoque" class="back-link">← Voltar ao Estoque</a><div class="form-container"><form method="post" action="/registrar_saida" onsubmit="return validarSaida()"><input type="hidden" name="material_id" value="{material['id']}"><div><label>Material</label><input type="text" value="{material['denominacao']}" readonly></div><div><label>Unidade de Medida</label><input type="text" value="{material['unidade_medida']}" readonly></div><div><label>Saldo Atual em Estoque</label><input type="text" id="saldo_atual" value="{saldo_atual}" readonly style="font-weight: bold;"></div><div><label>Quantidade a Retirar *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="verificarSaldo()"></div><div><label>Motivo da Saída *</label><textarea name="motivo" rows="3" required></textarea></div><div id="alerta_saldo" class="alert" style="display: none;">⚠️ A quantidade retirada é maior que o saldo em estoque!</div><button type="submit" class="btn">📤 Registrar Saída</button></form></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function verificarSaldo() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; const alerta = document.getElementById('alerta_saldo'); alerta.style.display = (qtd > saldo) ? 'block' : 'none'; }}function validarSaida() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; if (qtd <= 0) {{ alert('A quantidade deve ser maior que zero.'); return false; }} if (qtd > saldo) {{ if (!confirm('⚠️ A quantidade é maior que o saldo. Deseja continuar mesmo assim?')) {{ return false; }} }} return true; }}</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Saída</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📤 Registrar Saída de Material</h1></div>
+    {menu_suspenso()}
+    <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
+    <div class="form-container">
+    <form method="post" action="/registrar_saida" onsubmit="return validarSaida()">
+    <input type="hidden" name="material_id" value="{material['id']}">
+    <div><label>Material</label><input type="text" value="{material['denominacao']}" readonly></div>
+    <div><label>Unidade de Medida</label><input type="text" value="{material['unidade_medida']}" readonly></div>
+    <div><label>Saldo Atual em Estoque</label><input type="text" id="saldo_atual" value="{saldo_atual}" readonly style="font-weight: bold;"></div>
+    <div><label>Quantidade a Retirar *</label><input type="number" name="quantidade" id="quantidade" step="0.01" required oninput="verificarSaldo()"></div>
+    <div><label>Motivo da Saída *</label><textarea name="motivo" rows="3" required></textarea></div>
+    <div id="alerta_saldo" class="alert" style="display: none;">⚠️ A quantidade retirada é maior que o saldo em estoque!</div>
+    <button type="submit" class="btn">📤 Registrar Saída</button></form></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function verificarSaldo() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; const alerta = document.getElementById('alerta_saldo'); if (qtd > saldo) {{ alerta.style.display = 'block'; }} else {{ alerta.style.display = 'none'; }} }}function validarSaida() {{ const saldo = parseFloat(document.getElementById('saldo_atual').value); const qtd = parseFloat(document.getElementById('quantidade').value) || 0; if (qtd <= 0) {{ alert('A quantidade deve ser maior que zero.'); return false; }} if (qtd > saldo) {{ if (!confirm('⚠️ A quantidade é maior que o saldo. Deseja continuar mesmo assim?')) {{ return false; }} }} return true; }}</script></body></html>
     '''
 
 @app.route('/registrar_saida', methods=['POST'])
 def registrar_saida():
-    if 'usuario' not in session or session['nivel'] not in ['administrador', 'vendedor']: flash("Acesso negado!"); return redirect(url_for('estoque'))
-    material_id, quantidade, motivo = request.form.get('material_id'), request.form.get('quantidade'), request.form.get('motivo')
-    if not material_id or not quantidade or not motivo: flash("Preencha todos os campos!"); return redirect(url_for('estoque'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] not in ['administrador', 'vendedor']:
+        flash("Acesso negado!")
+        return redirect(url_for('estoque'))
+    material_id = request.form.get('material_id')
+    quantidade = request.form.get('quantidade')
+    motivo = request.form.get('motivo')
+    if not material_id or not quantidade or not motivo:
+        flash("Preencha todos os campos!")
+        return redirect(url_for('estoque'))
     try:
         quantidade = float(quantidade)
-        if quantidade <= 0: flash("Quantidade deve ser maior que zero."); return redirect(url_for('estoque'))
-    except: flash("Quantidade inválida."); return redirect(url_for('estoque'))
+        if quantidade <= 0:
+            flash("Quantidade deve ser maior que zero.")
+            return redirect(url_for('estoque'))
+    except:
+        flash("Quantidade inválida.")
+        return redirect(url_for('estoque'))
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {"material_id": int(material_id), "tipo": "saida", "quantidade": quantidade, "motivo": motivo, "data_movimentacao": datetime.now().isoformat()}
         response = requests.post(url, json=dados, headers=headers)
         if response.status_code == 201: flash("📤 Saída registrada com sucesso!")
         else: flash("❌ Erro ao registrar saída.")
-    except: flash("❌ Erro ao registrar saída.")
+    except Exception as e:
+        flash("❌ Erro ao registrar saída.")
     return redirect(url_for('estoque'))
 
 @app.route('/excluir_movimentacao/<int:id>')
 def excluir_movimentacao(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('estoque'))
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('estoque'))
     if excluir_movimentacao_db(id): flash("🗑️ Movimentação excluída com sucesso!")
     else: flash("❌ Erro ao excluir movimentação.")
     return redirect(url_for('estoque'))
 
 @app.route('/fornecedores')
 def listar_fornecedores():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     busca = request.args.get('q', '').strip()
     try:
-        url = f"{SUPABASE_URL}/rest/v1/fornecedores?or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)" if busca else f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
-        fornecedores = requests.get(url, headers=headers).json() if requests.get(url, headers=headers).status_code == 200 else []
-    except: fornecedores = []
+        if busca: url = f"{SUPABASE_URL}/rest/v1/fornecedores?or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+        else: url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200: fornecedores = response.json()
+        else:
+            flash("Erro ao carregar fornecedores.")
+            fornecedores = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        fornecedores = []
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Fornecedores Cadastrados</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.search-box {{ padding: 20px 30px; text-align: center; }} .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }} table {{ width: 100%; border-collapse: collapse; }} th, td {{ padding: 16px 20px; text-align: left; }} th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }} tr:nth-child(even) {{ background: #f9f9f9; }} tr:hover {{ background: #f1f7fb; }} .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>{menu_superior()}<a href="/clientes" class="back-link">← Voltar ao Menu</a><a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a><div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div><table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"<tr><td>{f['id']}</td><td>{f['nome']}</td><td>{f['cnpj']}</td><td>{f.get('contato', '—')}</td><td>{f.get('telefone', '—')}</td><td>{f.get('email', '—')}</td><td><div style='display: flex; gap: 10px;'><a href=\"/editar_fornecedor/{f['id']}\" style=\"color: #f39c12; text-decoration: none;\">✏️ Editar</a><a href=\"/excluir_fornecedor/{f['id']}\" style=\"color: #e74c3c; text-decoration: none;\" onclick=\"return confirm('Tem certeza que deseja excluir?')\">🗑️ Excluir</a></div></td></tr>" for f in fornecedores)}</tbody></table><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fornecedores Cadastrados</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .search-box {{ padding: 20px 30px; text-align: center; }}
+    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 16px 20px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
+    {menu_suspenso()}
+    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
+    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"""<tr><td>{f["id"]}</td><td>{f["nome"]}</td><td>{f["cnpj"]}</td><td>{f.get("contato", "—")}</td><td>{f.get("telefone", "—")}</td><td>{f.get("email", "—")}</td><td><div style="display: flex; gap: 10px;"><a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a><a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a></div></td></tr>""" for f in fornecedores)}</tbody></table>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/cadastrar_fornecedor', methods=['GET', 'POST'])
 def cadastrar_fornecedor():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     if request.method == 'POST':
-        nome, cnpj, contato, telefone, email, endereco = request.form.get('nome'), request.form.get('cnpj'), request.form.get('contato'), request.form.get('telefone'), request.form.get('email'), request.form.get('endereco')
-        if not nome: flash("Nome do fornecedor é obrigatório!"); return redirect(request.url)
-        if criar_fornecedor(nome, cnpj, contato, telefone, email, endereco): flash("✅ Fornecedor cadastrado com sucesso!"); return redirect(url_for('listar_fornecedores'))
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+        if criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor cadastrado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
         else: flash("❌ Erro ao cadastrar fornecedor.")
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cadastrar Fornecedor</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>{menu_superior()}<a href="/fornecedores" class="back-link">← Voltar à lista</a><form method="post" class="form-container"><div><label>Nome *</label><input type="text" name="nome" required></div><div><label>CNPJ</label><input type="text" name="cnpj"></div><div><label>Contato</label><input type="text" name="contato"></div><div><label>Telefone</label><input type="text" name="telefone"></div><div><label>E-mail</label><input type="email" name="email"></div><div><label>Endereço</label><textarea name="endereco" rows="3"></textarea></div><button type="submit" class="btn">💾 Salvar Fornecedor</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Fornecedor</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>
+    {menu_suspenso()}
+    <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container">
+    <div><label>Nome *</label><input type="text" name="nome" required></div>
+    <div><label>CNPJ</label><input type="text" name="cnpj"></div>
+    <div><label>Contato</label><input type="text" name="contato"></div>
+    <div><label>Telefone</label><input type="text" name="telefone"></div>
+    <div><label>E-mail</label><input type="email" name="email"></div>
+    <div><label>Endereço</label><textarea name="endereco" rows="3"></textarea></div>
+    <button type="submit" class="btn">💾 Salvar Fornecedor</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/editar_fornecedor/<int:id>', methods=['GET', 'POST'])
 def editar_fornecedor(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session: return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     try:
         url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1627,26 +2067,123 @@ def editar_fornecedor(id):
             flash("Fornecedor não encontrado.")
             return redirect(url_for('listar_fornecedores'))
         fornecedor = response.json()[0]
-    except: flash("Erro ao carregar fornecedor."); return redirect(url_for('listar_fornecedores'))
+    except Exception as e:
+        flash("Erro ao carregar fornecedor.")
+        return redirect(url_for('listar_fornecedores'))
     if request.method == 'POST':
-        nome, cnpj, contato, telefone, email, endereco = request.form.get('nome'), request.form.get('cnpj'), request.form.get('contato'), request.form.get('telefone'), request.form.get('email'), request.form.get('endereco')
-        if not nome: flash("Nome do fornecedor é obrigatório!"); return redirect(request.url)
-        if atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco): flash("✅ Fornecedor atualizado com sucesso!"); return redirect(url_for('listar_fornecedores'))
+        nome = request.form.get('nome')
+        cnpj = request.form.get('cnpj')
+        contato = request.form.get('contato')
+        telefone = request.form.get('telefone')
+        email = request.form.get('email')
+        endereco = request.form.get('endereco')
+        if not nome:
+            flash("Nome do fornecedor é obrigatório!")
+            return redirect(request.url)
+        if atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
+            flash("✅ Fornecedor atualizado com sucesso!")
+            return redirect(url_for('listar_fornecedores'))
         else: flash("❌ Erro ao atualizar fornecedor.")
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Editar Fornecedor</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>{menu_superior()}<a href="/fornecedores" class="back-link">← Voltar à lista</a><form method="post" class="form-container"><div><label>Nome *</label><input type="text" name="nome" value="{fornecedor['nome']}" required></div><div><label>CNPJ</label><input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}"></div><div><label>Contato</label><input type="text" name="contato" value="{fornecedor.get('contato', '')}"></div><div><label>Telefone</label><input type="text" name="telefone" value="{fornecedor.get('telefone', '')}"></div><div><label>E-mail</label><input type="email" name="email" value="{fornecedor.get('email', '')}"></div><div><label>Endereço</label><textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea></div><button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Fornecedor</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>
+    {menu_suspenso()}
+    <a href="/fornecedores" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container">
+    <div><label>Nome *</label><input type="text" name="nome" value="{fornecedor['nome']}" required></div>
+    <div><label>CNPJ</label><input type="text" name="cnpj" value="{fornecedor.get('cnpj', '')}"></div>
+    <div><label>Contato</label><input type="text" name="contato" value="{fornecedor.get('contato', '')}"></div>
+    <div><label>Telefone</label><input type="text" name="telefone" value="{fornecedor.get('telefone', '')}"></div>
+    <div><label>E-mail</label><input type="email" name="email" value="{fornecedor.get('email', '')}"></div>
+    <div><label>Endereço</label><textarea name="endereco" rows="3">{fornecedor.get('endereco', '')}</textarea></div>
+    <button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/excluir_fornecedor/<int:id>')
 def excluir_fornecedor_view(id):
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session:
+        flash("Acesso negado!")
+        return redirect(url_for('login'))
+    if session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     if excluir_fornecedor(id): flash("🗑️ Fornecedor excluído com sucesso!")
     else: flash("❌ Erro ao excluir fornecedor.")
     return redirect(url_for('listar_fornecedores'))
 
 # ========================
-# ROTAS DE ORÇAMENTOS (ATUALIZADO COM MENU, REMOÇÃO DE ITENS E CÁLCULO DE DATA)
+# ✅ ROTAS DE ORÇAMENTOS (COM CÁLCULO DE DATA E REMOÇÃO DE ITENS)
 # ========================
+@app.route('/orcamentos')
+def listar_orcamentos():
+    if 'usuario' not in session: return redirect(url_for('login'))
+    busca = request.args.get('q', '').strip()
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
+        if busca: url += f"&titulo=ilike.*{busca}*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200: orcamentos = response.json()
+        else:
+            flash("Erro ao carregar orçamentos.")
+            orcamentos = []
+    except Exception as e:
+        flash("Erro de conexão.")
+        orcamentos = []
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orçamentos</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>💰 Orçamentos</h1></div>
+    {menu_suspenso()}
+    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
+    <div style="text-align: center; padding: 20px;"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>{''.join(f"""<tr><td>{o['codigo_servico']}</td><td>{o['titulo']}</td><td>{o['empresas']['nome_empresa'] if o.get('empresas') else '—'}</td><td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td><td>{format_data(o.get('data_abertura'))}</td><td><a href="/pdf_orcamento/{o['id']}" class="btn" style="background: #e67e22;">📄 PDF</a><a href="/complementar_orcamento/{o['id']}" class="btn" style="background: #27ae60;">✅ Aceito → Serviço</a><a href="/editar_servico/{o['id']}" class="btn" style="background: #f39c12;">✏️ Editar</a><a href="/excluir_servico/{o['id']}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td></tr>""" for o in orcamentos)}</tbody></table>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    '''
+
 def adicionar_dias_uteis(data_inicio, dias):
     feriados = ["2026-01-01","2026-02-17","2026-04-03","2026-04-21","2026-05-01","2026-06-04","2026-09-07","2026-10-12","2026-11-02","2026-11-15","2026-11-20","2026-12-25"]
     data_atual = data_inicio
@@ -1661,28 +2198,20 @@ def adicionar_dias_uteis(data_inicio, dias):
 def calcular_data_entrega_api():
     dados = request.get_json()
     data_inicio = datetime.strptime(dados.get('data_abertura'), "%Y-%m-%d")
-    data_entrega = adicionar_dias_uteis(data_inicio, int(dados.get('dias', 7)))
+    dias = int(dados.get('dias', 7))
+    data_entrega = adicionar_dias_uteis(data_inicio, dias)
     return jsonify({'data_entrega': data_entrega.strftime('%Y-%m-%d')})
-
-@app.route('/orcamentos')
-def listar_orcamentos():
-    if 'usuario' not in session: return redirect(url_for('login'))
-    busca = request.args.get('q', '').strip()
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
-        if busca: url += f"&titulo=ilike.*{busca}*"
-        orcamentos = requests.get(url, headers=headers).json() if requests.get(url, headers=headers).status_code == 200 else []
-    except: orcamentos = []
-    return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orçamentos</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; }} table {{ width: 100%; border-collapse: collapse; }} th, td {{ padding: 12px 15px; text-align: left; }} th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>💰 Orçamentos</h1></div>{menu_superior()}<a href="/clientes" class="back-link">← Voltar ao Menu</a><a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a><div style="text-align: center; padding: 20px;"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div><table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>{''.join(f"<tr><td>{o['codigo_servico']}</td><td>{o['titulo']}</td><td>{o['empresas']['nome_empresa'] if o.get('empresas') else '—'}</td><td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td><td>{format_data(o.get('data_abertura'))}</td><td><a href=\"/pdf_orcamento/{o['id']}\" class=\"btn\" style=\"background:#e67e22;\">📄 PDF</a><a href=\"/complementar_orcamento/{o['id']}\" class=\"btn\" style=\"background:#27ae60;\">✅ Aceito → Serviço</a><a href=\"/editar_servico/{o['id']}\" class=\"btn\" style=\"background:#f39c12;\">✏️ Editar</a><a href=\"/excluir_servico/{o['id']}\" class=\"btn\" style=\"background:#e74c3c;\" onclick=\"return confirm('Tem certeza?')\">🗑️ Excluir</a></td></tr>" for o in orcamentos)}</tbody></table><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
-    '''
 
 @app.route('/adicionar_orcamento', methods=['GET', 'POST'])
 def adicionar_orcamento():
     if 'usuario' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
-        empresa_id, data_abertura, prazo_dias = request.form.get('empresa_id'), request.form.get('data_abertura'), int(request.form.get('prazo_dias', 7))
-        if not empresa_id: flash("Cliente é obrigatório!"); return redirect(url_for('adicionar_orcamento'))
+        empresa_id = request.form.get('empresa_id')
+        data_abertura = request.form.get('data_abertura')
+        prazo_dias = int(request.form.get('prazo_dias', 7))
+        if not empresa_id:
+            flash("Cliente é obrigatório!")
+            return redirect(url_for('adicionar_orcamento'))
         data_inicio = datetime.strptime(data_abertura, "%Y-%m-%d") if data_abertura else datetime.now()
         data_entrega = adicionar_dias_uteis(data_inicio, prazo_dias)
         data_entrega_str = data_entrega.strftime("%Y-%m-%d")
@@ -1699,14 +2228,20 @@ def adicionar_orcamento():
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados_orc = {"codigo_servico": codigo_servico, "titulo": "Orçamento Múltiplo", "empresa_id": int(empresa_id), "tipo": "Orçamento", "status": "Pendente", "data_abertura": data_abertura, "previsao_entrega": data_entrega_str, "valor_cobrado": 0.0, "observacoes": request.form.get('observacoes_gerais', '')}
             response = requests.post(url, json=dados_orc, headers=headers)
-            if response.status_code != 201: flash("❌ Erro ao criar orçamento."); return redirect(url_for('adicionar_orcamento'))
+            if response.status_code != 201:
+                flash("❌ Erro ao criar orçamento.")
+                return redirect(url_for('adicionar_orcamento'))
             url_busca = f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1"
             resp_busca = requests.get(url_busca, headers=headers)
             if resp_busca.status_code == 200:
                 orc_data = resp_busca.json()
                 if len(orc_data) > 0: orcamento_id = orc_data[0]['id']
-                else: flash("❌ Orçamento criado, mas ID não encontrado."); return redirect(url_for('adicionar_orcamento'))
-            else: flash("❌ Falha ao buscar o ID do orçamento."); return redirect(url_for('adicionar_orcamento'))
+                else:
+                    flash("❌ Orçamento criado, mas ID não encontrado.")
+                    return redirect(url_for('adicionar_orcamento'))
+            else:
+                flash("❌ Falha ao buscar o ID do orçamento.")
+                return redirect(url_for('adicionar_orcamento'))
             valor_total_orcamento = 0.0
             titulos = request.form.getlist('item_titulo[]')
             quantidades = request.form.getlist('item_quantidade[]')
@@ -1723,15 +2258,87 @@ def adicionar_orcamento():
                     vlr_unit = float(valores_unit[i]) if valores_unit[i] else 0
                     vlr_total = qtd * vlr_unit
                     valor_total_orcamento += vlr_total
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={"orcamento_id": orcamento_id, "titulo": titulo, "quantidade": qtd, "dimensao": dim, "numero_cores": cor, "valor_unitario": vlr_unit, "valor_total": vlr_total}, headers=headers)
+                    dados_item = {"orcamento_id": orcamento_id, "titulo": titulo, "quantidade": qtd, "dimensao": dim, "numero_cores": cor, "valor_unitario": vlr_unit, "valor_total": vlr_total}
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
                 except: continue
             requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}", json={"valor_cobrado": valor_total_orcamento}, headers=headers)
             flash("✅ Orçamento criado com sucesso!")
             return redirect(url_for('listar_orcamentos'))
-        except: flash("❌ Erro de conexão.")
+        except Exception as e:
+            flash("❌ Erro de conexão.")
     empresas = buscar_empresas()
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Adicionar Orçamento</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }}.item-row {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 50px; gap: 10px; align-items: end; margin-bottom: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; font-size: 14px; }}.form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.btn-blue {{ background: #3498db; }}.btn-red {{ background: #e74c3c; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}.data-entrega-preview {{ background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #27ae60; display: none; }}</style></head><body><div class="container"><div class="header"><h1>➕ Novo Orçamento</h1></div>{menu_superior()}<a href="/orcamentos" class="back-link">← Voltar à lista</a><form method="post" class="form-container" id="formOrcamento"><div class="grid-2"><div><label>Cliente *</label><select name="empresa_id" id="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select></div><div><label>Data de Abertura *</label><input type="date" name="data_abertura" id="data_abertura" required onchange="calcularDataEntrega()"></div></div><div class="grid-2"><div><label>Prazo de Entrega (dias úteis) *</label><input type="number" name="prazo_dias" id="prazo_dias" value="7" min="1" required onchange="calcularDataEntrega()"></div><div><label>Data Prevista de Entrega</label><div id="data_entrega_display" style="padding: 10px; background: #ecf0f1; border-radius: 6px; font-weight: 600; color: #2c3e50;">Preencha os dados acima</div></div></div><div class="data-entrega-preview" id="preview_entrega"><strong>📅 Entrega prevista:</strong> <span id="texto_entrega"></span></div><h3 style="margin: 30px 0 20px 0; color: #2c3e50;">Itens do Orçamento</h3><div id="itens-container"></div><button type="button" onclick="adicionarItem()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button><button type="button" onclick="if(confirm('Limpar todos os itens?')){{document.getElementById('itens-container').innerHTML=''; adicionarItem();}}" class="btn btn-red" style="width: 100%; margin-bottom: 20px;">🧹 Limpar Todos</button><div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;"><label>Observações Gerais</label><textarea name="observacoes_gerais" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea></div><button type="submit" class="btn" style="width: 100%; margin-top: 20px;">💾 Gerar Orçamento</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>let itemCounter = 0;function adicionarItem() {{ itemCounter++; const container = document.getElementById('itens-container'); const div = document.createElement('div'); div.className = 'item-row'; div.id = 'item-' + itemCounter; div.innerHTML = `<div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona"></div><div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required placeholder="1" onchange="calcularDataEntrega()"></div><div><label>Valor Unit. (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00" onchange="calcularDataEntrega()"></div><div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div><div><label>Cores</label><input type="number" name="item_cores[]" step="1" placeholder="4"></div><div><button type="button" onclick="removerItem('item-${{itemCounter}}')" class="btn btn-red" style="padding: 10px; font-size: 12px;">🗑️</button></div>`; container.appendChild(div); }}function removerItem(itemId) {{ const item = document.getElementById(itemId); if (item) {{ item.remove(); calcularDataEntrega(); }} }}function calcularDataEntrega() {{ const dataAbertura = document.getElementById('data_abertura').value; const prazoDias = parseInt(document.getElementById('prazo_dias').value) || 7; if (!dataAbertura) {{ document.getElementById('data_entrega_display').textContent = 'Preencha a data de abertura'; document.getElementById('preview_entrega').style.display = 'none'; return; }} fetch('/calcular_data_entrega', {{ method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{data_abertura: dataAbertura, dias: prazoDias}}) }}).then(response => response.json()).then(data => {{ const dataFormatada = data.data_entrega.split('-').reverse().join('/'); document.getElementById('data_entrega_display').textContent = dataFormatada; document.getElementById('texto_entrega').textContent = dataFormatada + ' (' + prazoDias + ' dias úteis)'; document.getElementById('preview_entrega').style.display = 'block'; }}).catch(error => {{ console.error('Erro:', error); document.getElementById('data_entrega_display').textContent = 'Erro ao calcular'; }}); }}window.onload = function() {{ adicionarItem(); document.getElementById('data_abertura').value = new Date().toISOString().split('T')[0]; calcularDataEntrega(); }};</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Orçamento</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }}
+    .item-row {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 50px; gap: 10px; align-items: end; margin-bottom: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; font-size: 14px; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .btn-blue {{ background: #3498db; }} .btn-red {{ background: #e74c3c; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .data-entrega-preview {{ background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #27ae60; }}
+    .data-entrega-preview strong {{ color: #27ae60; font-size: 16px; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>➕ Novo Orçamento</h1></div>
+    {menu_suspenso()}
+    <a href="/orcamentos" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container" id="formOrcamento">
+    <div class="grid-2"><div><label>Cliente *</label><select name="empresa_id" id="empresa_id" required onchange="calcularDataEntrega()"><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select></div><div><label>Data de Abertura *</label><input type="date" name="data_abertura" id="data_abertura" required onchange="calcularDataEntrega()"></div></div>
+    <div class="grid-2"><div><label>Prazo de Entrega (dias úteis) *</label><input type="number" name="prazo_dias" id="prazo_dias" value="7" min="1" required onchange="calcularDataEntrega()"></div><div><label>Data Prevista de Entrega</label><div id="data_entrega_display" style="padding: 10px; background: #ecf0f1; border-radius: 6px; font-weight: 600; color: #2c3e50;">Preencha os dados acima</div></div></div>
+    <div class="data-entrega-preview" id="preview_entrega" style="display: none;"><strong>📅 Entrega prevista:</strong> <span id="texto_entrega"></span></div>
+    <h3 style="margin: 30px 0 20px 0; color: #2c3e50;">Itens do Orçamento</h3>
+    <div id="itens-container"></div>
+    <button type="button" onclick="adicionarItem()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
+    <button type="button" onclick="if(confirm('Limpar todos os itens?')){{document.getElementById('itens-container').innerHTML=''; adicionarItem();}}" class="btn btn-red" style="width: 100%; margin-bottom: 20px;">🧹 Limpar Todos</button>
+    <div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;"><label>Observações Gerais</label><textarea name="observacoes_gerais" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea></div>
+    <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">💾 Gerar Orçamento</button></form>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div>
+    <script>
+    let itemCounter = 0;
+    function adicionarItem() {{
+    itemCounter++;
+    const container = document.getElementById('itens-container');
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.id = 'item-' + itemCounter;
+    div.innerHTML = `<div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona"></div><div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" required placeholder="1" onchange="calcularDataEntrega()"></div><div><label>Valor Unit. (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00" onchange="calcularDataEntrega()"></div><div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div><div><label>Cores</label><input type="number" name="item_cores[]" step="1" placeholder="4"></div><div><button type="button" onclick="removerItem('item-${{itemCounter}}')" class="btn btn-red" style="padding: 10px; font-size: 12px;">🗑️</button></div>`;
+    container.appendChild(div);
+    }}
+    function removerItem(itemId) {{
+    const item = document.getElementById(itemId);
+    if (item) {{ item.remove(); calcularDataEntrega(); }}
+    }}
+    function calcularDataEntrega() {{
+    const dataAbertura = document.getElementById('data_abertura').value;
+    const prazoDias = parseInt(document.getElementById('prazo_dias').value) || 7;
+    if (!dataAbertura) {{ document.getElementById('data_entrega_display').textContent = 'Preencha a data de abertura'; document.getElementById('preview_entrega').style.display = 'none'; return; }}
+    fetch('/calcular_data_entrega', {{ method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{data_abertura: dataAbertura, dias: prazoDias}}) }}).then(r => r.json()).then(d => {{
+    const dt = d.data_entrega.split('-').reverse().join('/');
+    document.getElementById('data_entrega_display').textContent = dt;
+    document.getElementById('texto_entrega').textContent = dt + ' (' + prazoDias + ' dias úteis)';
+    document.getElementById('preview_entrega').style.display = 'block';
+    }}).catch(error => {{ console.error('Erro:', error); document.getElementById('data_entrega_display').textContent = 'Erro ao calcular'; }});
+    }}
+    window.onload = function() {{ adicionarItem(); document.getElementById('data_abertura').value = new Date().toISOString().split('T')[0]; calcularDataEntrega(); }};
+    </script>
+    </body></html>
     '''
 
 @app.route('/pdf_orcamento/<int:id>')
@@ -1745,27 +2352,38 @@ def pdf_orcamento(id):
     pdf = pdfkit.from_string(html, False)
     return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orc['codigo_servico']}.pdf", mimetype="application/pdf")
 
-# MÓDULO DE RASTREAMENTO DE ENVIOS (ATUALIZADO COM MENU)
+# ========================
+# MÓDULO DE RASTREAMENTO DE ENVIOS
+# ========================
 def buscar_envios():
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
         response = requests.get(url, headers=headers)
-        return response.json() if response.status_code == 200 else []
-    except: return []
+        if response.status_code == 200: return response.json()
+        return []
+    except Exception as e:
+        print("Erro ao buscar envios:", e)
+        return []
 
 def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios"
         dados = {"tipo_envio": tipo_envio, "empresa_id": int(empresa_id), "descricao": descricao, "codigo_rastreio": codigo_rastreio, "data_envio": datetime.now().isoformat(), "status": "Enviado"}
-        return requests.post(url, json=dados, headers=headers).status_code == 201
-    except: return False
+        response = requests.post(url, json=dados, headers=headers)
+        return response.status_code == 201
+    except Exception as e:
+        print("Erro ao criar envio:", e)
+        return False
 
 def marcar_entregue(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
         dados = {"status": "Entregue", "data_entrega": datetime.now().isoformat()}
-        return requests.patch(url, json=dados, headers=headers).status_code == 204
-    except: return False
+        response = requests.patch(url, json=dados, headers=headers)
+        return response.status_code == 204
+    except Exception as e:
+        print("Erro ao marcar entrega:", e)
+        return False
 
 @app.route('/registrar_envio')
 def registrar_envio():
@@ -1777,38 +2395,117 @@ def registrar_envio():
         servicos = response.json() if response.status_code == 200 else []
     except: servicos = []
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Registrar Envio - Rastreamento</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>{menu_superior()}<a href="/envios" class="back-link">← Voltar à Lista de Envios</a><form method="post" action="/salvar_envio" class="form-container"><div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço">Serviço (vinculado a OS)</option><option value="Amostra">Amostra Grátis</option></select></div><div id="servico-campo" style="display: none;"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}">{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div><div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select></div><div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" placeholder="Ex: Amostra de papel couché 300g" required></textarea></div><div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" placeholder="Ex: PQ123456789BR" required></div><button type="submit" class="btn">💾 Registrar Envio</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); campo.style.display = (tipo === 'Serviço') ? 'block' : 'none'; }}</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Envio - Rastreamento</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>
+    {menu_suspenso()}
+    <a href="/envios" class="back-link">← Voltar à Lista de Envios</a>
+    <form method="post" action="/salvar_envio" class="form-container">
+    <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço">Serviço (vinculado a OS)</option><option value="Amostra">Amostra Grátis</option></select></div>
+    <div id="servico-campo" style="display: none;"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}">{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select></div>
+    <div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" placeholder="Ex: Amostra de papel couché 300g" required></textarea></div>
+    <div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" placeholder="Ex: PQ123456789BR" required></div>
+    <button type="submit" class="btn">💾 Registrar Envio</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); if (tipo === 'Serviço') {{ campo.style.display = 'block'; }} else {{ campo.style.display = 'none'; }} }}</script></body></html>
     '''
 
 @app.route('/salvar_envio', methods=['POST'])
 def salvar_envio():
     if 'usuario' not in session: return redirect(url_for('login'))
-    tipo_envio, empresa_id, descricao, codigo_rastreio = request.form.get('tipo_envio'), request.form.get('empresa_id'), request.form.get('descricao'), request.form.get('codigo_rastreio')
-    if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio: flash("Preencha todos os campos obrigatórios!"); return redirect(url_for('registrar_envio'))
+    tipo_envio = request.form.get('tipo_envio')
+    empresa_id = request.form.get('empresa_id')
+    descricao = request.form.get('descricao')
+    codigo_rastreio = request.form.get('codigo_rastreio')
+    if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio:
+        flash("Preencha todos os campos obrigatórios!")
+        return redirect(url_for('registrar_envio'))
     try:
         dados = {"tipo_envio": tipo_envio, "empresa_id": int(empresa_id), "descricao": descricao, "codigo_rastreio": codigo_rastreio, "data_envio": datetime.now().isoformat()}
         if tipo_envio == "Serviço":
             servico_id = request.form.get('servico_id')
-            if servico_id: dados["servico_id"] = int(servico_id)
-            try: requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}", json={"status": "Enviado"}, headers=headers)
-            except: pass
+            if servico_id:
+                dados["servico_id"] = int(servico_id)
+                try:
+                    url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}"
+                    requests.patch(url_serv, json={"status": "Enviado"}, headers=headers)
+                except: pass
         response = requests.post(f"{SUPABASE_URL}/rest/v1/envios", json=dados, headers=headers)
         if response.status_code == 201: flash("✅ Envio registrado com sucesso!")
         else: flash(f"❌ Erro ao registrar envio. Código: {response.status_code}")
-    except: flash("❌ Erro de conexão.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
     return redirect(url_for('envios'))
 
 @app.route('/envios')
 def envios():
     if 'usuario' not in session: return redirect(url_for('login'))
     lista_envios = buscar_envios()
-    enviados, entregues = [], []
-    for e in lista_envios: (entregues if e.get('status') == "Entregue" else enviados).append(e)
-    def html_lista(lista_env):
-        if not lista_env: return '<tr><td colspan="8" style="text-align:center;">Nenhum registro</td></tr>'
-        return ''.join(f'<tr><td>{format_data(e.get("data_envio"))}</td><td>{e["empresas"]["nome_empresa"] if e.get("empresas") else "—"}</td><td>{e["tipo_envio"]}</td><td>{e["descricao"]}</td><td>{e["codigo_rastreio"]}</td><td><span style="color: {"#27ae60" if e["status"]=="Entregue" else "#e67e22"}; font-weight:bold;">{e["status"]}</span></td><td>{format_data(e.get("data_entrega")) or "—"}</td><td><a href="https://www.linkcorreios.com.br/{e["codigo_rastreio"]}" target="_blank" class="btn btn-blue">🔍</a><a href="/editar_envio/{e["id"]}" class="btn btn-yellow">✏️</a><a href="/excluir_envio/{e["id"]}" class="btn btn-red" onclick="return confirm(\'Excluir?\')">🗑️</a>{f\'<a href="/marcar_entregue/{e["id"]}" class="btn btn-green">✅</a>\' if e[\'status\']!=\'Entregue\' else \'\'}</td></tr>' for e in lista_env)
+    envios_enviados, envios_entregues = [], []
+    for e in lista_envios:
+        if e.get('status') == "Entregue": envios_entregues.append(e)
+        else: envios_enviados.append(e)
+    html_enviados, html_entregues = "", ""
+    for e in envios_enviados:
+        data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
+        html_enviados += f'<tr><td>{format_data(e.get("data_envio"))}</td><td>{e["empresas"]["nome_empresa"] if e.get("empresas") else "—"}</td><td>{e["tipo_envio"]}</td><td>{e["descricao"]}</td><td>{e["codigo_rastreio"]}</td><td><span style="color: #e67e22; font-weight: bold;">{e["status"]}</span></td><td>{data_entrega}</td><td><div style="display: flex; gap: 5px; align-items: center;"><a href="https://www.linkcorreios.com.br/{e["codigo_rastreio"]}" target="_blank" class="btn btn-blue">🔍 Rastrear</a><a href="/editar_envio/{e["id"]}" class="btn btn-yellow">✏️ Editar</a><a href="/excluir_envio/{e["id"]}" class="btn btn-red" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a><a href="/marcar_entregue/{e["id"]}" class="btn btn-green">✅ Entregue</a></div></td></tr>'
+    for e in envios_entregues:
+        data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
+        html_entregues += f'<tr><td>{format_data(e.get("data_envio"))}</td><td>{e["empresas"]["nome_empresa"] if e.get("empresas") else "—"}</td><td>{e["tipo_envio"]}</td><td>{e["descricao"]}</td><td>{e["codigo_rastreio"]}</td><td><span style="color: #27ae60; font-weight: bold;">{e["status"]}</span></td><td>{data_entrega}</td><td><div style="display: flex; gap: 5px; align-items: center;"><a href="https://www.linkcorreios.com.br/{e["codigo_rastreio"]}" target="_blank" class="btn btn-blue">🔍 Rastrear</a><a href="/editar_envio/{e["id"]}" class="btn btn-yellow">✏️ Editar</a><a href="/excluir_envio/{e["id"]}" class="btn btn-red" onclick="return confirm(\'Tem certeza que deseja excluir?\')">🗑️ Excluir</a><span style="color: #95a5a6;">Já entregue</span></div></td></tr>'
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Rastreamento de Envios</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}.btn-blue {{ background: #3498db; color: white; }} .btn-green {{ background: #27ae60; color: white; }} .btn-yellow {{ background: #f39c12; color: white; }} .btn-red {{ background: #e74c3c; color: white; }}table {{ width: 100%; border-collapse: collapse; }} th, td {{ padding: 12px 15px; text-align: left; }} th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}.section {{ padding: 20px 30px; }} .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}</style></head><body><div class="container"><div class="header"><h1>📦 Rastreamento de Envios</h1></div>{menu_superior()}<a href="/clientes" class="back-link">← Voltar ao Menu</a><a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a><div class="section"><h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2><table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_lista(enviados)}</tbody></table></div><div class="section"><h2 class="section-title">✅ Envios Entregues</h2><table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_lista(entregues)}</tbody></table></div><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreamento de Envios</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
+    .btn-blue {{ background: #3498db; color: white; }} .btn-green {{ background: #27ae60; color: white; }} .btn-yellow {{ background: #f39c12; color: white; }} .btn-red {{ background: #e74c3c; color: white; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 15px; text-align: left; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .section {{ padding: 20px 30px; }}
+    .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
+    {menu_suspenso()}
+    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
+    <div class="section"><h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2><table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}</tbody></table></div>
+    <div class="section"><h2 class="section-title">✅ Envios Entregues</h2><table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center;">Nenhum envio entregue ainda</td></tr>'}</tbody></table></div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div></body></html>
     '''
 
 @app.route('/marcar_entregue/<int:id>')
@@ -1824,7 +2521,9 @@ def editar_envio(id):
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
         response = requests.get(url, headers=headers)
-        if response.status_code != 200 or not response.json(): flash("Envio não encontrado."); return redirect(url_for('envios'))
+        if response.status_code != 200 or not response.json():
+            flash("Envio não encontrado.")
+            return redirect(url_for('envios'))
         envio = response.json()[0]
         empresas = buscar_empresas()
         try:
@@ -1832,31 +2531,76 @@ def editar_envio(id):
             response_serv = requests.get(url_serv, headers=headers)
             servicos = response_serv.json() if response_serv.status_code == 200 else []
         except: servicos = []
-    except: flash("Erro ao carregar envio."); return redirect(url_for('envios'))
+    except Exception as e:
+        flash("Erro ao carregar envio.")
+        return redirect(url_for('envios'))
     if request.method == 'POST':
-        tipo_envio, empresa_id, descricao, codigo_rastreio = request.form.get('tipo_envio'), request.form.get('empresa_id'), request.form.get('descricao'), request.form.get('codigo_rastreio')
-        if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio: flash("Preencha todos os campos obrigatórios!"); return redirect(request.url)
+        tipo_envio = request.form.get('tipo_envio')
+        empresa_id = request.form.get('empresa_id')
+        descricao = request.form.get('descricao')
+        codigo_rastreio = request.form.get('codigo_rastreio')
+        if not tipo_envio or not empresa_id or not descricao or not codigo_rastreio:
+            flash("Preencha todos os campos obrigatórios!")
+            return redirect(request.url)
         try:
             dados = {"tipo_envio": tipo_envio, "empresa_id": int(empresa_id), "descricao": descricao, "codigo_rastreio": codigo_rastreio}
             if tipo_envio == "Serviço":
                 servico_id = request.form.get('servico_id')
                 if servico_id: dados["servico_id"] = int(servico_id)
             response = requests.patch(url, json=dados, headers=headers)
-            if response.status_code == 204: flash("✅ Envio atualizado com sucesso!"); return redirect(url_for('envios'))
+            if response.status_code == 204:
+                flash("✅ Envio atualizado com sucesso!")
+                return redirect(url_for('envios'))
             else: flash("❌ Erro ao atualizar envio.")
-        except: flash("❌ Erro de conexão.")
-        return redirect(request.url)
+        except Exception as e:
+            flash("❌ Erro de conexão.")
+            return redirect(request.url)
     return f'''
-    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Editar Envio</title><style>{CSS_MENU}body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}.container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}.header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }} h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}.form-container {{ padding: 30px; }}.form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}.form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}.btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}.back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}.footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}</style></head><body><div class="container"><div class="header"><h1>✏️ Editar Envio</h1></div>{menu_superior()}<a href="/envios" class="back-link">← Voltar à lista</a><form method="post" class="form-container"><div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option><option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option></select></div><div id="servico-campo" style="display: {'block' if envio['tipo_envio'] == 'Serviço' else 'none'};"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}" {"selected" if s.get("id") == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div><div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == envio["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}</select></div><div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" required>{envio['descricao']}</textarea></div><div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" value="{envio['codigo_rastreio']}" required></div><button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); campo.style.display = (tipo === 'Serviço') ? 'block' : 'none'; }}</script></body></html>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Envio</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    {CSS_MENU}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .form-container {{ padding: 30px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>✏️ Editar Envio</h1></div>
+    {menu_suspenso()}
+    <a href="/envios" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container">
+    <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option><option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option></select></div>
+    <div id="servico-campo" style="display: {'block' if envio['tipo_envio'] == 'Serviço' else 'none'};"><label>Serviço *</label><select name="servico_id"><option value="">Selecione um serviço</option>{''.join(f'<option value="{s["id"]}" {"selected" if s.get("id") == envio.get("servico_id") else ""}>{s["codigo_servico"]} - {s["titulo"]}</option>' for s in servicos)}</select></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}" {"selected" if e["id"] == envio["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas)}</select></div>
+    <div><label>O que foi enviado? *</label><textarea name="descricao" rows="3" required>{envio['descricao']}</textarea></div>
+    <div><label>Código de Rastreio *</label><input type="text" name="codigo_rastreio" value="{envio['codigo_rastreio']}" required></div>
+    <button type="submit" class="btn">💾 Salvar Alterações</button></form><div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div></div><script>function toggleServico() {{ const tipo = document.getElementById('tipo_envio').value; const campo = document.getElementById('servico-campo'); if (tipo === 'Serviço') {{ campo.style.display = 'block'; }} else {{ campo.style.display = 'none'; }} }}</script></body></html>
     '''
 
 @app.route('/excluir_envio/<int:id>')
 def excluir_envio(id):
     if 'usuario' not in session: return redirect(url_for('login'))
     try:
-        if requests.delete(f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}", headers=headers).status_code == 204: flash("🗑️ Envio excluído com sucesso!")
+        url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204: flash("🗑️ Envio excluído com sucesso!")
         else: flash("❌ Erro ao excluir envio.")
-    except: flash("❌ Erro de conexão.")
+    except Exception as e:
+        flash("❌ Erro de conexão.")
     return redirect(url_for('envios'))
 
 # ========================
@@ -1864,65 +2608,164 @@ def excluir_envio(id):
 # ========================
 @app.route('/exportar_excel')
 def exportar_excel():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
-    output = BytesIO(); wb = Workbook()
-    def add_sheet(ws, data, headers):
-        ws.append(headers)
-        for r in data: ws.append(r)
-        for cell in ws[1]: cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
-    ws_emp = wb.active; ws_emp.title = "Empresas"
-    add_sheet(ws_emp, [[e.get("id"), e.get("nome_empresa",""), e.get("cnpj",""), e.get("responsavel",""), e.get("whatsapp",""), e.get("email",""), e.get("endereco",""), e.get("bairro",""), e.get("cidade",""), e.get("estado",""), e.get("cep",""), e.get("numero",""), e.get("entrega_endereco",""), e.get("entrega_numero",""), e.get("entrega_bairro",""), e.get("entrega_cidade",""), e.get("entrega_estado",""), e.get("entrega_cep","")] for e in buscar_empresas()], ["ID","Nome","CNPJ","Responsável","WhatsApp","Email","Endereço","Bairro","Cidade","Estado","CEP","Número","Entrega End","Entrega Num","Entrega Bairro","Entrega Cidade","Entrega Estado","Entrega CEP"])
-    ws_mat = wb.create_sheet("Materiais")
-    add_sheet(ws_mat, [[m.get("id"), m.get("denominacao",""), m.get("marca",""), m.get("grupo_material",""), m.get("unidade_medida",""), m.get("valor_unitario",0), m.get("fornecedor",""), m.get("especificacao","")] for m in buscar_materiais()], ["ID","Denominação","Marca","Grupo","Unidade","Valor Unit.","Fornecedor","Especificação"])
-    ws_est = wb.create_sheet("Estoque")
-    movs = buscar_movimentacoes_com_materiais()
-    add_sheet(ws_est, [[m.get("id"), m.get("materiais",{}).get("denominacao","Excluído"), m.get("tipo","").upper(), m.get("quantidade",0), m.get("valor_unitario",0), m.get("valor_total",0), m.get("data_movimentacao","")[:16].replace("T"," "), m.get("motivo",""), m.get("tamanho","")] for m in movs], ["ID","Material","Tipo","Quantidade","Valor Unit.","Valor Total","Data","Motivo","Tamanho"])
-    ws_usu = wb.create_sheet("Usuários")
-    add_sheet(ws_usu, [[u.get("id"), u.get("nome de usuario",""), u.get("NÍVEL","").upper(), u.get("telefone","")] for u in buscar_usuarios()], ["ID","Usuário","Nível","Telefone"])
-    ws_for = wb.create_sheet("Fornecedores")
-    add_sheet(ws_for, [[f.get("id"), f.get("nome",""), f.get("cnpj",""), f.get("contato",""), f.get("telefone",""), f.get("email",""), f.get("endereco","")] for f in buscar_fornecedores()], ["ID","Nome","CNPJ","Contato","Telefone","Email","Endereço"])
-    ws_ser = wb.create_sheet("Serviços")
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
+    output = BytesIO()
+    wb = Workbook()
+    ws_empresas = wb.active; ws_empresas.title = "Empresas"
+    empresas = buscar_empresas()
+    ws_empresas.append(["ID", "Nome da Empresa", "CNPJ", "Responsável", "WhatsApp", "Email", "Endereço", "Bairro", "Cidade", "Estado", "CEP", "Número", "Entrega Endereço", "Entrega Número", "Entrega Bairro", "Entrega Cidade", "Entrega Estado", "Entrega CEP"])
+    for e in empresas:
+        ws_empresas.append([e.get("id"), e.get("nome_empresa", ""), e.get("cnpj", ""), e.get("responsavel", ""), e.get("whatsapp", ""), e.get("email", ""), e.get("endereco", ""), e.get("bairro", ""), e.get("cidade", ""), e.get("estado", ""), e.get("cep", ""), e.get("numero", ""), e.get("entrega_endereco", ""), e.get("entrega_numero", ""), e.get("entrega_bairro", ""), e.get("entrega_cidade", ""), e.get("entrega_estado", ""), e.get("entrega_cep", "")])
+    for cell in ws_empresas[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_materiais = wb.create_sheet("Materiais")
+    materiais = buscar_materiais()
+    ws_materiais.append(["ID", "Denominação", "Marca", "Grupo", "Unidade", "Valor Unitário", "Fornecedor", "Especificação"])
+    for m in materiais:
+        ws_materiais.append([m.get("id"), m.get("denominacao", ""), m.get("marca", ""), m.get("grupo_material", ""), m.get("unidade_medida", ""), m.get("valor_unitario", 0), m.get("fornecedor", ""), m.get("especificacao", "")])
+    for cell in ws_materiais[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_estoque = wb.create_sheet("Estoque")
+    movimentacoes = buscar_movimentacoes_com_materiais()
+    ws_estoque.append(["ID", "Material", "Tipo", "Quantidade", "Valor Unit.", "Valor Total", "Data", "Motivo", "Tamanho"])
+    for m in movimentacoes:
+        material_nome = m["materiais"]["denominacao"] if m.get("materiais") else "Excluído"
+        ws_estoque.append([m.get("id"), material_nome, m.get("tipo", "").upper(), m.get("quantidade", 0), m.get("valor_unitario", 0), m.get("valor_total", 0), m.get("data_movimentacao", "")[:16].replace("T", " "), m.get("motivo", ""), m.get("tamanho", "")])
+    for cell in ws_estoque[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_usuarios = wb.create_sheet("Usuários")
+    usuarios = buscar_usuarios()
+    ws_usuarios.append(["ID", "Nome de Usuário", "Nível", "Telefone"])
+    for u in usuarios:
+        ws_usuarios.append([u.get("id"), u.get("nome de usuario", ""), u.get("NÍVEL", "").upper(), u.get("telefone", "")])
+    for cell in ws_usuarios[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_fornecedores = wb.create_sheet("Fornecedores")
+    fornecedores = buscar_fornecedores()
+    ws_fornecedores.append(["ID", "Nome", "CNPJ", "Contato", "Telefone", "Email", "Endereço"])
+    for f in fornecedores:
+        ws_fornecedores.append([f.get("id"), f.get("nome", ""), f.get("cnpj", ""), f.get("contato", ""), f.get("telefone", ""), f.get("email", ""), f.get("endereco", "")])
+    for cell in ws_fornecedores[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_servicos = wb.create_sheet("Serviços")
     try:
-        servicos = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&order=codigo_servico.desc", headers=headers).json() if requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&order=codigo_servico.desc", headers=headers).status_code == 200 else []
-        add_sheet(ws_ser, [[s.get("id"), s.get("codigo_servico",""), s.get("titulo",""), s.get("empresas",{}).get("nome_empresa","") if s.get("empresas") else "", s.get("tipo",""), s.get("status",""), s.get("quantidade",""), s.get("dimensao",""), s.get("numero_cores",""), s.get("valor_cobrado",0), s.get("data_abertura","")[:10] if s.get("data_abertura") else "", s.get("previsao_entrega","")[:10] if s.get("previsao_entrega") else "", s.get("observacoes","")] for s in servicos], ["ID","Código","Título","Cliente","Tipo","Status","Quantidade","Dimensão","Cores","Valor","Abertura","Previsão","Obs"])
-    except: pass
-    ws_env = wb.create_sheet("Envios")
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&order=codigo_servico.desc"
+        response = requests.get(url_serv, headers=headers)
+        servicos = response.json() if response.status_code == 200 else []
+    except: servicos = []
+    ws_servicos.append(["ID", "Código", "Título", "Cliente", "Tipo", "Status", "Quantidade", "Dimensão", "Nº Cores", "Valor Cobrado", "Data Abertura", "Previsão Entrega", "Observações"])
+    for s in servicos:
+        ws_servicos.append([s.get("id"), s.get("codigo_servico", ""), s.get("titulo", ""), s.get("empresas", {}).get("nome_empresa", "") if s.get("empresas") else "", s.get("tipo", ""), s.get("status", ""), s.get("quantidade", ""), s.get("dimensao", ""), s.get("numero_cores", ""), s.get("valor_cobrado", 0), s.get("data_abertura", "")[:10] if s.get("data_abertura") else "", s.get("previsao_entrega", "")[:10] if s.get("previsao_entrega") else "", s.get("observacoes", "")])
+    for cell in ws_servicos[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
+    ws_envios = wb.create_sheet("Envios")
     try:
-        envios = requests.get(f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc", headers=headers).json() if requests.get(f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc", headers=headers).status_code == 200 else []
-        add_sheet(ws_env, [[e.get("id"), e.get("tipo_envio",""), e.get("empresas",{}).get("nome_empresa","") if e.get("empresas") else "", e.get("descricao",""), e.get("codigo_rastreio",""), e.get("data_envio","")[:16].replace("T"," ") if e.get("data_envio") else "", e.get("data_entrega","")[:16].replace("T"," ") if e.get("data_entrega") else "", e.get("status","")] for e in envios], ["ID","Tipo","Cliente","Descrição","Rastreio","Data Envio","Data Entrega","Status"])
-    except: pass
+        url_envios = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
+        response = requests.get(url_envios, headers=headers)
+        envios = response.json() if response.status_code == 200 else []
+    except: envios = []
+    ws_envios.append(["ID", "Tipo", "Cliente", "Descrição", "Código Rastreio", "Data Envio", "Data Entrega", "Status"])
+    for e in envios:
+        ws_envios.append([e.get("id"), e.get("tipo_envio", ""), e.get("empresas", {}).get("nome_empresa", "") if e.get("empresas") else "", e.get("descricao", ""), e.get("codigo_rastreio", ""), e.get("data_envio", "")[:16].replace("T", " ") if e.get("data_envio") else "", e.get("data_entrega", "")[:16].replace("T", " ") if e.get("data_entrega") else "", e.get("status", "")])
+    for cell in ws_envios[1]:
+        cell.font = Font(bold=True); cell.fill = PatternFill(start_color="D0E2FF", end_color="D0E2FF", fill_type="solid")
     for ws in wb.worksheets:
         for col in ws.columns:
-            max_len = max((len(str(c.value)) for c in col), default=0)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 50)
-    wb.save(output); output.seek(0)
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length: max_length = len(str(cell.value))
+                except: pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column].width = adjusted_width
+    wb.save(output)
+    output.seek(0)
     return send_file(output, as_attachment=True, download_name="backup_sistema_grafica.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 @app.route('/importar_excel', methods=['GET', 'POST'])
 def importar_excel():
-    if 'usuario' not in session or session['nivel'] != 'administrador': flash("Acesso negado!"); return redirect(url_for('clientes'))
+    if 'usuario' not in session or session['nivel'] != 'administrador':
+        flash("Acesso negado!")
+        return redirect(url_for('clientes'))
     if request.method == 'POST':
-        if 'arquivo' not in request.files or request.files['arquivo'].filename == '': flash("Nenhum arquivo."); return redirect(request.url)
+        if 'arquivo' not in request.files:
+            flash("Nenhum arquivo enviado.")
+            return redirect(request.url)
         arquivo = request.files['arquivo']
-        if not arquivo.filename.endswith(('.xlsx', '.xls')): flash("Apenas Excel."); return redirect(request.url)
+        if arquivo.filename == '':
+            flash("Nenhum arquivo selecionado.")
+            return redirect(request.url)
+        if not arquivo.filename.endswith(('.xlsx', '.xls')):
+            flash("Apenas arquivos Excel (.xlsx) são permitidos.")
+            return redirect(request.url)
         try:
-            df = pd.read_excel(arquivo, sheet_name=None); log = []
+            df = pd.read_excel(arquivo, sheet_name=None)
+            log = []
             if 'Empresas' in df:
-                for _, r in df['Empresas'].iterrows():
-                    try: criar_empresa(nome=r['Nome da Empresa'], cnpj=r.get('CNPJ',''), responsavel=r.get('Responsável',''), telefone=r.get('Telefone',''), whatsapp=r.get('WhatsApp',''), email=r.get('Email',''), endereco=r.get('Endereço',''), bairro=r.get('Bairro',''), cidade=r.get('Cidade',''), estado=r.get('Estado',''), cep=r.get('CEP',''), numero=r.get('Número',''), entrega_endereco=r.get('Entrega Endereço',''), entrega_numero=r.get('Entrega Número',''), entrega_bairro=r.get('Entrega Bairro',''), entrega_cidade=r.get('Entrega Cidade',''), entrega_estado=r.get('Entrega Estado',''), entrega_cep=r.get('Entrega CEP','')); log.append(f"✅ {r['Nome da Empresa']}")
-                    except Exception as e: log.append(f"❌ {e}")
-            if 'Materiais' in df:
-                for _, r in df['Materiais'].iterrows():
+                for _, row in df['Empresas'].iterrows():
                     try:
-                        resp = requests.post(f"{SUPABASE_URL}/rest/v1/materiais", json={"denominacao": r['Denominação'], "marca": r.get('Marca',''), "grupo_material": r.get('Grupo',''), "unidade_medida": r.get('Unidade','unidade'), "valor_unitario": float(r.get('Valor Unitário',0)), "fornecedor": r.get('Fornecedor',''), "especificacao": r.get('Especificação','')}, headers=headers)
-                        log.append(f"✅ {r['Denominação']}" if resp.status_code==201 else f"❌ {resp.text}")
-                    except Exception as e: log.append(f"❌ {e}")
+                        criar_empresa(nome=row['Nome da Empresa'], cnpj=row.get('CNPJ', ''), responsavel=row.get('Responsável', ''), telefone=row.get('Telefone', ''), whatsapp=row.get('WhatsApp', ''), email=row.get('Email', ''), endereco=row.get('Endereço', ''), bairro=row.get('Bairro', ''), cidade=row.get('Cidade', ''), estado=row.get('Estado', ''), cep=row.get('CEP', ''), numero=row.get('Número', ''), entrega_endereco=row.get('Entrega Endereço', ''), entrega_numero=row.get('Entrega Número', ''), entrega_bairro=row.get('Entrega Bairro', ''), entrega_cidade=row.get('Entrega Cidade', ''), entrega_estado=row.get('Entrega Estado', ''), entrega_cep=row.get('Entrega CEP', ''))
+                        log.append(f"✅ Empresa '{row['Nome da Empresa']}' importada.")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao importar empresa: {str(e)}")
+            if 'Materiais' in df:
+                for _, row in df['Materiais'].iterrows():
+                    try:
+                        url = f"{SUPABASE_URL}/rest/v1/materiais"
+                        dados = {"denominacao": row['Denominação'], "marca": row.get('Marca', ''), "grupo_material": row.get('Grupo', ''), "unidade_medida": row.get('Unidade', 'unidade'), "valor_unitario": float(row.get('Valor Unitário', 0)), "fornecedor": row.get('Fornecedor', ''), "especificacao": row.get('Especificação', '')}
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201: log.append(f"✅ Material '{row['Denominação']}' cadastrado.")
+                        else: log.append(f"❌ Erro ao cadastrar material: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar material: {str(e)}")
             if 'Fornecedores' in df:
-                for _, r in df['Fornecedores'].iterrows():
-                    try: criar_fornecedor(nome=r['Nome'], cnpj=r.get('CNPJ',''), contato=r.get('Contato',''), telefone=r.get('Telefone',''), email=r.get('Email',''), endereco=r.get('Endereço','')); log.append(f"✅ {r['Nome']}")
-                    except Exception as e: log.append(f"❌ {e}")
+                for _, row in df['Fornecedores'].iterrows():
+                    try:
+                        criar_fornecedor(nome=row['Nome'], cnpj=row.get('CNPJ', ''), contato=row.get('Contato', ''), telefone=row.get('Telefone', ''), email=row.get('Email', ''), endereco=row.get('Endereço', ''))
+                        log.append(f"✅ Fornecedor '{row['Nome']}' cadastrado.")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao cadastrar fornecedor: {str(e)}")
+            if 'Serviços' in df:
+                for _, row in df['Serviços'].iterrows():
+                    try:
+                        empresa_id = None
+                        if row.get('Cliente'):
+                            empresas = buscar_empresas()
+                            for emp in empresas:
+                                if emp.get('nome_empresa') == row['Cliente']:
+                                    empresa_id = emp['id']; break
+                        url = f"{SUPABASE_URL}/rest/v1/servicos"
+                        dados = {"codigo_servico": row['Código'], "titulo": row['Título'], "empresa_id": empresa_id, "tipo": row['Tipo'], "status": row['Status'], "quantidade": row.get('Quantidade', ''), "dimensao": row.get('Dimensão', ''), "numero_cores": row.get('Nº Cores'), "valor_cobrado": float(row.get('Valor Cobrado', 0)), "data_abertura": row.get('Data Abertura'), "previsao_entrega": row.get('Previsão Entrega'), "observacoes": row.get('Observações', '')}
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201: log.append(f"✅ Serviço '{row['Código']}' cadastrado.")
+                        else: log.append(f"❌ Erro ao cadastrar serviço: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar serviço: {str(e)}")
+            if 'Envios' in df:
+                for _, row in df['Envios'].iterrows():
+                    try:
+                        empresa_id = None
+                        if row.get('Cliente'):
+                            empresas = buscar_empresas()
+                            for emp in empresas:
+                                if emp.get('nome_empresa') == row['Cliente']:
+                                    empresa_id = emp['id']; break
+                        if not empresa_id:
+                            log.append(f"⚠️ Empresa '{row['Cliente']}' não encontrada para envio. Pulando..."); continue
+                        url = f"{SUPABASE_URL}/rest/v1/envios"
+                        dados = {"tipo_envio": row['Tipo'], "empresa_id": empresa_id, "descricao": row['Descrição'], "codigo_rastreio": row['Código Rastreio'], "data_envio": row['Data Envio'], "data_entrega": row.get('Data Entrega'), "status": row['Status']}
+                        response = requests.post(url, json=dados, headers=headers)
+                        if response.status_code == 201: log.append(f"✅ Envio '{row['Código Rastreio']}' cadastrado.")
+                        else: log.append(f"❌ Erro ao cadastrar envio: {response.text}")
+                    except Exception as e:
+                        log.append(f"❌ Erro ao processar envio: {str(e)}")
             return render_template('importar_excel.html', log=log)
-        except Exception as e: flash(f"❌ Erro: {e}"); return redirect(request.url)
+        except Exception as e:
+            flash(f"❌ Erro ao ler o arquivo: {str(e)}")
+            return redirect(request.url)
     return render_template('importar_excel.html', log=None)
 
 # ========================
