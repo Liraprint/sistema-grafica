@@ -3153,16 +3153,15 @@ def pdf_orcamento(id):
     for item in itens:
         qtd = int(item['quantidade']) if item['quantidade'].is_integer() else item['quantidade']
         dimensao = item.get('dimensao', '')
-        # ✅ Dimensão mostra "—" se estiver vazia
         dimensao_display = dimensao if dimensao else "—"
         itens_html += f"""
         <tr>
-        <td style="text-align: center; font-weight: 600;">{qtd}</td>
-        <td style="text-align: left; font-weight: 600;">{item['titulo']}</td>
-        <td style="text-align: center; color: #666;">{dimensao_display}</td>
-        <td style="text-align: center;">{item.get('numero_cores', '—')}x0</td>
-        <td style="text-align: right;">R$ {item['valor_unitario']:.2f}</td>
-        <td style="text-align: right; font-weight: 600;">R$ {item['valor_total']:.2f}</td>
+        <td style="text-align: center; font-weight: 600; font-size: 15px;">{qtd}</td>
+        <td style="text-align: left; font-weight: 600; font-size: 15px;">{item['titulo']}</td>
+        <td style="text-align: center; color: #666; font-size: 14px;">{dimensao_display}</td>
+        <td style="text-align: center; font-size: 14px;">{item.get('numero_cores', '—')}x0</td>
+        <td style="text-align: right; font-size: 14px;">R$ {item['valor_unitario']:.2f}</td>
+        <td style="text-align: right; font-weight: 600; font-size: 15px;">R$ {item['valor_total']:.2f}</td>
         </tr>
         """
     
@@ -3176,84 +3175,84 @@ def pdf_orcamento(id):
     <title>Orçamento {orcamento['codigo_servico']}</title>
     <style>
     @page {{ size: A4; margin: 2cm 2.5cm; }}
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.5; }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }}
     
     /* Cabeçalho com logo */
-    .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a56db; padding-bottom: 20px; }}
-    .header img {{ max-width: 180px; margin-bottom: 10px; }}
-    .header h1 {{ margin: 0; font-size: 28px; color: #1a56db; letter-spacing: 1px; }}
+    .header {{ text-align: center; margin-bottom: 50px; border-bottom: 3px solid #1a56db; padding-bottom: 30px; }}
+    .header img {{ max-width: 220px; margin-bottom: 15px; }}
+    .header h1 {{ margin: 0; font-size: 32px; color: #1a56db; letter-spacing: 1px; }}
     
     /* Número do orçamento em destaque */
     .orcamento-numero {{ 
-        font-size: 22px; 
+        font-size: 24px; 
         font-weight: bold; 
         color: #1a56db; 
         text-align: right; 
         background: #e8f0fe; 
-        padding: 12px 20px; 
+        padding: 15px 25px; 
         border-radius: 8px; 
-        border-left: 4px solid #1a56db;
-        margin: 20px 0;
+        border-left: 5px solid #1a56db;
+        margin: 40px 0;
     }}
     
     /* Data e local */
-    .data-local {{ font-size: 16px; color: #555; margin: 15px 0; }}
+    .data-local {{ font-size: 18px; color: #555; margin: 30px 0; }}
     
-    /* ✅ Cliente: sem retângulo feio, apenas destaque elegante */
+    /* Cliente: sem retângulo feio, apenas destaque elegante */
     .cliente-box {{ 
         background: #f8f9fa; 
-        padding: 20px 25px; 
+        padding: 25px 30px; 
         border-radius: 8px; 
-        margin: 25px 0; 
-        border: 1px solid #e0e0e0;
+        margin: 40px 0; 
+        border: 2px solid #e0e0e0;
     }}
-    .cliente-box h3 {{ margin: 0 0 8px 0; color: #1a56db; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }}
-    .cliente-nome {{ font-size: 24px; font-weight: bold; color: #2c3e50; }}
-    .cliente-responsavel {{ font-size: 16px; color: #666; margin-top: 5px; }}
+    .cliente-box h3 {{ margin: 0 0 10px 0; color: #1a56db; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .cliente-nome {{ font-size: 28px; font-weight: bold; color: #2c3e50; }}
+    .cliente-responsavel {{ font-size: 18px; color: #666; margin-top: 8px; }}
     
     /* ✅ Tabela com cabeçalho azul Liraprint */
-    table {{ width: 100%; border-collapse: collapse; margin: 30px 0 40px 0; font-size: 14px; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 50px 0 60px 0; font-size: 16px; }}
     th {{ 
         background-color: #1a56db;  /* ✅ Azul da marca Liraprint */
         color: white; 
-        font-size: 13px; 
+        font-size: 16px; 
         text-transform: uppercase; 
-        padding: 14px 12px;
+        padding: 18px 15px;
         border: none;
+        font-weight: 600;
     }}
-    td {{ border: 1px solid #e0e0e0; padding: 14px 12px; }}
+    td {{ border: 2px solid #e0e0e0; padding: 16px 15px; }}
     tr:nth-child(even) {{ background-color: #f8f9fa; }}
     
     /* ✅ Informações editáveis (prazo e pagamento) */
     .info-editaveis {{ 
         display: flex; 
         justify-content: space-between; 
-        margin: 30px 0; 
-        padding: 20px; 
+        margin: 50px 0; 
+        padding: 25px 30px; 
         background: #f0f7ff; 
         border-radius: 8px; 
-        border: 1px solid #d0e3ff;
+        border: 2px solid #d0e3ff;
+        font-size: 18px;
     }}
-    .info-item {{ font-size: 15px; }}
-    .info-item strong {{ color: #1a56db; }}
+    .info-item {{ font-size: 18px; }}
+    .info-item strong {{ color: #1a56db; font-size: 18px; }}
     
     /* Valor total destacado */
     .valor-total {{ 
         text-align: right; 
-        font-size: 24px; 
+        font-size: 28px; 
         font-weight: bold; 
         color: #1a56db; 
-        margin: 30px 0;
-        padding: 15px 0;
-        border-top: 2px solid #1a56db;
+        margin: 50px 0;
+        padding: 20px 0;
+        border-top: 3px solid #1a56db;
     }}
     
     /* Assinatura */
-    .assinatura {{ margin-top: 80px; text-align: center; font-size: 16px; line-height: 2; }}
-    .assinatura .nome-vendedor {{ font-weight: bold; font-size: 18px; color: #2c3e50; }}
-    .assinatura .telefone {{ color: #666; }}
-    
-    /* ✅ Sem rodapé de "documento gerado automaticamente" */
+    .assinatura {{ margin-top: 100px; text-align: center; font-size: 18px; line-height: 2.2; }}
+    .assinatura .nome-vendedor {{ font-weight: bold; font-size: 22px; color: #2c3e50; }}
+    .assinatura .telefone {{ color: #666; font-size: 18px; }}
     </style>
     </head>
     <body>
@@ -3303,13 +3302,13 @@ def pdf_orcamento(id):
     <div>Atenciosamente,</div>
     <div class="nome-vendedor">{nome_vendedor}</div>
     <div class="telefone">Tel: {telefone_vendedor}</div>
-    <div style="color: #666; font-size: 14px;">São Paulo - SP</div>
+    <div style="color: #666; font-size: 16px; margin-top: 10px;">São Paulo - SP</div>
     </div>
     </body>
     </html>
     '''
     pdf = pdfkit.from_string(html, False)
-    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")# ========================
+    return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")
 
 # MÓDULO DE RASTREAMENTO DE ENVIOS
 
