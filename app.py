@@ -953,10 +953,10 @@ def servicos_empresa(id):
     </body>
     </html>
     '''
-    @app.route('/servicos')
-    def listar_servicos():
-        if 'usuario' not in session:
-            return redirect(url_for('login'))
+@app.route('/servicos')
+def listar_servicos():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
     busca = request.args.get('q', '').strip()
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc&tipo=neq.Orçamento"
@@ -971,6 +971,7 @@ def servicos_empresa(id):
     except Exception as e:
         flash("Erro de conexão.")
         servicos = []
+
     def calcular_custo(servico_id):
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{servico_id}"
@@ -981,6 +982,7 @@ def servicos_empresa(id):
             return 0.0
         except:
             return 0.0
+
     def calcular_prazo_restante(previsao, status):
         if not previsao:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Sem prazo"}
@@ -1000,9 +1002,11 @@ def servicos_empresa(id):
                 return {"dias": dias, "cor": "#27ae60", "texto": f"Faltam {dias} dias"}
         except:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Erro"}
+
     html_todos = ""
     html_andamento = ""
     html_concluidos = ""
+
     for s in servicos:
         empresa_nome = s['empresas']['nome_empresa'] if s.get('empresas') else "Sem cliente"
         custo_materiais = calcular_custo(s['id'])
@@ -1015,6 +1019,7 @@ def servicos_empresa(id):
             'Entregue': 'status-entregue'
         }.get(s.get('status', ''), 'status-pendente')
         prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
+
         linha = f'''
         <tr>
         <td>{s['codigo_servico']}</td>
@@ -1039,6 +1044,7 @@ def servicos_empresa(id):
             html_andamento += linha
         elif s.get('status') in ['Concluído', 'Entregue']:
             html_concluidos += linha
+
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3060,24 +3066,27 @@ def pdf_orcamento(id):
     except Exception as e:
         flash("Erro ao carregar orçamento.")
         return redirect(url_for('listar_orcamentos'))
+    
     from datetime import datetime
     hoje = datetime.now().strftime("%d de %B de %Y")
     hoje = hoje.replace("January", "janeiro").replace("February", "fevereiro").replace("March", "março").replace("April", "abril").replace("May", "maio").replace("June", "junho").replace("July", "julho").replace("August", "agosto").replace("September", "setembro").replace("October", "outubro").replace("November", "novembro").replace("December", "dezembro")
+    
     itens_html = ""
     for item in itens:
         qtd = int(item['quantidade']) if item['quantidade'].is_integer() else item['quantidade']
         itens_html += f"""
         <tr>
-        <td>{qtd}</td>
-        <td>{item['titulo']}</td>
-        <td>{item.get('dimensao', '—')}</td>
-        <td>{item.get('numero_cores', '—')}x0</td>
+        <td style="text-align: center;">{qtd}</td>
+        <td style="text-align: left; font-weight: 600;">{item['titulo']}</td>
+        <td style="text-align: center;">{item.get('dimensao', '—')}</td>
+        <td style="text-align: center;">{item.get('numero_cores', '—')}x0</td>
         <td style="text-align: right;">R$ {item['valor_unitario']:.2f}</td>
-        <td style="text-align: right;">R$ {item['valor_total']:.2f}</td>
+        <td style="text-align: right; font-weight: 600;">R$ {item['valor_total']:.2f}</td>
         </tr>
         """
+    
     logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
-    logo_tag = f'<img src="{logo_url}" width="200" style="margin-bottom: 20px;">'
+    
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -3085,64 +3094,86 @@ def pdf_orcamento(id):
     <meta charset="UTF-8">
     <title>Orçamento {orcamento['codigo_servico']}</title>
     <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }}
-    .header {{ text-align: center; margin-bottom: 30px; }}
-    .header h1 {{ margin: 0; font-size: 24px; color: #2c3e50; text-transform: uppercase; letter-spacing: 1px; }}
-    .info {{ display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 14px; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 30px 0; }}
-    th, td {{ border: 1px solid #333; padding: 10px; text-align: left; }}
-    th {{ background-color: #f8f9fa; font-weight: 600; text-align: center; }}
-    .total-box {{ text-align: right; font-size: 18px; margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; }}
-    .footer {{ margin-top: 50px; text-align: center; font-size: 14px; line-height: 1.6; }}
-    .ass {{ margin-top: 80px; text-align: center; font-weight: 600; }}
+    @page {{ size: A4; margin: 2.5cm; }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #222; line-height: 1.6; }}
+    .header {{ text-align: center; margin-bottom: 50px; border-bottom: 3px solid #2c3e50; padding-bottom: 30px; }}
+    .header img {{ max-width: 220px; margin-bottom: 15px; }}
+    .header h1 {{ margin: 0; font-size: 32px; color: #2c3e50; letter-spacing: 1px; }}
+    
+    .info-block {{ display: flex; justify-content: space-between; margin: 40px 0 30px 0; }}
+    .orcamento-numero {{ font-size: 24px; font-weight: bold; color: #e74c3c; text-align: right; background: #fdf2f2; padding: 10px 20px; border-radius: 8px; border-left: 5px solid #e74c3c; }}
+    .data-local {{ font-size: 18px; color: #555; }}
+    
+    .cliente-box {{ background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 30px 0; border: 2px dashed #3498db; }}
+    .cliente-box h3 {{ margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; text-transform: uppercase; }}
+    .cliente-nome {{ font-size: 26px; font-weight: bold; color: #2c3e50; }}
+    
+    table {{ width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 16px; }}
+    th, td {{ border: 2px solid #333; padding: 18px 15px; }}
+    th {{ background-color: #2c3e50; color: white; font-size: 18px; text-transform: uppercase; }}
+    
+    .totals {{ text-align: right; margin: 50px 0 80px 0; font-size: 20px; line-height: 1.8; }}
+    .totals .valor-final {{ font-size: 28px; font-weight: bold; color: #27ae60; margin-top: 10px; }}
+    
+    .signature {{ margin-top: 100px; text-align: center; font-size: 18px; line-height: 2; }}
+    .signature .nome-vendedor {{ font-weight: bold; font-size: 20px; color: #2c3e50; }}
+    
+    .footer {{ text-align: center; font-size: 14px; color: #777; margin-top: 60px; border-top: 1px solid #ddd; padding-top: 20px; }}
     </style>
     </head>
     <body>
     <div class="header">
-    {logo_tag}
+    <img src="{logo_url}" alt="Logo Liraprint">
     <h1>PROPOSTA COMERCIAL</h1>
     </div>
-    <div class="info">
-    <div>
-    <p><strong>São Paulo, {hoje}.</strong></p>
-    <p><strong>Cliente:</strong> {empresa_nome}</p>
+    
+    <div class="info-block">
+    <div class="data-local"><strong>São Paulo, {hoje}.</strong></div>
+    <div class="orcamento-numero">Orçamento: {orcamento['codigo_servico']}</div>
     </div>
-    <div>
-    <p><strong>Orçamento:</strong> {orcamento['codigo_servico']}</p>
+    
+    <div class="cliente-box">
+    <h3>Cliente</h3>
+    <div class="cliente-nome">{empresa_nome}</div>
     </div>
-    </div>
+    
     <table>
     <thead>
     <tr>
-    <th>Quant.</th>
-    <th>Material</th>
-    <th>Dimensão</th>
-    <th>Cor</th>
-    <th>Preço Unitário</th>
-    <th>Preço Total</th>
+    <th style="width: 10%;">Quant.</th>
+    <th style="width: 35%;">Material</th>
+    <th style="width: 15%;">Dimensão</th>
+    <th style="width: 10%;">Cor</th>
+    <th style="width: 15%;">Valor Unit.</th>
+    <th style="width: 15%;">Valor Total</th>
     </tr>
     </thead>
     <tbody>
     {itens_html}
     </tbody>
     </table>
-    <div class="total-box">
-    <p><strong>Prazo de entrega:</strong> 07 dias úteis</p>
-    <p><strong>Pagamento:</strong> À vista</p>
-    <p><strong>Valor Total:</strong> R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}</p>
+    
+    <div class="totals">
+    <div><strong>Prazo de entrega:</strong> 07 dias úteis</div>
+    <div><strong>Pagamento:</strong> À vista</div>
+    <div class="valor-final">Valor Total: R$ {float(orcamento.get('valor_cobrado', 0) or 0):.2f}</div>
     </div>
-    <div class="ass">
-    <p>Atenciosamente</p>
-    <p>{nome_vendedor}</p>
-    <p>Tel: {telefone_vendedor}</p>
-    <p>São Paulo - SP</p>
+    
+    <div class="signature">
+    <div>Atenciosamente,</div>
+    <div class="nome-vendedor">{nome_vendedor}</div>
+    <div>Tel: {telefone_vendedor}</div>
+    <div>São Paulo - SP</div>
+    </div>
+    
+    <div class="footer">
+    Sistema de Gestão Liraprint © 2025 | Documento gerado automaticamente
     </div>
     </body>
     </html>
     '''
     pdf = pdfkit.from_string(html, False)
     return send_file(BytesIO(pdf), as_attachment=True, download_name=f"orcamento_{orcamento['codigo_servico']}.pdf", mimetype="application/pdf")
-
 # ========================
 # MÓDULO DE RASTREAMENTO DE ENVIOS
 # ========================
