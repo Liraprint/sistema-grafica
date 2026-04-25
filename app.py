@@ -3156,15 +3156,16 @@ def pdf_orcamento(id):
         dimensao_display = dimensao if dimensao else "—"
         itens_html += f"""
         <tr>
-        <td style="text-align: center; font-weight: 600; font-size: 15px;">{qtd}</td>
-        <td style="text-align: left; font-weight: 600; font-size: 15px;">{item['titulo']}</td>
-        <td style="text-align: center; color: #666; font-size: 14px;">{dimensao_display}</td>
-        <td style="text-align: center; font-size: 14px;">{item.get('numero_cores', '—')}x0</td>
-        <td style="text-align: right; font-size: 14px;">R$ {item['valor_unitario']:.2f}</td>
-        <td style="text-align: right; font-weight: 600; font-size: 15px;">R$ {item['valor_total']:.2f}</td>
+        <td style="text-align: center; font-weight: 600; font-size: 16px;">{qtd}</td>
+        <td style="text-align: left; font-weight: 600; font-size: 16px;">{item['titulo']}</td>
+        <td style="text-align: center; color: #666; font-size: 15px;">{dimensao_display}</td>
+        <td style="text-align: center; font-size: 15px;">{item.get('numero_cores', '—')}x0</td>
+        <td style="text-align: right; font-size: 15px;">R$ {item['valor_unitario']:.2f}</td>
+        <td style="text-align: right; font-weight: 600; font-size: 16px;">R$ {item['valor_total']:.2f}</td>
         </tr>
         """
     
+    # ✅ Logo maior (de 220px para 280px)
     logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
     
     html = f'''
@@ -3179,7 +3180,7 @@ def pdf_orcamento(id):
     
     /* Cabeçalho com logo */
     .header {{ text-align: center; margin-bottom: 50px; border-bottom: 3px solid #1a56db; padding-bottom: 30px; }}
-    .header img {{ max-width: 220px; margin-bottom: 15px; }}
+    .header img {{ max-width: 280px; margin-bottom: 15px; }} /* ✅ Logo aumentado de 220px para 280px */
     .header h1 {{ margin: 0; font-size: 32px; color: #1a56db; letter-spacing: 1px; }}
     
     /* Número do orçamento em destaque */
@@ -3215,13 +3216,13 @@ def pdf_orcamento(id):
     th {{ 
         background-color: #1a56db;  /* ✅ Azul da marca Liraprint */
         color: white; 
-        font-size: 16px; 
+        font-size: 17px; /* ✅ Aumentado */
         text-transform: uppercase; 
-        padding: 18px 15px;
+        padding: 20px 15px; /* ✅ Mais espaçamento */
         border: none;
         font-weight: 600;
     }}
-    td {{ border: 2px solid #e0e0e0; padding: 16px 15px; }}
+    td {{ border: 2px solid #e0e0e0; padding: 18px 15px; }} /* ✅ Mais espaçamento interno */
     tr:nth-child(even) {{ background-color: #f8f9fa; }}
     
     /* ✅ Informações editáveis (prazo e pagamento) */
