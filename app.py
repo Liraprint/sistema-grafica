@@ -11,7 +11,9 @@ import pdfkit
 # ========================
 # 🧩 MENU FLUTUANTE (COPIADO EXATAMENTE COMO SOLICITADO)
 # ========================
-<!-- BOTÃO MENU DENTRO DO SISTEMA -->
+
+MENU_FLUTUANTE = '''
+<!-- BOTÃO MENU INTEGRADO AO LAYOUT -->
 <div style="margin-bottom: 20px;">
     <div style="position: relative; display: inline-block;">
         <button id="btnMenu" style="
@@ -29,7 +31,6 @@ import pdfkit
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             ☰ Menu
         </button>
-        <!-- O Menu Dropdown -->
         <div id="dropdownMenu" style="
             display: none; 
             position: absolute; 
@@ -54,8 +55,6 @@ import pdfkit
         </div>
     </div>
 </div>
-
-<!-- Script para abrir/fechar o menu -->
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const b = document.getElementById('btnMenu');
@@ -71,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 });
 </script>
+'''
 
 
 app = Flask(__name__)
@@ -463,7 +463,7 @@ def clientes():
     .footer {{ text-align: center; padding: 15px; background: #ecf0f1; color: #7f8c8d; font-size: 12px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📋 Menu da Gráfica</h1></div>
     <div class="user-info">
@@ -514,69 +514,10 @@ def gerenciar_usuarios():
         .back-link {{ display: inline-block; margin: 20px 0; color: #3498db; }}
         </style>
         </head>
-        <body>\n    {MENU_FLUTUANTE}
+        <body>\n
         <div class="container">
         <h2>🔐 Gerenciar Usuários</h2>
-        <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+        {MENU_FLUTUANTE}
         <div class="form-container">
         <h3>➕ Criar Novo Usuário</h3>
         <form method="post" action="/criar_usuario">
@@ -721,7 +662,7 @@ def cadastrar_cliente():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -794,70 +735,11 @@ def listar_empresas():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <div class="search-box">
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
     </div>
@@ -926,7 +808,7 @@ def detalhes_empresa(id):
     th {{ background: #ecf0f1; font-weight: 600; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1041,7 +923,7 @@ def editar_empresa(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>✏️ Editar {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1110,7 +992,7 @@ def servicos_empresa(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📋 Serviços - {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1273,70 +1155,11 @@ def listar_servicos():
     .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
     <div class="search-box">
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
@@ -1469,7 +1292,7 @@ def adicionar_servico():
         .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
         </style>
         </head>
-        <body>\n    {MENU_FLUTUANTE}
+        <body>\n
         <div class="container">
         <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
         <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1630,7 +1453,7 @@ def editar_servico(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1747,7 +1570,7 @@ def imprimir_os(id):
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -1843,7 +1666,7 @@ def pdf_os(id):
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -1914,70 +1737,11 @@ def configuracoes():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <form method="post" action="/salvar_configuracoes" class="form-container">
     <h3>Remetente (Etiquetas)</h3>
     <div><label>Nome do Remetente</label><input type="text" name="nome_remetente" value="{config['nome_remetente']}" required></div>
@@ -2057,70 +1821,11 @@ def listar_materiais():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-   <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table>
@@ -2187,7 +1892,7 @@ def detalhes_material(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📦 {material['denominacao']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2304,7 +2009,7 @@ def editar_material(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2443,7 +2148,7 @@ def cadastrar_material():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2599,70 +2304,11 @@ def estoque():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📊 Meu Estoque</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <div class="section">
     <h2 class="section-title">Adicionar ao Estoque</h2>
     <p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a></p>
@@ -2723,7 +2369,7 @@ def registrar_entrada_form():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📥 Registrar Entrada de Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2842,7 +2488,7 @@ def registrar_saida_form():
     .alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📤 Registrar Saída de Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2964,70 +2610,11 @@ def listar_fornecedores():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
@@ -3086,7 +2673,7 @@ def cadastrar_fornecedor():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3160,7 +2747,7 @@ def editar_fornecedor(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3237,70 +2824,11 @@ def listar_orcamentos():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>💰 Orçamentos</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
     <div style="text-align: center; padding: 20px;"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
@@ -3457,7 +2985,7 @@ def adicionar_orcamento():
     .data-entrega-preview strong {{ color: #27ae60; font-size: 16px; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>➕ Novo Orçamento</h1></div>
     <div class="user-info"><span>👤 {{session['usuario']}}</span><a href="/logout">🚪 Sair</a></div>
@@ -3679,7 +3207,7 @@ def registrar_envio():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3820,70 +3348,11 @@ def envios():
     .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            padding: 10px 25px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            ☰ Menu
-        </button>
-        <!-- O Menu Dropdown -->
-        <div id="dropdownMenu" style="
-            display: none; 
-            position: absolute; 
-            top: 45px; 
-            left: 0; 
-            background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
-            min-width: 220px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
-        </div>
-    </div>
-</div>
-
-<!-- Script para abrir/fechar o menu -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
-    }
-});
-</script>
+    {MENU_FLUTUANTE}
     <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
     <div class="section">
     <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
@@ -3980,7 +3449,7 @@ def editar_envio(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>\n
     <div class="container">
     <div class="header"><h1>✏️ Editar Envio</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
