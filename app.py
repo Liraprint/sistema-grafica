@@ -2911,232 +2911,166 @@ def adicionar_orcamento():
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = int(request.form.get('prazo_dias', 7))
+        observacoes_gerais = request.form.get('observacoes_gerais', '')
         
         if not empresa_id:
             flash("Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        # Calcula data de entrega pulando FDS e feriados
-        from datetime import timedelta
-        feriados = ["2026-01-01", "2026-02-17", "2026-04-03", "2026-04-21", "2026-05-01", "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02", "2026-11-15", "2026-11-20", "2026-12-25"]
-        data_inicio = datetime.strptime(data_abertura, "%Y-%m-%d") if data_abertura else datetime.now()
-        data_atual, dias_adicionados = data_inicio, 0
-        while dias_adicionados < prazo_dias:
-            data_atual += timedelta(days=1)
-            if data_atual.weekday() < 5 and data_atual.strftime("%Y-%m-%d") not in feriados:
-                dias_adicionados += 1
-        data_entrega_str = data_atual.strftime("%Y-%m-%d")
-        
         # Gera código OR-001, OR-002...
         try:
-            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
-            response = requests.get(url_seq, headers=headers)
-            numero = int(response.json()[0]['codigo_servico'].split('-')[1]) + 1 if response.status_code == 200 and response.json() else 1
-            codigo_servico = f"OR-{numero:03d}"
+            ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
+            n = int(ult[0]['codigo_servico'].split('-')[1])+1 if ult else 1
         except:
-            codigo_servico = "OR-001"
+            n = 1
+        
+        cod = f"OR-{n:03d}"
         
         try:
-            url = f"{SUPABASE_URL}/rest/v1/servicos"
-            dados_orc = {
-                "codigo_servico": codigo_servico, "titulo": "Orçamento Múltiplo",
-                "empresa_id": int(empresa_id), "tipo": "Orçamento", "status": "Pendente",
-                "data_abertura": data_abertura, "previsao_entrega": data_entrega_str,
-                "valor_cobrado": 0.0, "observacoes": request.form.get('observacoes_gerais', '')
-            }
-            response = requests.post(url, json=dados_orc, headers=headers)
-            if response.status_code != 201:
-                flash("❌ Erro ao criar orçamento."); return redirect(url_for('adicionar_orcamento'))
+            oid = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", 
+                json={
+                    "codigo_servico": cod,
+                    "titulo": "Orçamento Múltiplo",
+                    "empresa_id": int(empresa_id),
+                    "tipo": "Orçamento",
+                    "status": "Pendente",
+                    "data_abertura": data_abertura,
+                    "previsao_entrega": None,  # Removido cálculo automático
+                    "valor_cobrado": 0.0,
+                    "observacoes": observacoes_gerais
+                }, headers=headers).json().get('id')
             
-            url_busca = f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1"
-            resp_busca = requests.get(url_busca, headers=headers)
-            orcamento_id = resp_busca.json()[0]['id'] if resp_busca.status_code == 200 and resp_busca.json() else None
-            if not orcamento_id: flash("❌ ID não encontrado."); return redirect(url_for('adicionar_orcamento'))
-            
-            valor_total_orcamento = 0.0
-            titulos = request.form.getlist('item_titulo[]')
-            quantidades = request.form.getlist('item_quantidade[]')
-            dimensoes = request.form.getlist('item_dimensao[]')
-            cores = request.form.getlist('item_cores[]')
-            valores_unit = request.form.getlist('item_valor_unit[]')
-            
-            for i in range(len(titulos)):
-                try:
-                    titulo = titulos[i].strip()
-                    if not titulo: continue
-                    qtd = float(quantidades[i]) if quantidades[i] else 0
-                    vlr_unit = float(valores_unit[i]) if valores_unit[i] else 0
-                    vlr_total = qtd * vlr_unit
-                    valor_total_orcamento += vlr_total
-                    dados_item = {
-                        "orcamento_id": orcamento_id, "titulo": titulo, "quantidade": qtd,
-                        "dimensao": dimensoes[i].strip() if dimensoes[i] else "",
-                        "numero_cores": int(cores[i]) if cores[i] else None,
-                        "valor_unitario": vlr_unit, "valor_total": vlr_total
-                    }
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json=dados_item, headers=headers)
-                except: continue
+            if oid:
+                vt = 0.0
+                for i in range(len(request.form.getlist('item_titulo[]'))):
+                    t = request.form['item_titulo[]'][i].strip()
+                    if not t:
+                        continue
+                    q = float(request.form['item_quantidade[]'][i] or 0)
+                    vu = float(request.form['item_valor_unit[]'][i] or 0)
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", 
+                        json={
+                            "orcamento_id": oid,
+                            "titulo": t,
+                            "quantidade": q,
+                            "dimensao": request.form['item_dimensao[]'][i],
+                            "numero_cores": request.form['item_cores[]'][i],
+                            "valor_unitario": vu,
+                            "valor_total": q*vu
+                        }, headers=headers)
+                    vt += q*vu
                 
-            requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{orcamento_id}", json={"valor_cobrado": valor_total_orcamento}, headers=headers)
-            flash("✅ Orçamento criado com sucesso!"); return redirect(url_for('listar_orcamentos'))
-        except: flash("❌ Erro de conexão.")
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                    json={"valor_cobrado": vt}, headers=headers)
+                
+                flash("✅ Orçamento criado com sucesso!")
+                return redirect(url_for('listar_orcamentos'))
+        except Exception as e:
+            print("ERRO:", e)
+            flash("❌ Erro ao criar orçamento.")
     
-    empresas = buscar_empresas()
+    # Busca empresas para o dropdown
+    try:
+        empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
+    except:
+        empresas = []
+    
+    # Constrói opções do select
+    opts = ""
+    for e in empresas:
+        opts += f'<option value="{e["id"]}">{e["nome_empresa"]}</option>'
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Orçamento</title>
+    <title>Novo Orçamento</title>
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
-    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
-    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
-    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }}
-    .item-row {{ display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 50px; gap: 10px; align-items: end; margin-bottom: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; }}
-    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; font-size: 14px; }}
-    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    body {{ font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }}
+    .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+    .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
+    .content {{ padding: 30px; }}
+    .form-group {{ margin-bottom: 20px; }}
+    label {{ display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; }}
+    input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; box-sizing: border-box; }}
+    .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+    .item-row {{ background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
+    .btn {{ padding: 12px 25px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; }}
     .btn-blue {{ background: #3498db; }}
     .btn-red {{ background: #e74c3c; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
-    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
-    .data-entrega-preview {{ background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #27ae60; }}
-    .data-entrega-preview strong {{ color: #27ae60; font-size: 16px; }}
+    .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 20px; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
-    <div class="header"><h1>➕ Novo Orçamento</h1></div>
-    <div class="user-info"><span>👤 {{session['usuario']}}</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/orcamentos" class="back-link">← Voltar à lista</a>
-    
-    <form method="post" class="form-container" id="formOrcamento">
-        <div class="grid-2">
-            <div>
-                <label>Cliente *</label>
-                <select name="empresa_id" id="empresa_id" required onchange="calcularDataEntrega()">
-                    <option value="">Selecione uma empresa</option>
-                    {{''.join(f'<option value="{{e["id"]}}">{{e["nome_empresa"]}}</option>' for e in empresas)}}
-                </select>
-            </div>
-            <div>
-                <label>Data de Abertura *</label>
-                <input type="date" name="data_abertura" id="data_abertura" required onchange="calcularDataEntrega()">
-            </div>
+        <div class="header"><h1 style="margin:0;">➕ Novo Orçamento</h1></div>
+        <div class="content">
+            <a href="/orcamentos" class="back-link">← Voltar à lista</a>
+            
+            <form method="post">
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Cliente *</label>
+                        <select name="empresa_id" required>
+                            <option value="">Selecione uma empresa</option>
+                            {opts}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Abertura *</label>
+                        <input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Prazo de Entrega (dias úteis após aprovação da arte)</label>
+                    <input type="number" name="prazo_dias" value="7" min="1" placeholder="Ex: 7 dias úteis">
+                    <small style="color: #7f8c8d;">* A contagem inicia após aprovação da arte</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Observações Gerais</label>
+                    <textarea name="observacoes_gerais" rows="3" placeholder="Informações adicionais sobre o orçamento..."></textarea>
+                </div>
+                
+                <h3 style="color: #2c3e50; margin-top: 30px;">Itens do Orçamento</h3>
+                <div id="itens-container">
+                    <div class="item-row">
+                        <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
+                            <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+                            <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" value="1" required></div>
+                            <div><label>Valor Unit. (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" value="0.00" required></div>
+                            <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                            <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                            <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" onclick="adicionarItem()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">💾 Gerar Orçamento</button>
+            </form>
         </div>
-        
-        <div class="grid-2">
-            <div>
-                <label>Prazo de Entrega (dias úteis) *</label>
-                <input type="number" name="prazo_dias" id="prazo_dias" value="7" min="1" required onchange="calcularDataEntrega()">
-            </div>
-            <div>
-                <label>Data Prevista de Entrega</label>
-                <div id="data_entrega_display" style="padding: 10px; background: #ecf0f1; border-radius: 6px; font-weight: 600; color: #2c3e50;">Preencha os dados acima</div>
-            </div>
-        </div>
-        
-        <div class="data-entrega-preview" id="preview_entrega" style="display: none;">
-            <strong>📅 Entrega prevista:</strong> <span id="texto_entrega"></span>
-        </div>
-
-        <h3 style="margin: 30px 0 20px 0; color: #2c3e50;">Itens do Orçamento</h3>
-        <div id="itens-container"></div>
-        
-        <button type="button" onclick="adicionarItem()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
-        
-        <div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;">
-            <label>Observações Gerais</label>
-            <textarea name="observacoes_gerais" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
-        </div>
-        
-        <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">💾 Gerar Orçamento</button>
-    </form>
-    
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     
     <script>
-    let itemCounter = 0;
-    
     function adicionarItem() {{
-        itemCounter++;
-        const container = document.getElementById('itens-container');
         const div = document.createElement('div');
         div.className = 'item-row';
-        div.id = 'item-' + itemCounter;
         div.innerHTML = `
-            <div>
-                <label>Material/Descrição *</label>
-                <input type="text" name="item_titulo[]" required placeholder="Ex: Banner Lona">
-            </div>
-            <div>
-                <label>Quantidade *</label>
-                <input type="number" name="item_quantidade[]" step="1" required placeholder="1" min="1">
-            </div>
-            <div>
-                <label>Valor Unit. (R$) *</label>
-                <input type="number" name="item_valor_unit[]" step="0.01" required placeholder="0.00" min="0">
-            </div>
-            <div>
-                <label>Dimensão</label>
-                <input type="text" name="item_dimensao[]" placeholder="Ex: 100x50">
-            </div>
-            <div>
-                <label>Cores</label>
-                <input type="number" name="item_cores[]" step="1" placeholder="4" min="1">
-            </div>
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <button type="button" onclick="removerItem('item-${{itemCounter}}')" class="btn btn-red" style="padding: 10px; font-size: 12px; margin-top: 22px;" title="Excluir este item">🗑️</button>
+            <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
+                <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+                <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="1" value="1" required></div>
+                <div><label>Valor Unit. (R$) *</label><input type="number" name="item_valor_unit[]" step="0.01" value="0.00" required></div>
+                <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
             </div>
         `;
-        container.appendChild(div);
+        document.getElementById('itens-container').appendChild(div);
     }}
-    
-    function removerItem(itemId) {{
-        if (confirm('Deseja realmente remover este item do orçamento?')) {{
-            const item = document.getElementById(itemId);
-            if (item) {{
-                item.remove();
-                calcularDataEntrega();
-            }}
-        }}
-    }}
-    
-    function calcularDataEntrega() {{
-        const dataAbertura = document.getElementById('data_abertura').value;
-        const prazoDias = parseInt(document.getElementById('prazo_dias').value) || 7;
-        if (!dataAbertura) {{
-            document.getElementById('data_entrega_display').textContent = 'Preencha a data de abertura';
-            document.getElementById('preview_entrega').style.display = 'none';
-            return;
-        }}
-        fetch('/calcular_data_entrega', {{
-            method: 'POST',
-            headers: {{'Content-Type': 'application/json'}},
-            body: JSON.stringify({{data_abertura: dataAbertura, dias: prazoDias}})
-        }})
-        .then(response => response.json())
-        .then(data => {{
-            document.getElementById('data_entrega_display').textContent = data.data_entrega.split('-').reverse().join('/');
-            document.getElementById('texto_entrega').textContent = data.data_entrega.split('-').reverse().join('/') + ' (' + prazoDias + ' dias úteis)';
-            document.getElementById('preview_entrega').style.display = 'block';
-        }})
-        .catch(error => {{ console.error('Erro:', error); document.getElementById('data_entrega_display').textContent = 'Erro ao calcular'; }});
-    }}
-    
-    window.onload = function() {{
-        adicionarItem();
-        const hoje = new Date().toISOString().split('T')[0];
-        document.getElementById('data_abertura').value = hoje;
-        calcularDataEntrega();
-    }};
     </script>
     </body>
     </html>
@@ -3714,7 +3648,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        url = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa,cnpj,telefone,email,endereco,bairro,cidade,estado),itens_orcamento(*)"
+        url = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0]
         
@@ -3733,46 +3667,36 @@ def pdf_orcamento(id):
         data_abr = fmt(orc.get('data_abertura'))
         total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
         
-        # HTML PROFISSIONAL - FONTES MAIORES E LIMPO
+        # HTML com FONTES MAIORES e SEM FOOTER
         h = []
         h.append('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Orçamento ' + str(orc.get('codigo_servico','')) + '</title>')
-        h.append('<style>@page{margin:2cm}body{font-family:Arial,sans-serif;margin:0;padding:0;color:#333;background:#fff;font-size:16px;line-height:1.6}.container{max-width:800px;margin:0 auto;padding:40px}.header{display:table;width:100%;margin-bottom:40px;border-bottom:4px solid #2c3e50;padding-bottom:30px}.logo-section{display:table-cell;width:50%;vertical-align:middle}.logo-section img{max-width:180px}.title-section{display:table-cell;width:50%;text-align:right;vertical-align:middle}.doc-title{font-size:48px;font-weight:bold;color:#2c3e50;margin:0 0 10px;letter-spacing:3px}.doc-number{font-size:22px;color:#7f8c8d;background:#ecf0f1;padding:10px 25px;border-radius:5px;display:inline-block}.info-section{margin-bottom:35px}.info-grid{display:table;width:100%;margin-bottom:25px}.info-box{display:table-cell;width:50%;padding:25px;background:#f8f9fa;border-radius:8px;vertical-align:top}.info-box-left{border-right:4px solid #fff}.info-label{font-size:13px;text-transform:uppercase;color:#7f8c8d;font-weight:bold;margin-bottom:10px;letter-spacing:1px}.info-value{font-size:18px;color:#2c3e50;font-weight:600;margin:6px 0}.info-value-small{font-size:15px;color:#555;margin:4px 0}.delivery-box{background:#e8f5e9;border-left:6px solid #27ae60;padding:25px;margin:30px 0;border-radius:5px}.delivery-label{font-size:14px;color:#27ae60;font-weight:bold;text-transform:uppercase;margin-bottom:10px}.delivery-text{font-size:16px;color:#27ae60;line-height:1.6}.items-section{margin:40px 0}.section-title{font-size:24px;font-weight:bold;color:#2c3e50;margin-bottom:25px;padding-bottom:12px;border-bottom:3px solid #ecf0f1}.items-table{width:100%;border-collapse:collapse;margin:25px 0;font-size:15px}.items-table thead{background:#2c3e50;color:white}.items-table th{padding:18px 15px;text-align:left;font-weight:bold;font-size:14px;text-transform:uppercase}.items-table td{padding:18px 15px;border-bottom:2px solid #ecf0f1;font-size:15px}.items-table tbody tr:nth-child(even){background:#f8f9fa}.text-center{text-align:center}.text-right{text-align:right}.total-section{margin:40px 0;text-align:right}.total-box{display:inline-block;background:#2c3e50;color:white;padding:25px 50px;border-radius:10px;min-width:350px}.total-label{font-size:16px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;opacity:0.9}.total-value{font-size:42px;font-weight:bold;letter-spacing:2px}.obs-section{margin:40px 0;padding:25px;background:#fff9e6;border-left:5px solid #f39c12;border-radius:5px}.obs-title{font-size:16px;font-weight:bold;color:#f39c12;margin-bottom:12px;text-transform:uppercase}.obs-text{font-size:15px;color:#555;line-height:1.7}.footer{margin-top:60px;padding-top:35px;border-top:3px solid #ecf0f1;text-align:center;font-size:12px;color:#95a5a6}.footer strong{color:#2c3e50}</style></head><body><div class="container">')
+        h.append('<style>@page{margin:2cm}body{font-family:Arial,sans-serif;margin:0;padding:0;color:#333;background:#fff;font-size:18px}.container{max-width:800px;margin:0 auto;padding:40px}.header{display:table;width:100%;margin-bottom:40px;border-bottom:4px solid #2c3e50;padding-bottom:30px}.logo-section{display:table-cell;width:50%}.logo-section img{max-width:200px}.title-section{display:table-cell;width:50%;text-align:right}.doc-title{font-size:48px;font-weight:bold;color:#2c3e50;margin:0}.doc-number{font-size:22px;color:#7f8c8d;background:#ecf0f1;padding:10px 25px;border-radius:5px;display:inline-block;margin-top:10px}.info-section{margin-bottom:35px}.info-grid{display:table;width:100%}.info-box{display:table-cell;width:50%;padding:25px;background:#f8f9fa;border-radius:8px;vertical-align:top}.info-label{font-size:14px;text-transform:uppercase;color:#7f8c8d;font-weight:bold;margin-bottom:10px}.info-value{font-size:20px;color:#2c3e50;font-weight:600;margin:6px 0}.delivery-box{background:#e8f5e9;border-left:6px solid #27ae60;padding:25px;margin:30px 0;border-radius:5px}.delivery-text{font-size:16px;color:#27ae60;line-height:1.6}.items-section{margin:40px 0}.section-title{font-size:26px;font-weight:bold;color:#2c3e50;margin-bottom:25px;padding-bottom:12px;border-bottom:3px solid #ecf0f1}.items-table{width:100%;border-collapse:collapse;margin:25px 0;font-size:16px}.items-table thead{background:#2c3e50;color:white}.items-table th{padding:20px 15px;text-align:left;font-weight:bold;font-size:15px}.items-table td{padding:20px 15px;border-bottom:2px solid #ecf0f1;font-size:16px}.items-table tbody tr:nth-child(even){background:#f8f9fa}.text-center{text-align:center}.text-right{text-align:right}.total-section{margin:50px 0;text-align:right}.total-box{display:inline-block;background:#2c3e50;color:white;padding:20px 40px;border-radius:8px}.total-label{font-size:16px;text-transform:uppercase;margin-bottom:10px;opacity:0.9}.total-value{font-size:32px;font-weight:bold}</style></head><body><div class="container">')
         
         # Header - APENAS LOGO + TÍTULO
         h.append('<div class="header"><div class="logo-section"><img src="' + logo_url + '" alt="Liraprint" onerror="this.style.display=\'none\'"/></div><div class="title-section"><div class="doc-title">ORÇAMENTO</div><div class="doc-number">' + str(orc.get('codigo_servico','—')) + '</div></div></div>')
         
-        # Informações do cliente e do orçamento (SEM STATUS)
-        h.append('<div class="info-section"><div class="info-grid"><div class="info-box info-box-left"><div class="info-label">Cliente</div><div class="info-value">' + str(cliente) + '</div><div style="margin-top:20px;"><div class="info-value-small"><strong>CNPJ:</strong> ' + str(emp.get('cnpj','—')) + '</div><div class="info-value-small"><strong>Tel:</strong> ' + str(emp.get('telefone','—')) + '</div><div class="info-value-small"><strong>Email:</strong> ' + str(emp.get('email','—')) + '</div></div></div><div class="info-box"><div class="info-label">Dados do Orçamento</div><div class="info-value-small"><strong>Emissão:</strong> ' + str(data_abr) + '</div><div class="info-value-small"><strong>Validade:</strong> 30 dias</div></div></div></div>')
+        # Informações
+        h.append('<div class="info-section"><div class="info-grid"><div class="info-box"><div class="info-label">Cliente</div><div class="info-value">' + str(cliente) + '</div><div style="margin-top:15px;"><div style="font-size:15px;color:#555;margin:4px 0;"><strong>CNPJ:</strong> ' + str(emp.get('cnpj','—')) + '</div><div style="font-size:15px;color:#555;margin:4px 0;"><strong>Tel:</strong> ' + str(emp.get('telefone','—')) + '</div></div></div><div class="info-box"><div class="info-label">Dados do Orçamento</div><div style="font-size:15px;color:#555;margin:4px 0;"><strong>Emissão:</strong> ' + str(data_abr) + '</div><div style="font-size:15px;color:#555;margin:4px 0;"><strong>Validade:</strong> 30 dias</div></div></div></div>')
         
-        # Box de entrega prevista - TEXTO EXPLICATIVO
-        h.append('<div class="delivery-box"><div class="delivery-label">📅 Previsão de Entrega</div><div class="delivery-text"><strong>Prazo:</strong> A combinar (dias úteis)<br><em>* A previsão de entrega começa a contar após a aprovação deste orçamento</em></div></div>')
+        # Box de entrega
+        h.append('<div class="delivery-box"><div class="delivery-text"><strong>📅 Prazo de Entrega:</strong><br>Dias úteis após aprovação da arte<br><em>* A contagem inicia após aprovação</em></div></div>')
         
-        # Tabela de itens
-        h.append('<div class="items-section"><div class="section-title">Itens Orçados</div><table class="items-table"><thead><tr><th width="5%">#</th><th width="55%">Descrição</th><th width="15%" class="text-center">Qtd</th><th width="25%" class="text-right">Valor</th></tr></thead><tbody>')
+        # Tabela - FONTES MAIORES
+        h.append('<div class="items-section"><div class="section-title">Itens Orçados</div><table class="items-table"><thead><tr><th width="5%">#</th><th width="50%">Descrição</th><th width="15%" class="text-center">Qtd</th><th width="30%" class="text-right">Valor</th></tr></thead><tbody>')
         
-        # Linhas da tabela
         itens = orc.get('itens_orcamento', [])
         for i, item in enumerate(itens):
-            h.append('<tr><td class="text-center">' + str(i+1) + '</td><td><strong>' + str(item.get('titulo','—')) + '</strong><br><small style="color:#7f8c8d">' + str(item.get('dimensao','')) + '</small></td><td class="text-center">' + str(item.get('quantidade','1')) + '</td><td class="text-right">R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td></tr>')
+            h.append('<tr><td class="text-center">' + str(i+1) + '</td><td><strong style="font-size:17px">' + str(item.get('titulo','—')) + '</strong><br><small style="color:#7f8c8d">' + str(item.get('dimensao','')) + '</small></td><td class="text-center">' + str(item.get('quantidade','1')) + '</td><td class="text-right" style="font-size:17px">R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td></tr>')
         
-        # Fecha tabela e adiciona total
         h.append('</tbody></table></div>')
+        
+        # Total - TAMANHO MÉDIO, MOVIDO PARA BAIXO
         h.append('<div class="total-section"><div class="total-box"><div class="total-label">Total do Orçamento</div><div class="total-value">R$ ' + "{:.2f}".format(total) + '</div></div></div>')
         
-        # Observações (se existir)
-        if orc.get('observacoes'):
-            h.append('<div class="obs-section"><div class="obs-title">Observações</div><div class="obs-text">' + str(orc['observacoes']) + '</div></div>')
-        
-        # Rodapé
-        h.append('<div class="footer"><div style="margin-bottom:12px;"><strong>LIRAPRINT</strong> - Gráfica Rápida<br>R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070<br>Tel: (11) XXXX-XXXX</div><div>Documento gerado em ' + datetime.now().strftime('%d/%m/%Y às %H:%M') + '<br>Este orçamento é válido por 30 dias a partir da data de emissão</div></div>')
-        
-        # Fecha HTML
+        # SEM FOOTER - fecha HTML
         h.append('</div></body></html>')
         
-        # Junta tudo
         html = "".join(h)
-        
-        # Gera PDF
         pdf = pdfkit.from_string(html, False, options={"quiet": "", "encoding": "UTF-8"})
         return send_file(BytesIO(pdf), as_attachment=True, download_name="Orcamento_" + str(orc.get('codigo_servico','')) + ".pdf", mimetype="application/pdf")
         
