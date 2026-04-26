@@ -2885,6 +2885,154 @@ def adicionar_dias_uteis(data_inicio, dias):
     
     return data_atual
 
+@app.route('/adicionar_orcamento', methods=['GET', 'POST'])
+def adicionar_orcamento():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        empresa_id = request.form.get('empresa_id')
+        data_abertura = request.form.get('data_abertura')
+        prazo_dias = request.form.get('prazo_dias', '7')
+        observacoes = request.form.get('observacoes_gerais', '')
+        
+        if not empresa_id:
+            flash("Cliente é obrigatório!")
+            return redirect(url_for('adicionar_orcamento'))
+        
+        # Gera código OR-XXX
+        try:
+            ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
+            n = int(ult[0]['codigo_servico'].split('-')[1]) + 1 if ult and len(ult) > 0 else 1
+        except:
+            n = 1
+        cod = f"OR-{n:03d}"
+        
+        try:
+            # Cria o orçamento no Supabase
+            resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json={
+                "codigo_servico": cod,
+                "titulo": "Orçamento Múltiplo",
+                "empresa_id": int(empresa_id),
+                "tipo": "Orçamento",
+                "status": "Pendente",
+                "data_abertura": data_abertura,
+                "previsao_entrega": None,
+                "valor_cobrado": 0.0,
+                "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
+            }, headers=headers)
+            
+            if resp.status_code == 201:
+                oid = resp.json().get('id')
+                vt = 0.0
+                
+                titulos = request.form.getlist('item_titulo[]')
+                qt = request.form.getlist('item_quantidade[]')
+                vu = request.form.getlist('item_valor_unit[]')
+                dims = request.form.getlist('item_dimensao[]')
+                cores = request.form.getlist('item_cores[]')
+                
+                for i in range(len(titulos)):
+                    t = titulos[i].strip()
+                    if not t: continue
+                    try:
+                        q = float(qt[i].replace(',', '.') or 0)
+                        v = float(vu[i].replace(',', '.') or 0)
+                    except:
+                        continue
+                    total = q * v
+                    vt += total
+                    
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
+                        "orcamento_id": oid, "titulo": t, "quantidade": q,
+                        "dimensao": dims[i] if i < len(dims) else "",
+                        "numero_cores": cores[i] if i < len(cores) else "",
+                        "valor_unitario": v, "valor_total": total
+                    }, headers=headers)
+                
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", json={"valor_cobrado": vt}, headers=headers)
+                flash("✅ Orçamento criado com sucesso!")
+                return redirect(url_for('listar_orcamentos'))
+        except Exception as e:
+            print("Erro ao criar orçamento:", e)
+            flash("❌ Erro ao criar orçamento.")
+    
+    # GET - Renderiza o formulário
+    try:
+        emps = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
+    except:
+        emps = []
+    
+    opts = "".join([f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in emps])
+    
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <title>Novo Orçamento</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 1100px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+        .form-group {{ margin-bottom: 15px; }}
+        label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
+        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
+        .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
+        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }}
+        .btn-blue {{ background: #3498db; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="header"><h1>➕ Novo Orçamento</h1></div>
+        <div class="content">
+            <a href="/orcamentos" class="back-link">← Voltar</a>
+            <form method="post">
+                <div class="grid">
+                    <div class="form-group"><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione</option>{opts}</select></div>
+                    <div class="form-group"><label>Data Abertura *</label><input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}" required></div>
+                </div>
+                <div class="form-group"><label>Prazo (dias úteis)</label><input type="number" name="prazo_dias" value="7" min="1"></div>
+                <div class="form-group"><label>Observações</label><textarea name="observacoes_gerais" rows="2"></textarea></div>
+                <h3>Itens</h3>
+                <div id="itens-container">
+                    <div class="item-row">
+                        <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
+                            <div><label>Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner" required></div>
+                            <div><label>Qtd *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                            <div><label>Valor Unit. *</label><input type="text" name="item_valor_unit[]" placeholder="0,00" required></div>
+                            <div><label>Dimensão</label><input type="text" name="item_dimensao[]"></div>
+                            <div><label>Cores</label><input type="number" name="item_cores[]" value="4"></div>
+                            <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:25px;">🗑️</button></div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="addRow()" class="btn btn-blue" style="margin:10px 0;width:100%;">+ Item</button>
+                <button type="submit" class="btn" style="width:100%;margin-top:15px;">💾 Gerar</button>
+            </form>
+        </div>
+    </div>
+    <script>
+    function addRow() {{
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `<div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
+            <div><input type="text" name="item_titulo[]" placeholder="Ex: Banner" required></div>
+            <div><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+            <div><input type="text" name="item_valor_unit[]" placeholder="0,00" required></div>
+            <div><input type="text" name="item_dimensao[]"></div>
+            <div><input type="number" name="item_cores[]" value="4"></div>
+            <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:5px;">🗑️</button></div>
+        </div>`;
+        document.getElementById('itens-container').appendChild(div);
+    }}
+    </script>
+    </body></html>'''
+
 @app.route('/editar_orcamento/<int:id>', methods=['GET', 'POST'])
 def editar_orcamento(id):
     if 'usuario' not in session:
