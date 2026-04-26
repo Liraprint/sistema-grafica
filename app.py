@@ -357,7 +357,9 @@ def login():
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
-    return f'''
+    
+    # HTML injetado com concatenação (sem 'f' para não quebrar o CSS com chaves {})
+    return '''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
@@ -378,7 +380,8 @@ def login():
     .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
     </style>
     </head>
-    <body>\n    {MENU_FLUTUANTE}
+    <body>
+    ''' + MENU_FLUTUANTE + '''
     <div class="login-container">
     <div class="header"><h1>Login</h1></div>
     <form method="post" class="form-container">
@@ -3649,46 +3652,50 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        url_serv = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa),itens_orcamento(*)&order=codigo_servico.desc"
-        response = requests.get(url_serv, headers=headers)
-        if response.status_code != 200 or not response.json():
-            flash("Orçamento não encontrado.")
-            return redirect(url_for('listar_orcamentos'))
-        orcamento = response.json()[0]
-    except:
-        flash("Erro ao carregar orçamento.")
-        return redirect(url_for('listar_orcamentos'))
-    
-    def fmt(data):
-        return data[:10].split("-")[::-1] if data and len(data)>=10 else "—"
-    
-    total = sum(float(i.get('valor_total',0) or 0) for i in orcamento.get('itens_orcamento',[]))
-    logo = "https://i.postimg.cc/RVqcJzzQ/logo.png"
-    cliente = orcamento.get('empresas',{}).get('nome_empresa','—') if orcamento.get('empresas') else '—'
-    
-    # HTML do PDF - usando concatenação simples para evitar erros
-    html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento ' + str(orcamento.get('codigo_servico','')) + '</title>'
-    html += '<style>body{font-family:Arial,sans-serif;padding:30px;margin:0}.container{max-width:800px;margin:auto}.header{background:#2c3e50;color:white;padding:20px;text-align:center}.logo{max-width:100px}.info{margin:20px 0}.destaque{background:#e8f5e9;padding:12px;border-left:4px solid #27ae60;margin:15px 0}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#ecf0f1}.total{text-align:right;font-size:18px;font-weight:bold;margin-top:20px}.footer{margin-top:40px;text-align:center;font-size:11px;color:#666;border-top:1px solid #eee;padding-top:15px}</style>'
-    html += '</head><body><div class="container">'
-    html += '<div class="header"><img src="' + logo + '" class="logo"><h1 style="margin:10px 0 0">ORÇAMENTO</h1><p style="margin:5px 0 0">' + str(orcamento.get('codigo_servico','—')) + '</p></div>'
-    html += '<div class="info"><p><strong>Cliente:</strong> ' + cliente + '</p><p><strong>Data:</strong> ' + fmt(orcamento.get('data_abertura')) + '</p><p><strong>Status:</strong> ' + str(orcamento.get('status','—')) + '</p></div>'
-    html += '<div class="destaque"><strong>📅 Entrega Prevista:</strong> ' + fmt(orcamento.get('previsao_entrega')) + ' <small style="color:#666;display:block">(Dias úteis, excluindo FDS/feriados)</small></div>'
-    html += '<table><thead><tr><th>Descrição</th><th>Qtd</th><th>Dimensão</th><th>Valor</th></tr></thead><tbody>'
-    
-    for item in orcamento.get('itens_orcamento',[]):
-        html += '<tr><td>' + str(item.get('titulo','—')) + '</td><td>' + str(item.get('quantidade','—')) + '</td><td>' + str(item.get('dimensao','—')) + '</td><td>R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td></tr>'
-    
-    html += '</tbody></table><div class="total">TOTAL: R$ ' + "{:.2f}".format(total) + '</div>'
-    if orcamento.get('observacoes'):
-        html += '<p style="margin-top:20px"><strong>Obs:</strong><br>' + str(orcamento['observacoes'][:200]) + '</p>'
-    html += '<div class="footer">Liraprint © 2025 | Gerado em ' + datetime.now().strftime('%d/%m/%Y %H:%M') + '</div></div></body></html>'
-    
-    try:
-        pdf = pdfkit.from_string(html, False, options={"quiet":""})
-        return send_file(BytesIO(pdf), as_attachment=True, download_name="orc_" + str(orcamento.get('codigo_servico','')) + ".pdf", mimetype="application/pdf")
+        url = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa),itens_orcamento(*)"
+        resp = requests.get(url, headers=headers)
+        orc = resp.json()[0]
+        
+        cliente = orc['empresas']['nome_empresa'] if orc.get('empresas') else 'Cliente'
+        
+        # Função fmt CORRIGIDA com join
+        def fmt(data):
+            if not data or len(str(data)) < 10:
+                return "—"
+            try:
+                return "/".join(str(data)[:10].split("-")[::-1])
+            except:
+                return "—"
+        
+        data_ent = fmt(orc.get('previsao_entrega'))
+        data_abr = fmt(orc.get('data_abertura'))
+        total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
+        
+        # HTML simples e seguro
+        html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento ' + str(orc.get('codigo_servico','')) + '</title>'
+        html += '<style>body{font-family:Arial,sans-serif;padding:40px;margin:0}.header{text-align:center;border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:30px}.header img{max-width:120px}.destaque{background:#e8f5e9;padding:15px;margin:20px 0;border-left:4px solid #27ae60}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ccc;padding:10px;text-align:left}th{background:#ecf0f1}.total{text-align:right;font-size:20px;font-weight:bold;margin-top:20px}.footer{margin-top:50px;text-align:center;font-size:11px;color:#666;border-top:1px solid #ccc;padding-top:15px}</style></head><body>'
+        html += '<div class="header"><img src="https://i.postimg.cc/RVqcJzzQ/logo.png" alt="Logo"><h1 style="margin:10px 0;color:#2c3e50">ORÇAMENTO ' + str(orc.get('codigo_servico','—')) + '</h1></div>'
+        html += '<p><strong>Cliente:</strong> ' + str(cliente) + '</p>'
+        html += '<p><strong>Data Abertura:</strong> ' + str(data_abr) + '</p>'
+        html += '<p><strong>Status:</strong> ' + str(orc.get('status','—')) + '</p>'
+        html += '<div class="destaque"><strong>📅 Entrega Prevista:</strong> ' + str(data_ent) + '<br><small style="color:#666">(Dias úteis - FDS/feriados excluídos)</small></div>'
+        html += '<h3>Itens</h3><table><tr><th>Descrição</th><th>Qtd</th><th>Valor</th></tr>'
+        
+        for item in orc.get('itens_orcamento', []):
+            vlr = float(item.get('valor_total', 0) or 0)
+            html += '<tr><td>' + str(item.get('titulo','—')) + '</td><td>' + str(item.get('quantidade','—')) + '</td><td>R$ ' + "{:.2f}".format(vlr) + '</td></tr>'
+        
+        html += '</table><div class="total">TOTAL: R$ ' + "{:.2f}".format(total) + '</div>'
+        if orc.get('observacoes'):
+            html += '<p style="margin-top:30px"><strong>Obs:</strong><br>' + str(orc['observacoes'][:200]) + '</p>'
+        html += '<div class="footer">Liraprint © 2025 | Gerado em ' + datetime.now().strftime('%d/%m/%Y %H:%M') + '</div></body></html>'
+        
+        pdf = pdfkit.from_string(html, False, options={"quiet": ""})
+        return send_file(BytesIO(pdf), as_attachment=True, download_name="orc_" + str(orc.get('codigo_servico','')) + ".pdf", mimetype="application/pdf")
+        
     except Exception as e:
-        print("Erro PDF:", e)
-        flash("❌ Erro ao gerar PDF")
+        print("ERRO PDF:", str(e))
+        flash("❌ Erro: " + str(e))
         return redirect(url_for('listar_orcamentos'))
 
 # ========================
