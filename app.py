@@ -357,7 +357,7 @@ def login():
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
-    return '''
+    return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
