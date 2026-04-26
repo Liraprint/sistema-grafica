@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 '''
 
-
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'minha_chave_secreta_123')
 
@@ -64,29 +63,29 @@ headers = {
 # Funções para acessar o Supabase
 # ========================
 def buscar_usuario_por_login(username, password):
-        try:
-            url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                dados = response.json()
-                return dados[0] if len(dados) > 0 else None
-            return None
-        except Exception as e:
-            print("Erro de conexão:", e)
-            return None
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            dados = response.json()
+            return dados[0] if len(dados) > 0 else None
+        return None
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return None
 
-    def buscar_usuarios():
-        try:
-            url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-            else:
-                print("Erro ao buscar usuários:", response.status_code, response.text)
-                return []
-        except Exception as e:
-            print("Erro de conexão:", e)
+def buscar_usuarios():
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("Erro ao buscar usuários:", response.status_code, response.text)
             return []
+    except Exception as e:
+        print("Erro de conexão:", e)
+        return []
 
     def criar_usuario(username, password, nivel, telefone=None):
         try:
