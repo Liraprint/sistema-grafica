@@ -378,7 +378,7 @@ def login():
     .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="login-container">
     <div class="header"><h1>Login</h1></div>
     <form method="post" class="form-container">
@@ -423,7 +423,7 @@ def clientes():
     .footer {{ text-align: center; padding: 15px; background: #ecf0f1; color: #7f8c8d; font-size: 12px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📋 Menu da Gráfica</h1></div>
     <div class="user-info">
@@ -474,7 +474,7 @@ def gerenciar_usuarios():
         .back-link {{ display: inline-block; margin: 20px 0; color: #3498db; }}
         </style>
         </head>
-        <body>
+        <body>\n    {{MENU_FLUTUANTE}}
         <div class="container">
         <h2>🔐 Gerenciar Usuários</h2>
         <a href="/clientes" class="back-link">← Voltar ao Menu</a>
@@ -622,7 +622,7 @@ def cadastrar_cliente():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -695,7 +695,7 @@ def listar_empresas():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -768,7 +768,7 @@ def detalhes_empresa(id):
     th {{ background: #ecf0f1; font-weight: 600; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -883,7 +883,7 @@ def editar_empresa(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>✏️ Editar {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -952,7 +952,7 @@ def servicos_empresa(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📋 Serviços - {empresa['nome_empresa']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1115,7 +1115,7 @@ def listar_servicos():
     .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1252,7 +1252,7 @@ def adicionar_servico():
         .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
         </style>
         </head>
-        <body>
+        <body>\n    {{MENU_FLUTUANTE}}
         <div class="container">
         <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
         <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1413,7 +1413,7 @@ def editar_servico(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>✏️ Editar Serviço: {servico['codigo_servico']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1530,7 +1530,7 @@ def imprimir_os(id):
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -1626,7 +1626,7 @@ def pdf_os(id):
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -1697,7 +1697,7 @@ def configuracoes():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1781,7 +1781,7 @@ def listar_materiais():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1852,7 +1852,7 @@ def detalhes_material(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📦 {material['denominacao']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1969,7 +1969,7 @@ def editar_material(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2108,7 +2108,7 @@ def cadastrar_material():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2264,7 +2264,7 @@ def estoque():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📊 Meu Estoque</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2329,7 +2329,7 @@ def registrar_entrada_form():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📥 Registrar Entrada de Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2448,7 +2448,7 @@ def registrar_saida_form():
     .alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📤 Registrar Saída de Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2570,7 +2570,7 @@ def listar_fornecedores():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2633,7 +2633,7 @@ def cadastrar_fornecedor():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2707,7 +2707,7 @@ def editar_fornecedor(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2784,7 +2784,7 @@ def listar_orcamentos():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>💰 Orçamentos</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -2945,7 +2945,7 @@ def adicionar_orcamento():
     .data-entrega-preview strong {{ color: #27ae60; font-size: 16px; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>➕ Novo Orçamento</h1></div>
@@ -3168,7 +3168,7 @@ def registrar_envio():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3309,7 +3309,7 @@ def envios():
     .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3410,7 +3410,7 @@ def editar_envio(id):
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n    {{MENU_FLUTUANTE}}
     <div class="container">
     <div class="header"><h1>✏️ Editar Envio</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -3648,6 +3648,7 @@ def importar_excel():
 def pdf_orcamento(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
         url_serv = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa),itens_orcamento(*)&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
@@ -3666,46 +3667,222 @@ def pdf_orcamento(id):
             return data_str[:10].split("-")[::-1]
         except: 
             return data_str[:10]
-        
+    
     total_itens = 0.0
     itens_html = ""
-    for item in orcamento.get('itens_orcamento', []):
+    for i, item in enumerate(orcamento.get('itens_orcamento', [])):
         total_item = float(item.get('valor_total', 0) or 0)
         total_itens += total_item
-        itens_html = itens_html + '<tr><td>' + str(item.get('titulo', '—')) + '</td><td>' + str(item.get('quantidade', '—')) + '</td><td>' + str(item.get('dimensao', '—')) + '</td><td>' + str(item.get('numero_cores', '—')) + '</td><td>R$ ' + "{:.2f}".format(float(item.get('valor_unitario', 0) or 0)) + '</td><td>R$ ' + "{:.2f}".format(total_item) + '</td></tr>'
-        
+        bg_class = ' class="bg-stripe"' if i % 2 == 1 else ''
+        itens_html = itens_html + '<tr' + bg_class + '><td class="text-center">' + str(i+1) + '</td><td>' + str(item.get('titulo', '—')) + '</td><td class="text-center">' + str(item.get('quantidade', '—')) + '</td><td class="text-center">' + str(item.get('dimensao', '—')) + '</td><td class="text-right">R$ ' + "{:.2f}".format(total_item) + '</td></tr>'
+    
     cliente_nome = orcamento.get('empresas', {}).get('nome_empresa', '—') if orcamento.get('empresas') else '—'
     data_entrega = formatar_data_br(orcamento.get('previsao_entrega'))
     data_abertura = formatar_data_br(orcamento.get('data_abertura'))
+    logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
     
-    # HTML do PDF - usando .format() para evitar erro com f-strings aninhados
-    html_template = """
-    <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento {codigo}</title>
-    <style>body{{font-family:Arial,sans-serif;padding:40px;color:#333;}}.header{{text-align:center;border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:30px;}}.header h1{{margin:0;color:#2c3e50;font-size:26px;}}.info{{margin:20px 0;}}.info p{{margin:8px 0;font-size:14px;}}.info strong{{color:#2c3e50;}}.destaque{{background:#e8f5e9;padding:15px;border-radius:8px;margin:15px 0;border-left:4px solid #27ae60;}}.destaque strong{{color:#27ae60;font-size:16px;}}table{{width:100%;border-collapse:collapse;margin:20px 0;}}th,td{{border:1px solid #ccc;padding:10px;text-align:left;font-size:13px;}}th{{background-color:#ecf0f1;color:#2c3e50;}}.total{{text-align:right;font-size:18px;margin-top:20px;font-weight:bold;}}.footer{{margin-top:50px;text-align:center;padding-top:20px;border-top:1px solid #ddd;font-size:11px;color:#7f8c8d;}}</style></head><body>
-    <div class="header"><h1>ORÇAMENTO</h1><p><strong>Código:</strong> {codigo}</p></div>
-    <div class="info"><p><strong>Cliente:</strong> {cliente}</p><p><strong>Data de Abertura:</strong> {data_abertura}</p><p><strong>Status:</strong> {status}</p></div>
-    <div class="destaque"><strong>📅 Entrega Prevista:</strong> {data_entrega} <small style="color:#666;display:block;margin-top:5px;">(Cálculo considera apenas dias úteis, excluindo sábados, domingos e feriados)</small></div>
-    <h3 style="margin-top:30px;">Itens Orçados</h3>
-    <table><thead><tr><th>Descrição</th><th>Qtd</th><th>Dimensão</th><th>Cores</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead><tbody>{itens_html}</tbody></table>
-    <div class="total"><p>TOTAL DO ORÇAMENTO: R$ {total:.2f}</p></div>
-    {obs_html}
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025<br>Gerado em: {data_geracao}</div></body></html>
+    html = """
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Orçamento """ + str(orcamento.get('codigo_servico', '')) + """</title>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        background-color: #fff;
+        font-size: 13px;
+    }
+    .invoice-container {
+        width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+    }
+    .row { letter-spacing: -1em; text-rendering: optimizespeed; }
+    .col {
+        display: inline-block;
+        vertical-align: top;
+        letter-spacing: normal;
+        word-spacing: normal;
+        text-rendering: auto;
+    }
+    .w-1-2 { width: 50%; }
+    .w-2-3 { width: 66.66%; }
+    .w-1-3 { width: 33.33%; }
+    .text-right { text-align: right; }
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    
+    .logo-box {
+        background-color: #2c3e50;
+        color: white;
+        padding: 15px;
+        width: 140px;
+        text-align: center;
+        border-radius: 4px;
+    }
+    .logo-box img { max-width: 100px; display: block; margin: 0 auto 8px; }
+    .logo-box div { font-size: 10px; }
+    .invoice-title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+        letter-spacing: 2px;
+    }
+    
+    .label-small {
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #777;
+        margin-bottom: 3px;
+    }
+    .info-value {
+        font-size: 13px;
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+    .recipient-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 5px 0;
+    }
+    
+    .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+        font-size: 12px;
+    }
+    .item-table th {
+        background-color: #2c3e50;
+        color: white;
+        padding: 10px 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+    .item-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .bg-stripe { background-color: #fafafa; }
+    
+    .summary-row { padding: 8px 0; font-size: 13px; }
+    .total-box {
+        background-color: #2c3e50;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .footer-bar {
+        border-top: 1px solid #eee;
+        padding: 20px 0 10px;
+        margin-top: 40px;
+        font-size: 10px;
+        color: #666;
+        text-align: center;
+    }
+    
+    .destaque-entrega {
+        background-color: #e8f5e9;
+        padding: 12px;
+        border-left: 4px solid #27ae60;
+        margin: 15px 0;
+        font-size: 13px;
+    }
+    .destaque-entrega strong {
+        color: #27ae60;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+<div class="invoice-container">
+    <!-- Header -->
+    <div class="row" style="margin-bottom: 25px;">
+        <div class="col w-1-2">
+            <div class="logo-box">
+                <img src="""" + logo_url + """" alt="Logo" onerror="this.style.display='none'"/>
+                <div style="font-size: 14px; font-weight: bold;">LIRAPRINT</div>
+                <div>Gráfica Rápida</div>
+            </div>
+        </div>
+        <div class="col w-1-2 text-right">
+            <h1 class="invoice-title">ORÇAMENTO</h1>
+            <div style="margin-top: 8px; font-size: 14px; color: #555;">
+                <strong>Código:</strong> """ + str(orcamento.get('codigo_servico', '—')) + """
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info Section -->
+    <div class="row" style="margin-bottom: 25px;">
+        <div class="col w-1-2">
+            <div class="label-small">CLIENTE</div>
+            <div class="recipient-name">""" + cliente_nome + """</div>
+            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; width: 300px;">
+                <div class="info-value"><strong>Data Abertura:</strong> """ + data_abertura + """</div>
+                <div class="info-value"><strong>Status:</strong> """ + str(orcamento.get('status', '—')) + """</div>
+            </div>
+        </div>
+        <div class="col w-1-2 text-right">
+            <div class="destaque-entrega">
+                <strong>📅 Entrega Prevista:</strong> """ + data_entrega + """<br>
+                <small style="color: #666; font-size: 11px;">(Cálculo considera dias úteis, excluindo FDS e feriados)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Items Table -->
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th class="text-center" width="5%">#</th>
+                <th class="text-left" width="40%">Descrição</th>
+                <th class="text-center" width="15%">Qtd</th>
+                <th class="text-center" width="20%">Dimensão</th>
+                <th class="text-right" width="20%">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            """ + (itens_html if itens_html else '<tr><td colspan="5" class="text-center">Nenhum item adicionado</td></tr>') + """
+        </tbody>
+    </table>
+    
+    <!-- Total -->
+    <div class="row" style="margin-top: 20px;">
+        <div class="col w-1-2">
+            <div style="font-size: 11px; color: #777; line-height: 1.5;">
+                <strong>Observações:</strong><br>
+                """ + str(orcamento.get('observacoes', 'Nenhuma observação.')[:150]) + """
+            </div>
+        </div>
+        <div class="col w-1-2">
+            <div class="total-box">
+                <div class="row">
+                    <div class="col w-1-2 text-left">TOTAL DO ORÇAMENTO</div>
+                    <div class="col w-1-2 text-right">R$ """ + "{:.2f}".format(total_itens) + """</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer-bar">
+        Sistema de Gestão para Gráfica Rápida | © 2025<br>
+        Documento gerado em """ + datetime.now().strftime('%d/%m/%Y às %H:%M') + """
+    </div>
+</div>
+</body>
+</html>
     """
-    
-    obs_html = '<p><strong>Observações:</strong><br>' + str(orcamento.get('observacoes', '—')) + '</p>' if orcamento.get('observacoes') else ''
-    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
-    
-    html = html_template.format(
-        codigo=orcamento.get('codigo_servico', '—'),
-        cliente=cliente_nome,
-        data_abertura=data_abertura,
-        status=orcamento.get('status', '—'),
-        data_entrega=data_entrega,
-        itens_html=itens_html if itens_html else '<tr><td colspan="6" style="text-align:center;">Nenhum item adicionado</td></tr>',
-        total=total_itens,
-        obs_html=obs_html,
-        data_geracao=data_geracao
-    )
     
     try:
         pdf = pdfkit.from_string(html, False, options={"quiet": ""})
@@ -3713,7 +3890,7 @@ def pdf_orcamento(id):
         return send_file(BytesIO(pdf), as_attachment=True, download_name=nome_arquivo, mimetype="application/pdf")
     except Exception as e:
         print("Erro ao gerar PDF:", e)
-        flash("❌ Erro ao gerar PDF. Verifique se o wkhtmltopdf está instalado.")
+        flash("❌ Erro ao gerar PDF.")
         return redirect(url_for('listar_orcamentos'))
 
 # ========================
