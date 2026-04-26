@@ -2921,7 +2921,7 @@ def adicionar_orcamento():
         try:
             # 1. Cria o orçamento
             print("\n📝 Criando orçamento no Supabase...")
-            resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json={
+            json_data = {
                 "codigo_servico": cod,
                 "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
@@ -2931,13 +2931,33 @@ def adicionar_orcamento():
                 "previsao_entrega": None,
                 "valor_cobrado": 0.0,
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
-            }, headers=headers)
+            }
+            print(f"JSON enviado: {json_data}")
+            
+            resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
             
             print(f"Status: {resp.status_code}")
-            print(f"Resposta: {resp.text}")
+            print(f"Resposta: {resp.text[:200]}")
             
-            if resp.status_code == 201:
-                oid = resp.json().get('id')
+            # ACEITA TANTO 200 QUANTO 201
+            if resp.status_code in [200, 201]:
+                try:
+                    oid = resp.json().get('id')
+                except:
+                    # Se não tiver ID na resposta, busca pelo código
+                    print("⚠️ Sem ID na resposta, buscando pelo código...")
+                    busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{cod}&order=id.desc&limit=1", headers=headers)
+                    if busca.status_code == 200 and busca.json():
+                        oid = busca.json()[0].get('id')
+                        print(f"✅ ID encontrado: {oid}")
+                    else:
+                        flash("❌ Erro ao obter ID do orçamento.")
+                        return redirect(url_for('listar_orcamentos'))
+                
+                if not oid:
+                    flash("❌ Erro ao criar orçamento.")
+                    return redirect(url_for('adicionar_orcamento'))
+                
                 print(f"✅ Orçamento criado! ID: {oid}")
                 
                 # 2. Processa os itens
@@ -2989,7 +3009,7 @@ def adicionar_orcamento():
                         "valor_total": total_item
                     }, headers=headers)
                     
-                    if resp_item.status_code == 201:
+                    if resp_item.status_code in [200, 201]:
                         print(f"    ✅ Item salvo!")
                     else:
                         print(f"    ❌ Erro ao salvar item: {resp_item.status_code} - {resp_item.text}")
@@ -3008,7 +3028,7 @@ def adicionar_orcamento():
                     flash("⚠️ Orçamento criado mas valor não atualizado.")
                     return redirect(url_for('listar_orcamentos'))
             else:
-                flash("❌ Erro ao criar orçamento no banco.")
+                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
@@ -3017,7 +3037,7 @@ def adicionar_orcamento():
             traceback.print_exc()
             flash("❌ Erro ao criar orçamento.")
     
-    # GET - Renderiza o formulário
+    # GET - Renderiza o formulário (mesmo HTML de antes)
     try:
         emps = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
     except:
@@ -3111,12 +3131,21 @@ def adicionar_orcamento():
     </div>
     
     <script>
-    // Formatação automática de valor monetário
+    // Formatação automática de valor monetário - CORRIGIDO
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
+            // Remove tudo que não é dígito
             let value = e.target.value.replace(/\\D/g, '');
-            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
-            e.target.value = value;
+            // Converte para float e formata
+            if (value.length > 2) {{
+                let reais = value.slice(0, -2);
+                let centavos = value.slice(-2);
+                e.target.value = reais + ',' + centavos;
+            }} else if (value.length > 0) {{
+                e.target.value = '0,' + value.padStart(2, '0');
+            }} else {{
+                e.target.value = '';
+            }}
         }}
     }});
     
