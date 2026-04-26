@@ -2891,18 +2891,10 @@ def adicionar_orcamento():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
-        print("=" * 50)
-        print("📥 RECEBENDO DADOS DO FORMULÁRIO")
-        print("=" * 50)
-        
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = request.form.get('prazo_dias', '7')
         observacoes = request.form.get('observacoes_gerais', '')
-        
-        print(f"Cliente ID: {empresa_id}")
-        print(f"Data: {data_abertura}")
-        print(f"Prazo: {prazo_dias} dias")
         
         if not empresa_id:
             flash("❌ Cliente é obrigatório!")
@@ -2913,14 +2905,12 @@ def adicionar_orcamento():
             ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
             n = int(ult[0]['codigo_servico'].split('-')[1]) + 1 if ult and len(ult) > 0 else 1
             cod = f"OR-{n:03d}"
-            print(f"✅ Código gerado: {cod}")
         except Exception as e:
-            print(f"❌ Erro ao gerar código: {e}")
+            print(f"Erro ao gerar código: {e}")
             cod = f"OR-001"
         
         try:
-            # 1. Cria o orçamento
-            print("\n📝 Criando orçamento no Supabase...")
+            # Cria o orçamento
             json_data = {
                 "codigo_servico": cod,
                 "titulo": "Orçamento Múltiplo",
@@ -2932,24 +2922,16 @@ def adicionar_orcamento():
                 "valor_cobrado": 0.0,
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
             }
-            print(f"JSON enviado: {json_data}")
             
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
             
-            print(f"Status: {resp.status_code}")
-            print(f"Resposta: {resp.text[:200]}")
-            
-            # ACEITA TANTO 200 QUANTO 201
             if resp.status_code in [200, 201]:
                 try:
                     oid = resp.json().get('id')
                 except:
-                    # Se não tiver ID na resposta, busca pelo código
-                    print("⚠️ Sem ID na resposta, buscando pelo código...")
                     busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{cod}&order=id.desc&limit=1", headers=headers)
                     if busca.status_code == 200 and busca.json():
                         oid = busca.json()[0].get('id')
-                        print(f"✅ ID encontrado: {oid}")
                     else:
                         flash("❌ Erro ao obter ID do orçamento.")
                         return redirect(url_for('listar_orcamentos'))
@@ -2958,9 +2940,7 @@ def adicionar_orcamento():
                     flash("❌ Erro ao criar orçamento.")
                     return redirect(url_for('adicionar_orcamento'))
                 
-                print(f"✅ Orçamento criado! ID: {oid}")
-                
-                # 2. Processa os itens
+                # Processa os itens
                 vt = 0.0
                 titulos = request.form.getlist('item_titulo[]')
                 quantidades = request.form.getlist('item_quantidade[]')
@@ -2968,17 +2948,9 @@ def adicionar_orcamento():
                 dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
                 
-                print(f"\n📦 Total de itens recebidos: {len(titulos)}")
-                
-                if len(titulos) == 0:
-                    print("⚠️ NENHUM ITEM RECEBIDO!")
-                    flash("⚠️ Adicione pelo menos um item ao orçamento.")
-                    return redirect(url_for('adicionar_orcamento'))
-                
                 for i in range(len(titulos)):
                     t = titulos[i].strip()
                     if not t:
-                        print(f"  ⚠️ Item {i+1} vazio, pulando...")
                         continue
                     
                     try:
@@ -2988,7 +2960,7 @@ def adicionar_orcamento():
                         q = float(q_str) if q_str else 1.0
                         vu = float(vu_str) if vu_str else 0.0
                     except Exception as e:
-                        print(f"  ❌ Erro ao converter: q={q_str}, vu={vu_str} | {e}")
+                        print(f"Erro ao converter: {e}")
                         continue
                     
                     dim = dimensoes[i].strip() if i < len(dimensoes) else ''
@@ -2996,10 +2968,7 @@ def adicionar_orcamento():
                     total_item = q * vu
                     vt += total_item
                     
-                    print(f"  ✓ Item {i+1}: '{t}' | Qtd: {q} | VU: R$ {vu:.2f} | Total: R$ {total_item:.2f}")
-                    
-                    # Salva item no banco
-                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
                         "orcamento_id": oid,
                         "titulo": t,
                         "quantidade": q,
@@ -3008,36 +2977,24 @@ def adicionar_orcamento():
                         "valor_unitario": vu,
                         "valor_total": total_item
                     }, headers=headers)
-                    
-                    if resp_item.status_code in [200, 201]:
-                        print(f"    ✅ Item salvo!")
-                    else:
-                        print(f"    ❌ Erro ao salvar item: {resp_item.status_code} - {resp_item.text}")
                 
-                # 3. Atualiza valor total
-                print(f"\n💰 Valor total: R$ {vt:.2f}")
-                resp_patch = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                # Atualiza valor total
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                     json={"valor_cobrado": vt}, headers=headers)
                 
-                if resp_patch.status_code == 204:
-                    print("✅ Valor total atualizado!")
-                    flash("✅ Orçamento criado com sucesso!")
-                    return redirect(url_for('listar_orcamentos'))
-                else:
-                    print(f"⚠️ Erro ao atualizar valor: {resp_patch.status_code}")
-                    flash("⚠️ Orçamento criado mas valor não atualizado.")
-                    return redirect(url_for('listar_orcamentos'))
+                flash("✅ Orçamento criado com sucesso!")
+                return redirect(url_for('listar_orcamentos'))
             else:
                 flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
-            print(f"\n❌ ERRO GERAL: {str(e)}")
+            print(f"ERRO GERAL: {str(e)}")
             import traceback
             traceback.print_exc()
             flash("❌ Erro ao criar orçamento.")
     
-    # GET - Renderiza o formulário (mesmo HTML de antes)
+    # GET - Renderiza o formulário
     try:
         emps = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
     except:
@@ -3131,21 +3088,12 @@ def adicionar_orcamento():
     </div>
     
     <script>
-    // Formatação automática de valor monetário - CORRIGIDO
+    // Formatação CORRETA de valor monetário - SEM ZEROS À ESQUERDA
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
-            // Remove tudo que não é dígito
             let value = e.target.value.replace(/\\D/g, '');
-            // Converte para float e formata
-            if (value.length > 2) {{
-                let reais = value.slice(0, -2);
-                let centavos = value.slice(-2);
-                e.target.value = reais + ',' + centavos;
-            }} else if (value.length > 0) {{
-                e.target.value = '0,' + value.padStart(2, '0');
-            }} else {{
-                e.target.value = '';
-            }}
+            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+            e.target.value = value;
         }}
     }});
     
@@ -3175,7 +3123,6 @@ def editar_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # Busca orçamento atual
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -3184,11 +3131,9 @@ def editar_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # Busca empresas
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         
         if request.method == 'POST':
-            # Atualiza orçamento
             dados = {
                 "empresa_id": int(request.form['empresa_id']),
                 "data_abertura": request.form['data_abertura'],
@@ -3196,8 +3141,6 @@ def editar_orcamento(id):
             }
             
             requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
-            
-            # Atualiza itens (simplificado - remove todos e adiciona novos)
             requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
             
             vt = 0.0
@@ -3228,51 +3171,97 @@ def editar_orcamento(id):
         
         opts_empresas = "".join([f'<option value="{e["id"]}" {"selected" if e["id"]==orc["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas])
         
-        # HTML dos itens existentes
         itens_html = ""
         for item in orc.get('itens_orcamento', []):
             itens_html += f'''
             <div class="item-row">
-                <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
+                <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
                     <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" value="{item.get('titulo','')}" required></div>
                     <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" value="{item.get('quantidade',1)}" required></div>
-                    <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" value="{item.get('valor_unitario',0):.2f}" required></div>
+                    <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" value="{item.get('valor_unitario',0):.2f}" required></div>
                     <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" value="{item.get('dimensao','')}"></div>
                     <div><label>Cores</label><input type="number" name="item_cores[]" value="{item.get('numero_cores','')}"></div>
-                    <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                    <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
                 </div>
             </div>'''
         
         return f'''
         <!DOCTYPE html>
-        <html><head><meta charset="UTF-8"><title>Editar Orçamento</title>
-        <style>body{{font-family:Arial,sans-serif;background:#f5f7fa;margin:0;padding:20px}}.container{{max-width:1100px;margin:0 auto;background:white;border-radius:10px}}.header{{background:#2c3e50;color:white;padding:25px;text-align:center}}.content{{padding:30px}}.grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}input,select,textarea{{width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;margin:5px 0}}.item-row{{background:#f8f9fa;padding:20px;margin:15px 0;border-radius:8px}}.btn{{padding:12px 25px;background:#27ae60;color:white;border:none;border-radius:5px;cursor:pointer}}</style>
-        </head><body>
+        <html lang="pt-BR">
+        <head>
+        <meta charset="UTF-8">
+        <title>Editar Orçamento</title>
+        <style>
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 1100px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+        .form-group {{ margin-bottom: 15px; }}
+        label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
+        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
+        .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #f39c12; }}
+        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        </style>
+        </head>
+        <body>
         <div class="container">
             <div class="header"><h1>✏️ Editar Orçamento {orc.get('codigo_servico','')}</h1></div>
             <div class="content">
-                <a href="/orcamentos" style="color:#3498db;">← Voltar</a>
+                <a href="/orcamentos" class="back-link">← Voltar</a>
                 <form method="post">
                     <div class="grid">
-                        <div><label>Cliente</label><select name="empresa_id" required>{opts_empresas}</select></div>
-                        <div><label>Data de Abertura</label><input type="date" name="data_abertura" value="{orc.get('data_abertura','')[:10] if orc.get('data_abertura') else ''}" required></div>
+                        <div class="form-group">
+                            <label>Cliente</label>
+                            <select name="empresa_id" required>
+                                {opts_empresas}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Data de Abertura</label>
+                            <input type="date" name="data_abertura" value="{orc.get('data_abertura','')[:10] if orc.get('data_abertura') else ''}" required>
+                        </div>
                     </div>
-                    <div><label>Observações</label><textarea name="observacoes_gerais" rows="3">{orc.get('observacoes','')}</textarea></div>
-                    <h3>Itens do Orçamento</h3>
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea name="observacoes_gerais" rows="2">{orc.get('observacoes','')}</textarea>
+                    </div>
+                    <h3 style="color: #2c3e50; margin: 25px 0 15px 0;">Itens do Orçamento</h3>
                     <div id="itens-container">{itens_html}</div>
-                    <button type="button" onclick="adicionarItem()" style="background:#3498db;color:white;padding:10px;border:none;border-radius:5px;width:100%;margin:15px 0;">+ Adicionar Item</button>
-                    <button type="submit" class="btn" style="width:100%;">💾 Salvar Alterações</button>
+                    <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Salvar Alterações</button>
                 </form>
             </div>
         </div>
         <script>
-        function adicionarItem(){{
-            const div=document.createElement('div');div.className='item-row';
-            div.innerHTML=`<div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;"><div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" required></div><div><label>Quantidade *</label><input type="number" name="item_quantidade[]" required></div><div><label>Valor Unit. *</label><input type="text" name="item_valor_unit[]" required></div><div><label>Dimensão</label><input type="text" name="item_dimensao[]"></div><div><label>Cores</label><input type="number" name="item_cores[]"></div><div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;">🗑️</button></div></div>`;
+        // MESMA formatação do criar orçamento
+        document.addEventListener('input', function(e) {{
+            if (e.target.classList.contains('valor-input')) {{
+                let value = e.target.value.replace(/\\D/g, '');
+                value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+                e.target.value = value;
+            }}
+        }});
+        
+        function addRow() {{
+            const div = document.createElement('div');
+            div.className = 'item-row';
+            div.innerHTML = `
+                <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
+                    <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+                    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                    <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
+                    <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                    <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                    <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                </div>
+            `;
             document.getElementById('itens-container').appendChild(div);
         }}
         </script>
-        </body></html>
+        </body>
+        </html>
         '''
     except Exception as e:
         print("ERRO:", e)
@@ -3866,112 +3855,302 @@ def pdf_orcamento(id):
         data_abr = fmt(orc.get('data_abertura'))
         total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
         
-        # HTML Profissional
+        # HTML Profissional - Layout A4 Otimizado
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <title>Orçamento {orc.get('codigo_servico','')}</title>
 <style>
-@page {{ margin: 2cm; }}
-body {{ font-family: Arial, sans-serif; font-size: 14px; color: #333; }}
-.header {{ text-align: center; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }}
-.logo {{ max-width: 200px; margin-bottom: 15px; }}
-.titulo {{ font-size: 36px; font-weight: bold; color: #2c3e50; margin: 10px 0; }}
-.codigo {{ font-size: 18px; color: #7f8c8d; background: #ecf0f1; padding: 8px 20px; border-radius: 5px; display: inline-block; }}
-.info-box {{ background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; }}
-.info-label {{ font-size: 12px; text-transform: uppercase; color: #7f8c8d; font-weight: bold; margin-bottom: 8px; }}
-.info-value {{ font-size: 16px; color: #2c3e50; font-weight: 600; margin: 5px 0; }}
-.entrega-box {{ background: #e8f5e9; border-left: 5px solid #27ae60; padding: 15px; margin: 20px 0; }}
-table {{ width: 100%; border-collapse: collapse; margin: 30px 0; }}
-th {{ background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 13px; }}
-td {{ padding: 12px; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-.total {{ text-align: right; margin-top: 40px; }}
-.total-box {{ background: #2c3e50; color: white; padding: 20px 30px; border-radius: 8px; display: inline-block; }}
-.total-label {{ font-size: 14px; text-transform: uppercase; margin-bottom: 8px; }}
-.total-value {{ font-size: 28px; font-weight: bold; }}
-.footer {{ margin-top: 50px; padding-top: 20px; border-top: 2px solid #ecf0f1; text-align: center; font-size: 11px; color: #95a5a6; }}
+@page {{ 
+    size: A4; 
+    margin: 2cm; 
+}}
+* {{ 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}}
+body {{ 
+    font-family: 'Arial', sans-serif; 
+    font-size: 12px; 
+    color: #333; 
+    line-height: 1.6;
+}}
+.container {{ 
+    max-width: 794px; 
+    margin: 0 auto; 
+    padding: 20px;
+}}
+/* Header */
+.header {{ 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid #2c3e50;
+}}
+.logo-section {{ 
+    text-align: center;
+    flex: 1;
+}}
+.logo {{ 
+    max-width: 180px; 
+    margin-bottom: 10px; 
+}}
+.titulo {{ 
+    font-size: 32px; 
+    font-weight: bold; 
+    color: #2c3e50; 
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}}
+.codigo-box {{
+    background: #ecf0f1;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-align: center;
+}}
+.codigo-label {{
+    font-size: 10px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+}}
+.codigo-numero {{
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c3e50;
+}}
+/* Info Section */
+.info-section {{ 
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+}}
+.info-box {{ 
+    flex: 1;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}}
+.info-label {{ 
+    font-size: 11px; 
+    text-transform: uppercase; 
+    color: #7f8c8d; 
+    font-weight: bold; 
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}}
+.info-value {{ 
+    font-size: 16px; 
+    color: #2c3e50; 
+    font-weight: 600; 
+    margin: 8px 0;
+}}
+.info-detail {{
+    font-size: 12px;
+    color: #555;
+    margin: 5px 0;
+}}
+/* Delivery Box */
+.entrega-box {{ 
+    background: #e8f5e9; 
+    border-left: 5px solid #27ae60; 
+    padding: 15px 20px; 
+    margin: 25px 0;
+    border-radius: 5px;
+}}
+.entrega-label {{
+    font-size: 12px; 
+    color: #27ae60; 
+    font-weight: bold; 
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}}
+.entrega-text {{ 
+    font-size: 13px; 
+    color: #27ae60; 
+    line-height: 1.6;
+}}
+/* Items Table */
+.items-section {{ 
+    margin: 30px 0;
+}}
+.section-title {{
+    font-size: 16px; 
+    font-weight: bold; 
+    color: #2c3e50; 
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 8px;
+}}
+.items-table {{ 
+    width: 100%; 
+    border-collapse: collapse;
+    margin: 20px 0;
+}}
+.items-table thead {{
+    background: #2c3e50; 
+    color: white;
+}}
+.items-table th {{ 
+    padding: 12px 15px; 
+    text-align: left; 
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}}
+.items-table td {{ 
+    padding: 15px 15px; 
+    border-bottom: 1px solid #ecf0f1; 
+    font-size: 12px;
+}}
+.items-table tbody tr:nth-child(even) {{
+    background: #f8f9fa;
+}}
+.text-center {{ text-align: center; }}
+.text-right {{ text-align: right; }}
+/* Total Section */
+.total-section {{
+    margin-top: 40px;
+    text-align: right;
+}}
+.total-box {{ 
+    background: #2c3e50; 
+    color: white; 
+    padding: 20px 30px; 
+    border-radius: 8px; 
+    display: inline-block;
+    min-width: 250px;
+}}
+.total-label {{ 
+    font-size: 12px; 
+    text-transform: uppercase; 
+    margin-bottom: 10px;
+    opacity: 0.9;
+}}
+.total-value {{ 
+    font-size: 32px; 
+    font-weight: bold;
+    letter-spacing: 2px;
+}}
+/* Footer */
+.footer {{
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 2px solid #ecf0f1;
+    text-align: center;
+    font-size: 10px;
+    color: #95a5a6;
+}}
+.footer strong {{
+    color: #2c3e50;
+    font-size: 11px;
+}}
 </style>
 </head>
 <body>
-<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+<div class="container">
+    <!-- Header com Logo e Código -->
     <div class="header">
-        <img src="{logo_url}" class="logo" alt="Liraprint" onerror="this.style.display='none'">
-        <div class="titulo">ORÇAMENTO</div>
-        <div class="codigo">{orc.get('codigo_servico','—')}</div>
-    </div>
-    <div style="display: table; width: 100%; margin-bottom: 25px;">
-        <div style="display: table-cell; width: 50%; vertical-align: top;">
-            <div class="info-box">
-                <div class="info-label">Cliente</div>
-                <div class="info-value" style="font-size: 18px;">{cliente}</div>
-                <div style="margin-top: 15px; font-size: 13px; color: #555;">
-                    <div><strong>CNPJ:</strong> {emp.get('cnpj','—')}</div>
-                    <div><strong>Tel:</strong> {emp.get('telefone','—')}</div>
-                    <div><strong>Email:</strong> {emp.get('email','—')}</div>
-                </div>
-            </div>
+        <div class="logo-section">
+            <img src="{logo_url}" class="logo" alt="Liraprint" onerror="this.style.display='none'">
+            <div class="titulo">ORÇAMENTO</div>
         </div>
-        <div style="display: table-cell; width: 50%; vertical-align: top; padding-left: 20px;">
-            <div class="info-box">
-                <div class="info-label">Dados do Orçamento</div>
-                <div style="font-size: 14px; color: #555; line-height: 1.8;">
-                    <div><strong>Emissão:</strong> {data_abr}</div>
-                    <div><strong>Validade:</strong> 30 dias</div>
-                </div>
-            </div>
+        <div class="codigo-box">
+            <div class="codigo-label">Número</div>
+            <div class="codigo-numero">{orc.get('codigo_servico','—')}</div>
         </div>
     </div>
+    
+    <!-- Informações -->
+    <div class="info-section">
+        <div class="info-box">
+            <div class="info-label">Cliente</div>
+            <div class="info-value" style="font-size: 18px;">{cliente}</div>
+            <div style="margin-top: 15px;">
+                <div class="info-detail"><strong>CNPJ:</strong> {emp.get('cnpj','—')}</div>
+                <div class="info-detail"><strong>Tel:</strong> {emp.get('telefone','—')}</div>
+                <div class="info-detail"><strong>Email:</strong> {emp.get('email','—')}</div>
+            </div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Dados do Orçamento</div>
+            <div class="info-detail" style="margin: 8px 0;"><strong>Emissão:</strong> {data_abr}</div>
+            <div class="info-detail" style="margin: 8px 0;"><strong>Status:</strong> {orc.get('status','Pendente')}</div>
+            <div class="info-detail" style="margin: 8px 0;"><strong>Validade:</strong> 30 dias</div>
+        </div>
+    </div>
+    
+    <!-- Prazo de Entrega -->
     <div class="entrega-box">
-        <div style="font-size: 14px; color: #27ae60; font-weight: bold; margin-bottom: 8px;">📅 Prazo de Entrega</div>
-        <div style="font-size: 14px; color: #27ae60; line-height: 1.6;">
+        <div class="entrega-label">📅 Prazo de Entrega</div>
+        <div class="entrega-text">
             Dias úteis após aprovação da arte.<br>
-            <em style="font-size: 12px;">* A contagem inicia após aprovação.</em>
+            <em style="font-size: 11px;">* A contagem inicia após aprovação.</em>
         </div>
     </div>
-    <div style="font-size: 18px; font-weight: bold; color: #2c3e50; margin: 30px 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">Itens Orçados</div>
-    <table>
-        <thead>
-            <tr>
-                <th width="5%">#</th>
-                <th width="50%">Descrição</th>
-                <th width="15%">Qtd</th>
-                <th width="30%" style="text-align: right;">Valor</th>
-            </tr>
-        </thead>
-        <tbody>'''
+    
+    <!-- Itens -->
+    <div class="items-section">
+        <div class="section-title">Itens Orçados</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="45%">Descrição</th>
+                    <th width="15%" class="text-center">Qtd</th>
+                    <th width="20%">Dimensão</th>
+                    <th width="15%" class="text-right">Valor</th>
+                </tr>
+            </thead>
+            <tbody>'''
         
         itens = orc.get('itens_orcamento', [])
         if itens:
             for i, item in enumerate(itens):
                 html += f'''
                 <tr>
-                    <td>{i+1}</td>
-                    <td><strong>{item.get('titulo','—')}</strong><br><small style="color:#7f8c8d">{item.get('dimensao','')}</small></td>
-                    <td>{item.get('quantidade','1')}</td>
-                    <td style="text-align: right; font-size: 15px;">R$ {float(item.get('valor_total',0) or 0):.2f}</td>
+                    <td class="text-center">{i+1}</td>
+                    <td><strong>{item.get('titulo','—')}</strong></td>
+                    <td class="text-center">{item.get('quantidade','1')}</td>
+                    <td>{item.get('dimensao','—')}</td>
+                    <td class="text-right" style="font-size: 13px;">R$ {float(item.get('valor_total',0) or 0):.2f}</td>
                 </tr>'''
         else:
-            html += '<tr><td colspan="4" style="text-align: center; color: #95a5a6; padding: 30px;">Nenhum item adicionado</td></tr>'
+            html += '<tr><td colspan="5" style="text-align: center; color: #95a5a6; padding: 40px;">Nenhum item adicionado</td></tr>'
         
         html += f'''
-        </tbody>
-    </table>
-    <div class="total">
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Total -->
+    <div class="total-section">
         <div class="total-box">
             <div class="total-label">Total do Orçamento</div>
             <div class="total-value">R$ {total:.2f}</div>
         </div>
     </div>
+    
+    <!-- Footer -->
     <div class="footer">
-        <div style="margin-bottom: 10px;"><strong>LIRAPRINT</strong> - Gráfica Rápida<br>R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070</div>
-        <div>Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}<br>Este orçamento é válido por 30 dias</div>
+        <div style="margin-bottom: 8px;">
+            <strong>LIRAPRINT</strong> - Gráfica Rápida<br>
+            R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070
+        </div>
+        <div>
+            Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}<br>
+            Este orçamento é válido por 30 dias a partir da data de emissão
+        </div>
     </div>
 </div>
 </body>
 </html>'''
         
-        pdf = pdfkit.from_string(html, False, options={"quiet": "", "encoding": "UTF-8"})
+        pdf = pdfkit.from_string(html, False, options={"quiet": "", "encoding": "UTF-8", "page-size": "A4"})
         return send_file(BytesIO(pdf), as_attachment=True, download_name=f"Orcamento_{orc.get('codigo_servico','')}.pdf", mimetype="application/pdf")
         
     except Exception as e:
