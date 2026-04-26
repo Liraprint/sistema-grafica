@@ -2921,7 +2921,7 @@ def adicionar_orcamento():
     if request.method == 'POST':
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
-        prazo_dias = request.form.get('prazo_dias', '7')  # Salva o prazo
+        prazo_dias = request.form.get('prazo_dias', '7')
         observacoes_gerais = request.form.get('observacoes_gerais', '')
         
         if not empresa_id:
@@ -2931,7 +2931,7 @@ def adicionar_orcamento():
         # Gera código OR-001, OR-002...
         try:
             ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
-            n = int(ult[0]['codigo_servico'].split('-')[1])+1 if ult else 1
+            n = int(ult[0]['codigo_servico'].split('-')[1])+1 if ult and len(ult) > 0 else 1
         except:
             n = 1
         
@@ -2939,7 +2939,7 @@ def adicionar_orcamento():
         
         try:
             # Cria o orçamento
-            oid = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", 
+            resp_cria = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", 
                 json={
                     "codigo_servico": cod,
                     "titulo": "Orçamento Múltiplo",
@@ -2950,7 +2950,15 @@ def adicionar_orcamento():
                     "previsao_entrega": None,
                     "valor_cobrado": 0.0,
                     "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes_gerais}" if prazo_dias else observacoes_gerais
-                }, headers=headers).json().get('id')
+                }, headers=headers)
+            
+            if resp_cria.status_code != 201:
+                print("ERRO AO CRIAR ORÇAMENTO:", resp_cria.text)
+                flash("❌ Erro ao criar orçamento no banco.")
+                return redirect(url_for('adicionar_orcamento'))
+            
+            oid = resp_cria.json().get('id')
+            print(f"✅ Orçamento criado com ID: {oid}")
             
             if oid:
                 vt = 0.0
@@ -2960,19 +2968,33 @@ def adicionar_orcamento():
                 dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
                 
+                print(f"📦 Itens recebidos: {len(titulos)}")
+                
                 for i in range(len(titulos)):
                     t = titulos[i].strip()
                     if not t:
                         continue
-                    q = float(quantidades[i].replace('.', '').replace(',', '.') or 0)
-                    vu = float(valores_unit[i].replace('.', '').replace(',', '.') or 0)
-                    dim = dimensoes[i].strip() if i < len(dimensoes) else ''
-                    cor = cores[i] if i < len(cores) else ''
+                    
+                    # Parsing robusto de quantidade e valor
+                    q_str = quantidades[i].strip().replace(',', '.') if i < len(quantidades) else '1'
+                    vu_str = valores_unit[i].strip().replace(',', '.') if i < len(valores_unit) else '0'
+                    
+                    try:
+                        q = float(q_str) if q_str else 1.0
+                        vu = float(vu_str) if vu_str else 0.0
+                    except ValueError as e:
+                        print(f"⚠️ Erro ao converter valores: q={q_str}, vu={vu_str} | {e}")
+                        continue
+                    
+                    dim = dimensoes[i].strip() if i < len(dimensoes) and dimensoes[i] else ''
+                    cor = cores[i].strip() if i < len(cores) and cores[i] else ''
                     
                     total_item = q * vu
                     vt += total_item
                     
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", 
+                    print(f"  • Item {i+1}: '{t}' | Qtd: {q} | VU: R$ {vu:.2f} | Total: R$ {total_item:.2f}")
+                    
+                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", 
                         json={
                             "orcamento_id": oid,
                             "titulo": t,
@@ -2982,23 +3004,34 @@ def adicionar_orcamento():
                             "valor_unitario": vu,
                             "valor_total": total_item
                         }, headers=headers)
+                    
+                    if resp_item.status_code != 201:
+                        print(f"❌ Erro ao salvar item {i+1}: {resp_item.text}")
                 
                 # Atualiza valor total do orçamento
-                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                resp_patch = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                     json={"valor_cobrado": vt}, headers=headers)
                 
-                flash("✅ Orçamento criado com sucesso!")
-                return redirect(url_for('listar_orcamentos'))
+                if resp_patch.status_code == 204:
+                    print(f"✅ Valor total atualizado: R$ {vt:.2f}")
+                    flash("✅ Orçamento criado com sucesso!")
+                    return redirect(url_for('listar_orcamentos'))
+                else:
+                    print(f"❌ Erro ao atualizar valor total: {resp_patch.text}")
+                    flash("⚠️ Orçamento criado, mas valor total não atualizado.")
+                    return redirect(url_for('listar_orcamentos'))
+                    
         except Exception as e:
-            print("ERRO:", e)
+            print("❌ ERRO GERAL:", str(e))
             import traceback
             traceback.print_exc()
             flash("❌ Erro ao criar orçamento.")
     
-    # Busca empresas
+    # Busca empresas para o GET
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
-    except:
+    except Exception as e:
+        print("Erro ao buscar empresas:", e)
         empresas = []
     
     opts = "".join([f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas])
@@ -3064,8 +3097,8 @@ def adicionar_orcamento():
                     <div class="item-row">
                         <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
                             <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
-                            <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" class="qtd" step="1" value="1" required></div>
-                            <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor" placeholder="0,00" required></div>
+                            <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" class="qtd" step="any" value="1" required></div>
+                            <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor" placeholder="Ex: 300 ou 300,50" required></div>
                             <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
                             <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
                             <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
@@ -3080,12 +3113,11 @@ def adicionar_orcamento():
     </div>
     
     <script>
-    // Formatação automática de valor monetário
+    // Formatação simples: aceita vírgula ou ponto, sem dividir por 100
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor')) {{
-            let value = e.target.value.replace(/\\D/g, '');
-            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
-            e.target.value = value;
+            // Só substitui vírgula por ponto para o Python entender
+            e.target.value = e.target.value.replace(',', '.');
         }}
     }});
     
@@ -3095,8 +3127,8 @@ def adicionar_orcamento():
         div.innerHTML = `
             <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;">
                 <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
-                <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" class="qtd" step="1" value="1" required></div>
-                <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor" placeholder="0,00" required></div>
+                <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" class="qtd" step="any" value="1" required></div>
+                <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor" placeholder="Ex: 300 ou 300,50" required></div>
                 <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
                 <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
                 <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:10px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
