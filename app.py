@@ -3657,8 +3657,8 @@ def pdf_orcamento(id):
         orc = resp.json()[0]
         
         cliente = orc['empresas']['nome_empresa'] if orc.get('empresas') else 'Cliente'
+        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
         
-        # Função fmt CORRIGIDA com join
         def fmt(data):
             if not data or len(str(data)) < 10:
                 return "—"
@@ -3671,24 +3671,223 @@ def pdf_orcamento(id):
         data_abr = fmt(orc.get('data_abertura'))
         total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
         
-        # HTML simples e seguro
-        html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento ' + str(orc.get('codigo_servico','')) + '</title>'
-        html += '<style>body{font-family:Arial,sans-serif;padding:40px;margin:0}.header{text-align:center;border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:30px}.header img{max-width:120px}.destaque{background:#e8f5e9;padding:15px;margin:20px 0;border-left:4px solid #27ae60}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ccc;padding:10px;text-align:left}th{background:#ecf0f1}.total{text-align:right;font-size:20px;font-weight:bold;margin-top:20px}.footer{margin-top:50px;text-align:center;font-size:11px;color:#666;border-top:1px solid #ccc;padding-top:15px}</style></head><body>'
-        html += '<div class="header"><img src="https://i.postimg.cc/RVqcJzzQ/logo.png" alt="Logo"><h1 style="margin:10px 0;color:#2c3e50">ORÇAMENTO ' + str(orc.get('codigo_servico','—')) + '</h1></div>'
-        html += '<p><strong>Cliente:</strong> ' + str(cliente) + '</p>'
-        html += '<p><strong>Data Abertura:</strong> ' + str(data_abr) + '</p>'
-        html += '<p><strong>Status:</strong> ' + str(orc.get('status','—')) + '</p>'
-        html += '<div class="destaque"><strong>📅 Entrega Prevista:</strong> ' + str(data_ent) + '<br><small style="color:#666">(Dias úteis - FDS/feriados excluídos)</small></div>'
-        html += '<h3>Itens</h3><table><tr><th>Descrição</th><th>Qtd</th><th>Valor</th></tr>'
+        # HTML Profissional - Layout Invoice
+        html = '''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Orçamento ''' + str(orc.get('codigo_servico','')) + '''</title>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        background-color: #fff;
+        font-size: 13px;
+    }
+    .invoice-container {
+        width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+    }
+    .row { letter-spacing: -1em; text-rendering: optimizespeed; }
+    .col {
+        display: inline-block;
+        vertical-align: top;
+        letter-spacing: normal;
+        word-spacing: normal;
+        text-rendering: auto;
+    }
+    .w-1-2 { width: 50%; }
+    .text-right { text-align: right; }
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    
+    /* Header */
+    .logo-box {
+        background-color: #2c3e50;
+        color: white;
+        padding: 15px;
+        width: 140px;
+        text-align: center;
+        border-radius: 4px;
+    }
+    .logo-box img { max-width: 100px; display: block; margin: 0 auto 8px; }
+    .logo-box div { font-size: 10px; }
+    .invoice-title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+        letter-spacing: 2px;
+    }
+    
+    /* Info */
+    .label-small {
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #777;
+        margin-bottom: 3px;
+    }
+    .info-value {
+        font-size: 13px;
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+    .recipient-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 5px 0;
+    }
+    
+    /* Table */
+    .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+        font-size: 12px;
+    }
+    .item-table th {
+        background-color: #2c3e50;
+        color: white;
+        padding: 10px 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+    .item-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .bg-stripe { background-color: #fafafa; }
+    
+    /* Summary */
+    .summary-row { padding: 8px 0; font-size: 13px; }
+    .total-box {
+        background-color: #2c3e50;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+    
+    /* Footer */
+    .footer-bar {
+        border-top: 1px solid #eee;
+        padding: 20px 0 10px;
+        margin-top: 40px;
+        font-size: 10px;
+        color: #666;
+        text-align: center;
+    }
+    
+    /* Destaque Entrega */
+    .destaque-entrega {
+        background-color: #e8f5e9;
+        padding: 12px;
+        border-left: 4px solid #27ae60;
+        margin: 15px 0;
+        font-size: 13px;
+    }
+    .destaque-entrega strong {
+        color: #27ae60;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+<div class="invoice-container">
+    <!-- Header -->
+    <div class="row" style="margin-bottom: 25px;">
+        <div class="col w-1-2">
+            <div class="logo-box">
+                <img src="''' + logo_url + '''" alt="Logo" onerror="this.style.display='none'"/>
+                <div style="font-size: 14px; font-weight: bold;">LIRAPRINT</div>
+                <div>Gráfica Rápida</div>
+            </div>
+        </div>
+        <div class="col w-1-2 text-right">
+            <h1 class="invoice-title">ORÇAMENTO</h1>
+            <div style="margin-top: 8px; font-size: 14px; color: #555;">
+                <strong>Código:</strong> ''' + str(orc.get('codigo_servico','—')) + '''
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info Section -->
+    <div class="row" style="margin-bottom: 25px;">
+        <div class="col w-1-2">
+            <div class="label-small">CLIENTE</div>
+            <div class="recipient-name">''' + str(cliente) + '''</div>
+            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; width: 300px;">
+                <div class="info-value"><strong>Data Abertura:</strong> ''' + str(data_abr) + '''</div>
+                <div class="info-value"><strong>Status:</strong> ''' + str(orc.get('status','—')) + '''</div>
+            </div>
+        </div>
+        <div class="col w-1-2 text-right">
+            <div class="destaque-entrega">
+                <strong>📅 Entrega Prevista:</strong> ''' + str(data_ent) + '''<br>
+                <small style="color: #666; font-size: 11px;">(Cálculo considera dias úteis, excluindo FDS e feriados)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Items Table -->
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th class="text-center" width="5%">#</th>
+                <th class="text-left" width="40%">Descrição</th>
+                <th class="text-center" width="15%">Qtd</th>
+                <th class="text-center" width="20%">Dimensão</th>
+                <th class="text-right" width="20%">Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>'''
         
-        for item in orc.get('itens_orcamento', []):
-            vlr = float(item.get('valor_total', 0) or 0)
-            html += '<tr><td>' + str(item.get('titulo','—')) + '</td><td>' + str(item.get('quantidade','—')) + '</td><td>R$ ' + "{:.2f}".format(vlr) + '</td></tr>'
+        itens = orc.get('itens_orcamento', [])
+        for i, item in enumerate(itens):
+            bg_class = ' class="bg-stripe"' if i % 2 == 1 else ''
+            html += '<tr' + bg_class + '>'
+            html += '<td class="text-center">' + str(i+1) + '</td>'
+            html += '<td>' + str(item.get('titulo','—')) + '</td>'
+            html += '<td class="text-center">' + str(item.get('quantidade','—')) + '</td>'
+            html += '<td class="text-center">' + str(item.get('dimensao','—')) + '</td>'
+            html += '<td class="text-right">R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td>'
+            html += '</tr>'
         
-        html += '</table><div class="total">TOTAL: R$ ' + "{:.2f}".format(total) + '</div>'
-        if orc.get('observacoes'):
-            html += '<p style="margin-top:30px"><strong>Obs:</strong><br>' + str(orc['observacoes'][:200]) + '</p>'
-        html += '<div class="footer">Liraprint © 2025 | Gerado em ' + datetime.now().strftime('%d/%m/%Y %H:%M') + '</div></body></html>'
+        html += '''</tbody>
+    </table>
+    
+    <!-- Total -->
+    <div class="row" style="margin-top: 20px;">
+        <div class="col w-1-2">
+            <div style="font-size: 11px; color: #777; line-height: 1.5;">
+                <strong>Observações:</strong><br>
+                ''' + str(orc.get('observacoes', 'Nenhuma observação.')[:150]) + '''
+            </div>
+        </div>
+        <div class="col w-1-2">
+            <div class="total-box">
+                <div class="row">
+                    <div class="col w-1-2 text-left">TOTAL DO ORÇAMENTO</div>
+                    <div class="col w-1-2 text-right">R$ ''' + "{:.2f}".format(total) + '''</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer-bar">
+        Sistema de Gestão para Gráfica Rápida | © 2025<br>
+        Documento gerado em ''' + datetime.now().strftime('%d/%m/%Y às %H:%M') + '''
+    </div>
+</div>
+</body>
+</html>'''
         
         pdf = pdfkit.from_string(html, False, options={"quiet": ""})
         return send_file(BytesIO(pdf), as_attachment=True, download_name="orc_" + str(orc.get('codigo_servico','')) + ".pdf", mimetype="application/pdf")
