@@ -3709,355 +3709,44 @@ def pdf_orcamento(id):
         data_abr = fmt(orc.get('data_abertura'))
         total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
         
-        # HTML PROFISSIONAL - Layout limpo e elegante
-        html = '''<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Orçamento ''' + str(orc.get('codigo_servico','')) + '''</title>
-<style>
-    @page { margin: 2cm; }
-    body {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        color: #333;
-        background: #fff;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 40px;
-    }
-    
-    /* Header */
-    .header {
-        display: table;
-        width: 100%;
-        margin-bottom: 40px;
-        border-bottom: 3px solid #2c3e50;
-        padding-bottom: 30px;
-    }
-    .logo-section {
-        display: table-cell;
-        width: 50%;
-        vertical-align: middle;
-    }
-    .logo-section img {
-        max-width: 150px;
-        height: auto;
-    }
-    .logo-text {
-        font-size: 28px;
-        font-weight: bold;
-        color: #2c3e50;
-        margin: 10px 0 5px 0;
-        letter-spacing: 1px;
-    }
-    .logo-subtext {
-        font-size: 13px;
-        color: #7f8c8d;
-        margin: 0;
-    }
-    .title-section {
-        display: table-cell;
-        width: 50%;
-        text-align: right;
-        vertical-align: middle;
-    }
-    .doc-title {
-        font-size: 42px;
-        font-weight: bold;
-        color: #2c3e50;
-        margin: 0 0 10px 0;
-        letter-spacing: 3px;
-    }
-    .doc-number {
-        font-size: 18px;
-        color: #7f8c8d;
-        background: #ecf0f1;
-        padding: 8px 20px;
-        border-radius: 5px;
-        display: inline-block;
-    }
-    
-    /* Info Boxes */
-    .info-section {
-        margin-bottom: 35px;
-    }
-    .info-grid {
-        display: table;
-        width: 100%;
-        margin-bottom: 25px;
-    }
-    .info-box {
-        display: table-cell;
-        width: 50%;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        vertical-align: top;
-    }
-    .info-box-left {
-        border-right: 3px solid #fff;
-    }
-    .info-label {
-        font-size: 11px;
-        text-transform: uppercase;
-        color: #7f8c8d;
-        font-weight: bold;
-        margin-bottom: 8px;
-        letter-spacing: 1px;
-    }
-    .info-value {
-        font-size: 16px;
-        color: #2c3e50;
-        font-weight: 600;
-        margin: 5px 0;
-    }
-    .info-value-small {
-        font-size: 13px;
-        color: #555;
-        margin: 3px 0;
-    }
-    
-    /* Delivery Box */
-    .delivery-box {
-        background: #e8f5e9;
-        border-left: 5px solid #27ae60;
-        padding: 20px;
-        margin: 25px 0;
-        border-radius: 5px;
-    }
-    .delivery-label {
-        font-size: 12px;
-        color: #27ae60;
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-    .delivery-date {
-        font-size: 20px;
-        font-weight: bold;
-        color: #27ae60;
-        margin: 5px 0;
-    }
-    .delivery-note {
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-    }
-    
-    /* Table */
-    .items-section {
-        margin: 35px 0;
-    }
-    .section-title {
-        font-size: 20px;
-        font-weight: bold;
-        color: #2c3e50;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #ecf0f1;
-    }
-    .items-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-    }
-    .items-table thead {
-        background: #2c3e50;
-        color: white;
-    }
-    .items-table th {
-        padding: 15px 12px;
-        text-align: left;
-        font-weight: bold;
-        font-size: 13px;
-        text-transform: uppercase;
-    }
-    .items-table td {
-        padding: 15px 12px;
-        border-bottom: 1px solid #ecf0f1;
-        font-size: 14px;
-    }
-    .items-table tbody tr:nth-child(even) {
-        background: #f8f9fa;
-    }
-    .items-table tbody tr:hover {
-        background: #e8f4f8;
-    }
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    
-    /* Total */
-    .total-section {
-        margin: 35px 0;
-        text-align: right;
-    }
-    .total-box {
-        display: inline-block;
-        background: #2c3e50;
-        color: white;
-        padding: 20px 40px;
-        border-radius: 8px;
-        min-width: 300px;
-    }
-    .total-label {
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
-        opacity: 0.9;
-    }
-    .total-value {
-        font-size: 36px;
-        font-weight: bold;
-        letter-spacing: 2px;
-    }
-    
-    /* Observations */
-    .obs-section {
-        margin: 35px 0;
-        padding: 20px;
-        background: #fff9e6;
-        border-left: 4px solid #f39c12;
-        border-radius: 5px;
-    }
-    .obs-title {
-        font-size: 14px;
-        font-weight: bold;
-        color: #f39c12;
-        margin-bottom: 10px;
-        text-transform: uppercase;
-    }
-    .obs-text {
-        font-size: 13px;
-        color: #555;
-        line-height: 1.6;
-    }
-    
-    /* Footer */
-    .footer {
-        margin-top: 50px;
-        padding-top: 30px;
-        border-top: 2px solid #ecf0f1;
-        text-align: center;
-        font-size: 11px;
-        color: #95a5a6;
-    }
-    .footer strong {
-        color: #2c3e50;
-    }
-</style>
-</head>
-<body>
-<div class="container">
-    <!-- Header -->
-    <div class="header">
-        <div class="logo-section">
-            <img src="''' + logo_url + '''" alt="Liraprint" onerror="this.style.display='none'"/>
-            <div class="logo-text">LIRAPRINT</div>
-            <div class="logo-subtext">Gráfica Rápida - Qualidade e Agilidade</div>
-        </div>
-        <div class="title-section">
-            <div class="doc-title">ORÇAMENTO</div>
-            <div class="doc-number">''' + str(orc.get('codigo_servico','—')) + '''</div>
-        </div>
-    </div>
-    
-    <!-- Info Section -->
-    <div class="info-section">
-        <div class="info-grid">
-            <div class="info-box info-box-left">
-                <div class="info-label">Cliente</div>
-                <div class="info-value">''' + str(cliente) + '''</div>
-                <div style="margin-top: 15px;">
-                    <div class="info-value-small"><strong>CNPJ:</strong> ''' + str(emp.get('cnpj', '—')) + '''</div>
-                    <div class="info-value-small"><strong>Tel:</strong> ''' + str(emp.get('telefone', '—')) + '''</div>
-                    <div class="info-value-small"><strong>Email:</strong> ''' + str(emp.get('email', '—')) + '''</div>
-                </div>
-            </div>
-            <div class="info-box">
-                <div class="info-label">Dados do Orçamento</div>
-                <div class="info-value-small"><strong>Emissão:</strong> ''' + str(data_abr) + '''</div>
-                <div class="info-value-small"><strong>Status:</strong> ''' + str(orc.get('status', 'Pendente')) + '''</div>
-                <div class="info-value-small"><strong>Válido até:</strong> 30 dias</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Delivery Info -->
-    <div class="delivery-box">
-        <div class="delivery-label">📅 Previsão de Entrega</div>
-        <div class="delivery-date">''' + str(data_ent) + '''</div>
-        <div class="delivery-note">* Cálculo baseado em dias úteis (excluindo finais de semana e feriados)</div>
-    </div>
-    
-    <!-- Items Table -->
-    <div class="items-section">
-        <div class="section-title">Itens Orçados</div>
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th width="5%">#</th>
-                    <th width="50%">Descrição</th>
-                    <th width="15%" class="text-center">Qtd</th>
-                    <th width="20%" class="text-center">Dimensão</th>
-                    <th width="10%" class="text-right">Valor</th>
-                </tr>
-            </thead>
-            <tbody>'''
+        # Construção do HTML em partes para evitar erro de sintaxe
+        html_parts = []
+        html_parts.append('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Orçamento ' + str(orc.get('codigo_servico','')) + '</title>')
+        html_parts.append('<style>@page{margin:2cm}body{font-family:Arial,sans-serif;margin:0;padding:0;color:#333;background:#fff;font-size:14px;line-height:1.6}.container{max-width:800px;margin:0 auto;padding:40px}.header{display:table;width:100%;margin-bottom:40px;border-bottom:3px solid #2c3e50;padding-bottom:30px}.logo-section{display:table-cell;width:50%;vertical-align:middle}.logo-section img{max-width:150px}.logo-text{font-size:28px;font-weight:bold;color:#2c3e50;margin:10px 0 5px}.logo-subtext{font-size:13px;color:#7f8c8d}.title-section{display:table-cell;width:50%;text-align:right;vertical-align:middle}.doc-title{font-size:42px;font-weight:bold;color:#2c3e50;margin:0 0 10px;letter-spacing:3px}.doc-number{font-size:18px;color:#7f8c8d;background:#ecf0f1;padding:8px 20px;border-radius:5px;display:inline-block}.info-section{margin-bottom:35px}.info-grid{display:table;width:100%;margin-bottom:25px}.info-box{display:table-cell;width:50%;padding:20px;background:#f8f9fa;border-radius:8px;vertical-align:top}.info-box-left{border-right:3px solid #fff}.info-label{font-size:11px;text-transform:uppercase;color:#7f8c8d;font-weight:bold;margin-bottom:8px}.info-value{font-size:16px;color:#2c3e50;font-weight:600;margin:5px 0}.info-value-small{font-size:13px;color:#555;margin:3px 0}.delivery-box{background:#e8f5e9;border-left:5px solid #27ae60;padding:20px;margin:25px 0;border-radius:5px}.delivery-label{font-size:12px;color:#27ae60;font-weight:bold;text-transform:uppercase;margin-bottom:8px}.delivery-date{font-size:20px;font-weight:bold;color:#27ae60;margin:5px 0}.delivery-note{font-size:12px;color:#666;margin-top:5px}.items-section{margin:35px 0}.section-title{font-size:20px;font-weight:bold;color:#2c3e50;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid #ecf0f1}.items-table{width:100%;border-collapse:collapse;margin:20px 0}.items-table thead{background:#2c3e50;color:white}.items-table th{padding:15px 12px;text-align:left;font-weight:bold;font-size:13px;text-transform:uppercase}.items-table td{padding:15px 12px;border-bottom:1px solid #ecf0f1;font-size:14px}.items-table tbody tr:nth-child(even){background:#f8f9fa}.text-center{text-align:center}.text-right{text-align:right}.total-section{margin:35px 0;text-align:right}.total-box{display:inline-block;background:#2c3e50;color:white;padding:20px 40px;border-radius:8px;min-width:300px}.total-label{font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;opacity:0.9}.total-value{font-size:36px;font-weight:bold;letter-spacing:2px}.obs-section{margin:35px 0;padding:20px;background:#fff9e6;border-left:4px solid #f39c12;border-radius:5px}.obs-title{font-size:14px;font-weight:bold;color:#f39c12;margin-bottom:10px;text-transform:uppercase}.obs-text{font-size:13px;color:#555;line-height:1.6}.footer{margin-top:50px;padding-top:30px;border-top:2px solid #ecf0f1;text-align:center;font-size:11px;color:#95a5a6}.footer strong{color:#2c3e50}</style></head><body><div class="container">')
         
+        # Header
+        html_parts.append('<div class="header"><div class="logo-section"><img src="' + logo_url + '" alt="Liraprint" onerror="this.style.display=\'none\'"/><div class="logo-text">LIRAPRINT</div><div class="logo-subtext">Gráfica Rápida - Qualidade e Agilidade</div></div><div class="title-section"><div class="doc-title">ORÇAMENTO</div><div class="doc-number">' + str(orc.get('codigo_servico','—')) + '</div></div></div>')
+        
+        # Info Section
+        html_parts.append('<div class="info-section"><div class="info-grid"><div class="info-box info-box-left"><div class="info-label">Cliente</div><div class="info-value">' + str(cliente) + '</div><div style="margin-top:15px;"><div class="info-value-small"><strong>CNPJ:</strong> ' + str(emp.get('cnpj','—')) + '</div><div class="info-value-small"><strong>Tel:</strong> ' + str(emp.get('telefone','—')) + '</div><div class="info-value-small"><strong>Email:</strong> ' + str(emp.get('email','—')) + '</div></div></div><div class="info-box"><div class="info-label">Dados do Orçamento</div><div class="info-value-small"><strong>Emissão:</strong> ' + str(data_abr) + '</div><div class="info-value-small"><strong>Status:</strong> ' + str(orc.get('status','Pendente')) + '</div><div class="info-value-small"><strong>Válido até:</strong> 30 dias</div></div></div></div>')
+        
+        # Delivery Info
+        html_parts.append('<div class="delivery-box"><div class="delivery-label">📅 Previsão de Entrega</div><div class="delivery-date">' + str(data_ent) + '</div><div class="delivery-note">* Cálculo baseado em dias úteis (excluindo finais de semana e feriados)</div></div>')
+        
+        # Items Table Header
+        html_parts.append('<div class="items-section"><div class="section-title">Itens Orçados</div><table class="items-table"><thead><tr><th width="5%">#</th><th width="50%">Descrição</th><th width="15%" class="text-center">Qtd</th><th width="20%" class="text-center">Dimensão</th><th width="10%" class="text-right">Valor</th></tr></thead><tbody>')
+        
+        # Items Rows
         itens = orc.get('itens_orcamento', [])
         for i, item in enumerate(itens):
-            html += '<tr>'
-            html += '<td class="text-center">' + str(i+1) + '</td>'
-            html += '<td><strong>' + str(item.get('titulo','—')) + '</strong></td>'
-            html += '<td class="text-center">' + str(item.get('quantidade','1')) + '</td>'
-            html += '<td class="text-center">' + str(item.get('dimensao','—')) + '</td>'
-            html += '<td class="text-right">R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td>'
-            html += '</tr>'
+            html_parts.append('<tr><td class="text-center">' + str(i+1) + '</td><td><strong>' + str(item.get('titulo','—')) + '</strong></td><td class="text-center">' + str(item.get('quantidade','1')) + '</td><td class="text-center">' + str(item.get('dimensao','—')) + '</td><td class="text-right">R$ ' + "{:.2f}".format(float(item.get('valor_total',0) or 0)) + '</td></tr>')
         
-        html += '''</tbody>
-        </table>
-    </div>
-    
-    <!-- Total -->
-    <div class="total-section">
-        <div class="total-box">
-            <div class="total-label">Total do Orçamento</div>
-            <div class="total-value">R$ ''' + "{:.2f}".format(total) + '''</div>
-        </div>
-    </div>
-    
-    <!-- Observations -->'''
-    
-    if orc.get('observacoes'):
-        html += '''
-    <div class="obs-section">
-        <div class="obs-title">Observações</div>
-        <div class="obs-text">''' + str(orc['observacoes']) + '''</div>
-    </div>'''
-    
-    html += '''
-    <!-- Footer -->
-    <div class="footer">
-        <div style="margin-bottom: 10px;">
-            <strong>LIRAPRINT</strong> - Gráfica Rápida<br>
-            R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070
-        </div>
-        <div>
-            Documento gerado em ''' + datetime.now().strftime('%d/%m/%Y às %H:%M') + '''<br>
-            Este orçamento é válido por 30 dias a partir da data de emissão
-        </div>
-    </div>
-</div>
-</body>
-</html>'''
+        # Close Table and Sections
+        html_parts.append('</tbody></table></div>')
+        html_parts.append('<div class="total-section"><div class="total-box"><div class="total-label">Total do Orçamento</div><div class="total-value">R$ ' + "{:.2f}".format(total) + '</div></div></div>')
         
+        # Observations (conditional)
+        if orc.get('observacoes'):
+            html_parts.append('<div class="obs-section"><div class="obs-title">Observações</div><div class="obs-text">' + str(orc['observacoes']) + '</div></div>')
+        
+        # Footer and Close HTML
+        html_parts.append('<div class="footer"><div style="margin-bottom:10px;"><strong>LIRAPRINT</strong> - Gráfica Rápida<br>R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070</div><div>Documento gerado em ' + datetime.now().strftime('%d/%m/%Y às %H:%M') + '<br>Este orçamento é válido por 30 dias a partir da data de emissão</div></div>')
+        html_parts.append('</div></body></html>')
+        
+        # Join all parts
+        html = "".join(html_parts)
+        
+        # Generate PDF
         pdf = pdfkit.from_string(html, False, options={"quiet": "", "encoding": "UTF-8"})
         return send_file(BytesIO(pdf), as_attachment=True, download_name="Orcamento_" + str(orc.get('codigo_servico','')) + ".pdf", mimetype="application/pdf")
         
