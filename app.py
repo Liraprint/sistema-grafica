@@ -1,91 +1,91 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
-import requests
-import os
-import pandas as pd
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill
-from io import BytesIO
-from datetime import datetime
-import pdfkit
+    from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
+    import requests
+    import os
+    import pandas as pd
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from io import BytesIO
+    from datetime import datetime
+    import pdfkit
 
-# ========================
-# 🧩 MENU FLUTUANTE
-# ========================
-MENU_FLUTUANTE = '''
-<div style="margin-bottom: 20px;">
-    <div style="position: relative; display: inline-block;">
-        <button id="btnMenu" style="background: #2c3e50; color: white; border: none; border-radius: 50px; padding: 10px 25px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">☰ Menu</button>
-        <div id="dropdownMenu" style="display: none; position: absolute; top: 45px; left: 0; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 220px; overflow: hidden; border: 1px solid #eee; z-index: 100;">
-            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
-            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
-            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
-            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
-            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
-            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
-            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
-            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
-            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+    # ========================
+    # 🧩 MENU FLUTUANTE
+    # ========================
+    MENU_FLUTUANTE = '''
+    <div style="margin-bottom: 20px;">
+        <div style="position: relative; display: inline-block;">
+            <button id="btnMenu" style="background: #2c3e50; color: white; border: none; border-radius: 50px; padding: 10px 25px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">☰ Menu</button>
+            <div id="dropdownMenu" style="display: none; position: absolute; top: 45px; left: 0; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 220px; overflow: hidden; border: 1px solid #eee; z-index: 100;">
+                <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+                <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+                <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+                <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+                <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+                <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+                <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+                <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+                <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+            </div>
         </div>
     </div>
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const b = document.getElementById('btnMenu');
-    const d = document.getElementById('dropdownMenu');
-    if(b && d){
-        b.onclick = function(e){
-            e.stopPropagation();
-            d.style.display = d.style.display === 'block' ? 'none' : 'block';
-        };
-        document.onclick = function(e){
-            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
-        };
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        const b = document.getElementById('btnMenu');
+        const d = document.getElementById('dropdownMenu');
+        if(b && d){
+            b.onclick = function(e){
+                e.stopPropagation();
+                d.style.display = d.style.display === 'block' ? 'none' : 'block';
+            };
+            document.onclick = function(e){
+                if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+            };
+        }
+    });
+    </script>
+    '''
+
+    app = Flask(__name__)
+    app.secret_key = os.environ.get('SECRET_KEY', 'minha_chave_secreta_123')
+
+    # ========================
+    # Dados do Supabase (API)
+    # ========================
+    SUPABASE_URL = os.environ.get('SUPABASE_URL')
+    SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
     }
-});
-</script>
-'''
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'minha_chave_secreta_123')
+    # ========================
+    # Funções para acessar o Supabase
+    # ========================
+    def buscar_usuario_por_login(username, password):
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                dados = response.json()
+                return dados[0] if len(dados) > 0 else None
+            return None
+        except Exception as e:
+            print("Erro de conexão:", e)
+            return None
 
-# ========================
-# Dados do Supabase (API)
-# ========================
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
-headers = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json"
-}
-
-# ========================
-# Funções para acessar o Supabase
-# ========================
-def buscar_usuario_por_login(username, password):
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*&nome%20de%20usuario=eq.{username}&SENHA=eq.{password}"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            dados = response.json()
-            return dados[0] if len(dados) > 0 else None
-        return None
-    except Exception as e:
-        print("Erro de conexão:", e)
-        return None
-
-def buscar_usuarios():
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print("Erro ao buscar usuários:", response.status_code, response.text)
+    def buscar_usuarios():
+        try:
+            url = f"{SUPABASE_URL}/rest/v1/usuarios?select=*"
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print("Erro ao buscar usuários:", response.status_code, response.text)
+                return []
+        except Exception as e:
+            print("Erro de conexão:", e)
             return []
-    except Exception as e:
-        print("Erro de conexão:", e)
-        return []
 
     def criar_usuario(username, password, nivel, telefone=None):
         try:
