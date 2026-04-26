@@ -3786,9 +3786,9 @@ def adicionar_orcamento():
                 return redirect(request.url)
         return render_template('importar_excel.html', log=None)
 
-                # ========================
-                # 🆕 ROTA NOVA: PDF DO ORÇAMENTO COM DATA DE ENTREGA (PULA FDS/FERIADOS)
-                # ========================
+        # ========================
+    # PDF DO ORÇAMENTO - Layout Profissional
+    # ========================
     @app.route('/pdf_orcamento/<int:id>')
     def pdf_orcamento(id):
         if 'usuario' not in session:
@@ -3809,7 +3809,7 @@ def adicionar_orcamento():
             data_abr = fmt(orc.get('data_abertura'))
             total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
         
-            # HTML LIMPO E FUNCIONAL
+            # HTML Profissional
             html = f'''<!DOCTYPE html>
     <html>
     <head>
@@ -3838,13 +3838,11 @@ def adicionar_orcamento():
     </head>
     <body>
     <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-    
         <div class="header">
             <img src="{logo_url}" class="logo" alt="Liraprint" onerror="this.style.display='none'">
             <div class="titulo">ORÇAMENTO</div>
             <div class="codigo">{orc.get('codigo_servico','—')}</div>
         </div>
-    
         <div style="display: table; width: 100%; margin-bottom: 25px;">
             <div style="display: table-cell; width: 50%; vertical-align: top;">
                 <div class="info-box">
@@ -3862,13 +3860,11 @@ def adicionar_orcamento():
                     <div class="info-label">Dados do Orçamento</div>
                     <div style="font-size: 14px; color: #555; line-height: 1.8;">
                         <div><strong>Emissão:</strong> {data_abr}</div>
-                        <div><strong>Status:</strong> {orc.get('status','Pendente')}</div>
                         <div><strong>Validade:</strong> 30 dias</div>
                     </div>
                 </div>
             </div>
         </div>
-    
         <div class="entrega-box">
             <div style="font-size: 14px; color: #27ae60; font-weight: bold; margin-bottom: 8px;">📅 Prazo de Entrega</div>
             <div style="font-size: 14px; color: #27ae60; line-height: 1.6;">
@@ -3876,9 +3872,7 @@ def adicionar_orcamento():
                 <em style="font-size: 12px;">* A contagem inicia após aprovação.</em>
             </div>
         </div>
-    
         <div style="font-size: 18px; font-weight: bold; color: #2c3e50; margin: 30px 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">Itens Orçados</div>
-    
         <table>
             <thead>
                 <tr>
@@ -3894,31 +3888,28 @@ def adicionar_orcamento():
             if itens:
                 for i, item in enumerate(itens):
                     html += f'''
-                <tr>
-                    <td>{i+1}</td>
-                    <td><strong>{item.get('titulo','—')}</strong><br><small style="color:#7f8c8d">{item.get('dimensao','')}</small></td>
-                    <td>{item.get('quantidade','1')}</td>
-                    <td style="text-align: right; font-size: 15px;">R$ {float(item.get('valor_total',0) or 0):.2f}</td>
-                </tr>'''
+                    <tr>
+                        <td>{i+1}</td>
+                        <td><strong>{item.get('titulo','—')}</strong><br><small style="color:#7f8c8d">{item.get('dimensao','')}</small></td>
+                        <td>{item.get('quantidade','1')}</td>
+                        <td style="text-align: right; font-size: 15px;">R$ {float(item.get('valor_total',0) or 0):.2f}</td>
+                    </tr>'''
             else:
                 html += '<tr><td colspan="4" style="text-align: center; color: #95a5a6; padding: 30px;">Nenhum item adicionado</td></tr>'
         
             html += f'''
             </tbody>
         </table>
-    
         <div class="total">
             <div class="total-box">
                 <div class="total-label">Total do Orçamento</div>
                 <div class="total-value">R$ {total:.2f}</div>
             </div>
         </div>
-    
         <div class="footer">
             <div style="margin-bottom: 10px;"><strong>LIRAPRINT</strong> - Gráfica Rápida<br>R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070</div>
             <div>Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}<br>Este orçamento é válido por 30 dias</div>
         </div>
-    
     </div>
     </body>
     </html>'''
@@ -3933,8 +3924,9 @@ def adicionar_orcamento():
             flash("❌ Erro ao gerar PDF: " + str(e))
             return redirect(url_for('listar_orcamentos'))
 
+
     # ========================
-    # Iniciar o app
+    # INICIAR O APP (FORA DE QUALQUER FUNÇÃO!)
     # ========================
     if __name__ == '__main__':
         port = int(os.environ.get('PORT', 5000))
