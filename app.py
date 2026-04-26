@@ -2891,25 +2891,36 @@ def adicionar_orcamento():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
+        print("=" * 50)
+        print("📥 RECEBENDO DADOS DO FORMULÁRIO")
+        print("=" * 50)
+        
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = request.form.get('prazo_dias', '7')
         observacoes = request.form.get('observacoes_gerais', '')
         
+        print(f"Cliente ID: {empresa_id}")
+        print(f"Data: {data_abertura}")
+        print(f"Prazo: {prazo_dias} dias")
+        
         if not empresa_id:
-            flash("Cliente é obrigatório!")
+            flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
         # Gera código OR-XXX
         try:
             ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
             n = int(ult[0]['codigo_servico'].split('-')[1]) + 1 if ult and len(ult) > 0 else 1
-        except:
-            n = 1
-        cod = f"OR-{n:03d}"
+            cod = f"OR-{n:03d}"
+            print(f"✅ Código gerado: {cod}")
+        except Exception as e:
+            print(f"❌ Erro ao gerar código: {e}")
+            cod = f"OR-001"
         
         try:
-            # Cria o orçamento no Supabase
+            # 1. Cria o orçamento
+            print("\n📝 Criando orçamento no Supabase...")
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json={
                 "codigo_servico": cod,
                 "titulo": "Orçamento Múltiplo",
@@ -2922,39 +2933,88 @@ def adicionar_orcamento():
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
             }, headers=headers)
             
+            print(f"Status: {resp.status_code}")
+            print(f"Resposta: {resp.text}")
+            
             if resp.status_code == 201:
                 oid = resp.json().get('id')
-                vt = 0.0
+                print(f"✅ Orçamento criado! ID: {oid}")
                 
+                # 2. Processa os itens
+                vt = 0.0
                 titulos = request.form.getlist('item_titulo[]')
-                qt = request.form.getlist('item_quantidade[]')
-                vu = request.form.getlist('item_valor_unit[]')
-                dims = request.form.getlist('item_dimensao[]')
+                quantidades = request.form.getlist('item_quantidade[]')
+                valores_unit = request.form.getlist('item_valor_unit[]')
+                dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
+                
+                print(f"\n📦 Total de itens recebidos: {len(titulos)}")
+                
+                if len(titulos) == 0:
+                    print("⚠️ NENHUM ITEM RECEBIDO!")
+                    flash("⚠️ Adicione pelo menos um item ao orçamento.")
+                    return redirect(url_for('adicionar_orcamento'))
                 
                 for i in range(len(titulos)):
                     t = titulos[i].strip()
-                    if not t: continue
-                    try:
-                        q = float(qt[i].replace(',', '.') or 0)
-                        v = float(vu[i].replace(',', '.') or 0)
-                    except:
+                    if not t:
+                        print(f"  ⚠️ Item {i+1} vazio, pulando...")
                         continue
-                    total = q * v
-                    vt += total
                     
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
-                        "orcamento_id": oid, "titulo": t, "quantidade": q,
-                        "dimensao": dims[i] if i < len(dims) else "",
-                        "numero_cores": cores[i] if i < len(cores) else "",
-                        "valor_unitario": v, "valor_total": total
+                    try:
+                        q_str = quantidades[i].strip().replace(',', '.') if i < len(quantidades) else '1'
+                        vu_str = valores_unit[i].strip().replace(',', '.') if i < len(valores_unit) else '0'
+                        
+                        q = float(q_str) if q_str else 1.0
+                        vu = float(vu_str) if vu_str else 0.0
+                    except Exception as e:
+                        print(f"  ❌ Erro ao converter: q={q_str}, vu={vu_str} | {e}")
+                        continue
+                    
+                    dim = dimensoes[i].strip() if i < len(dimensoes) else ''
+                    cor = cores[i].strip() if i < len(cores) else ''
+                    total_item = q * vu
+                    vt += total_item
+                    
+                    print(f"  ✓ Item {i+1}: '{t}' | Qtd: {q} | VU: R$ {vu:.2f} | Total: R$ {total_item:.2f}")
+                    
+                    # Salva item no banco
+                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
+                        "orcamento_id": oid,
+                        "titulo": t,
+                        "quantidade": q,
+                        "dimensao": dim,
+                        "numero_cores": cor,
+                        "valor_unitario": vu,
+                        "valor_total": total_item
                     }, headers=headers)
+                    
+                    if resp_item.status_code == 201:
+                        print(f"    ✅ Item salvo!")
+                    else:
+                        print(f"    ❌ Erro ao salvar item: {resp_item.status_code} - {resp_item.text}")
                 
-                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", json={"valor_cobrado": vt}, headers=headers)
-                flash("✅ Orçamento criado com sucesso!")
-                return redirect(url_for('listar_orcamentos'))
+                # 3. Atualiza valor total
+                print(f"\n💰 Valor total: R$ {vt:.2f}")
+                resp_patch = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                    json={"valor_cobrado": vt}, headers=headers)
+                
+                if resp_patch.status_code == 204:
+                    print("✅ Valor total atualizado!")
+                    flash("✅ Orçamento criado com sucesso!")
+                    return redirect(url_for('listar_orcamentos'))
+                else:
+                    print(f"⚠️ Erro ao atualizar valor: {resp_patch.status_code}")
+                    flash("⚠️ Orçamento criado mas valor não atualizado.")
+                    return redirect(url_for('listar_orcamentos'))
+            else:
+                flash("❌ Erro ao criar orçamento no banco.")
+                return redirect(url_for('adicionar_orcamento'))
+                
         except Exception as e:
-            print("Erro ao criar orçamento:", e)
+            print(f"\n❌ ERRO GERAL: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash("❌ Erro ao criar orçamento.")
     
     # GET - Renderiza o formulário
@@ -2981,7 +3041,7 @@ def adicionar_orcamento():
         label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
         input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
         .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
-        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }}
+        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }}
         .btn-blue {{ background: #3498db; }}
         .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
     </style>
@@ -2991,47 +3051,94 @@ def adicionar_orcamento():
         <div class="header"><h1>➕ Novo Orçamento</h1></div>
         <div class="content">
             <a href="/orcamentos" class="back-link">← Voltar</a>
-            <form method="post">
+            <form method="post" id="formOrcamento">
                 <div class="grid">
-                    <div class="form-group"><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione</option>{opts}</select></div>
-                    <div class="form-group"><label>Data Abertura *</label><input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}" required></div>
+                    <div class="form-group">
+                        <label>Cliente *</label>
+                        <select name="empresa_id" required>
+                            <option value="">Selecione uma empresa</option>
+                            {opts}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Abertura *</label>
+                        <input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}" required>
+                    </div>
                 </div>
-                <div class="form-group"><label>Prazo (dias úteis)</label><input type="number" name="prazo_dias" value="7" min="1"></div>
-                <div class="form-group"><label>Observações</label><textarea name="observacoes_gerais" rows="2"></textarea></div>
-                <h3>Itens</h3>
+                <div class="form-group">
+                    <label>Prazo de Entrega (dias úteis após aprovação da arte)</label>
+                    <input type="number" name="prazo_dias" value="7" min="1">
+                    <small style="color: #7f8c8d;">* A contagem inicia após aprovação da arte</small>
+                </div>
+                <div class="form-group">
+                    <label>Observações Gerais</label>
+                    <textarea name="observacoes_gerais" rows="2"></textarea>
+                </div>
+                <h3 style="color: #2c3e50; margin: 25px 0 15px 0;">Itens do Orçamento</h3>
                 <div id="itens-container">
                     <div class="item-row">
                         <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
-                            <div><label>Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner" required></div>
-                            <div><label>Qtd *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
-                            <div><label>Valor Unit. *</label><input type="text" name="item_valor_unit[]" placeholder="0,00" required></div>
-                            <div><label>Dimensão</label><input type="text" name="item_dimensao[]"></div>
-                            <div><label>Cores</label><input type="number" name="item_cores[]" value="4"></div>
-                            <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:25px;">🗑️</button></div>
+                            <div>
+                                <label>Material/Descrição *</label>
+                                <input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required>
+                            </div>
+                            <div>
+                                <label>Quantidade *</label>
+                                <input type="number" name="item_quantidade[]" step="any" value="1" required>
+                            </div>
+                            <div>
+                                <label>Valor Unit. (R$) *</label>
+                                <input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required>
+                            </div>
+                            <div>
+                                <label>Dimensão (opcional)</label>
+                                <input type="text" name="item_dimensao[]" placeholder="Ex: 100x50">
+                            </div>
+                            <div>
+                                <label>Cores</label>
+                                <input type="number" name="item_cores[]" step="1" value="4">
+                            </div>
+                            <div>
+                                <button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <button type="button" onclick="addRow()" class="btn btn-blue" style="margin:10px 0;width:100%;">+ Item</button>
-                <button type="submit" class="btn" style="width:100%;margin-top:15px;">💾 Gerar</button>
+                <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Gerar Orçamento</button>
             </form>
         </div>
     </div>
+    
     <script>
+    // Formatação automática de valor monetário
+    document.addEventListener('input', function(e) {{
+        if (e.target.classList.contains('valor-input')) {{
+            let value = e.target.value.replace(/\\D/g, '');
+            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+            e.target.value = value;
+        }}
+    }});
+    
     function addRow() {{
         const div = document.createElement('div');
         div.className = 'item-row';
-        div.innerHTML = `<div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
-            <div><input type="text" name="item_titulo[]" placeholder="Ex: Banner" required></div>
-            <div><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
-            <div><input type="text" name="item_valor_unit[]" placeholder="0,00" required></div>
-            <div><input type="text" name="item_dimensao[]"></div>
-            <div><input type="number" name="item_cores[]" value="4"></div>
-            <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:5px;">🗑️</button></div>
-        </div>`;
+        div.innerHTML = `
+            <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
+                <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+                <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
+                <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+            </div>
+        `;
         document.getElementById('itens-container').appendChild(div);
     }}
     </script>
-    </body></html>'''
+    </body>
+    </html>
+    '''
 
 @app.route('/editar_orcamento/<int:id>', methods=['GET', 'POST'])
 def editar_orcamento(id):
