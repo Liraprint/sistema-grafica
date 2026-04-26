@@ -11,30 +11,67 @@ import pdfkit
 # ========================
 # 🧩 MENU FLUTUANTE (COPIADO EXATAMENTE COMO SOLICITADO)
 # ========================
-MENU_FLUTUANTE = '''
-<div style="position:fixed;top:15px;right:15px;z-index:9999;font-family:sans-serif;">
-  <div style="position:relative;display:inline-block;">
-    <button id="btnMenu" style="background:#2c3e50;color:white;border:none;border-radius:50px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.15);">☰ Menu</button>
-    <div id="dropdownMenu" style="display:none;position:absolute;top:45px;right:0;background:white;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:200px;overflow:hidden;border:1px solid #eee;">
-      <div style="background:#34495e;color:white;padding:10px 14px;font-weight:600;">Navegação Rápida</div>
-      <a href="/clientes" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">🏠 Menu Principal</a>
-      <a href="/empresas" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">🏢 Clientes</a>
-      <a href="/servicos" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">📋 Serviços / OS</a>
-      <a href="/orcamentos" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">💰 Orçamentos</a>
-      <a href="/estoque" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">📊 Estoque</a>
-      <a href="/materiais" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">📦 Materiais</a>
-      <a href="/fornecedores" style="display:block;padding:10px 14px;color:#333;text-decoration:none;border-bottom:1px solid #f1f1f1;">🚚 Fornecedores</a>
-      <a href="/envios" style="display:block;padding:10px 14px;color:#333;text-decoration:none;">📬 Rastreamento</a>
+<!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
     </div>
-  </div>
 </div>
+
+<!-- Script para abrir/fechar o menu -->
 <script>
-document.addEventListener('DOMContentLoaded',function(){
-const b=document.getElementById('btnMenu');const d=document.getElementById('dropdownMenu');
-if(b&&d){b.onclick=function(e){e.stopPropagation();d.style.display=d.style.display==='block'?'none':'block';};
-document.onclick=function(e){if(!b.contains(e.target)&&!d.contains(e.target))d.style.display='none';};}});
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
 </script>
-'''
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'minha_chave_secreta_123')
@@ -480,7 +517,66 @@ def gerenciar_usuarios():
         <body>\n    {MENU_FLUTUANTE}
         <div class="container">
         <h2>🔐 Gerenciar Usuários</h2>
-        <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+        <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
         <div class="form-container">
         <h3>➕ Criar Novo Usuário</h3>
         <form method="post" action="/criar_usuario">
@@ -702,7 +798,66 @@ def listar_empresas():
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <div class="search-box">
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
     </div>
@@ -1122,7 +1277,66 @@ def listar_servicos():
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
     <div class="search-box">
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
@@ -1704,7 +1918,66 @@ def configuracoes():
     <div class="container">
     <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <form method="post" action="/salvar_configuracoes" class="form-container">
     <h3>Remetente (Etiquetas)</h3>
     <div><label>Nome do Remetente</label><input type="text" name="nome_remetente" value="{config['nome_remetente']}" required></div>
@@ -1788,7 +2061,66 @@ def listar_materiais():
     <div class="container">
     <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+   <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table>
@@ -2271,7 +2603,66 @@ def estoque():
     <div class="container">
     <div class="header"><h1>📊 Meu Estoque</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <div class="section">
     <h2 class="section-title">Adicionar ao Estoque</h2>
     <p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a></p>
@@ -2577,7 +2968,66 @@ def listar_fornecedores():
     <div class="container">
     <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
     <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
@@ -2791,7 +3241,66 @@ def listar_orcamentos():
     <div class="container">
     <div class="header"><h1>💰 Orçamentos</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
     <div style="text-align: center; padding: 20px;"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}" style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px;"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
     <table><thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
@@ -3315,7 +3824,66 @@ def envios():
     <div class="container">
     <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/clientes" class="back-link">← Voltar ao Menu</a>
+    <!-- BOTÃO MENU DENTRO DO SISTEMA -->
+<div style="margin-bottom: 20px;">
+    <div style="position: relative; display: inline-block;">
+        <button id="btnMenu" style="
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ☰ Menu
+        </button>
+        <!-- O Menu Dropdown -->
+        <div id="dropdownMenu" style="
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 0; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            min-width: 220px; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+            z-index: 100;">
+            <div style="background: #34495e; color: white; padding: 10px 14px; font-weight: bold;">Navegação Rápida</div>
+            <a href="/clientes" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏠 Menu Principal</a>
+            <a href="/empresas" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🏢 Clientes</a>
+            <a href="/servicos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📋 Serviços / OS</a>
+            <a href="/orcamentos" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">💰 Orçamentos</a>
+            <a href="/estoque" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📊 Estoque</a>
+            <a href="/materiais" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">📦 Materiais</a>
+            <a href="/fornecedores" style="display: block; padding: 10px 14px; color: #333; text-decoration: none; border-bottom: 1px solid #f1f1f1;">🚚 Fornecedores</a>
+            <a href="/envios" style="display: block; padding: 10px 14px; color: #333; text-decoration: none;">📬 Rastreamento</a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para abrir/fechar o menu -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const b = document.getElementById('btnMenu');
+    const d = document.getElementById('dropdownMenu');
+    if(b && d){
+        b.onclick = function(e){
+            e.stopPropagation();
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        };
+        document.onclick = function(e){
+            if(!b.contains(e.target) && !d.contains(e.target)) d.style.display = 'none';
+        };
+    }
+});
+</script>
     <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
     <div class="section">
     <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
