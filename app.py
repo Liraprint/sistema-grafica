@@ -390,7 +390,6 @@ def login():
     </style>
     </head>
     <body>
-    ''' + MENU_FLUTUANTE + '''
     <div class="login-container">
     <div class="header"><h1>Login</h1></div>
     <form method="post" class="form-container">
