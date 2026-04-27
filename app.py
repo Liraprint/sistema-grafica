@@ -1587,76 +1587,94 @@ def gerar_etiqueta(id):
         font-family: Arial, sans-serif; 
         background: #f5f7fa; 
         padding: 20px;
-        font-size: 12px;
+        font-size: 14px;
     }}
     .container {{ 
-        max-width: 800px; 
+        max-width: 900px; 
         margin: 0 auto; 
         background: white; 
         border-radius: 10px; 
         box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-        padding: 20px;
+        padding: 30px;
     }}
     .header {{ 
         background: #2c3e50; 
         color: white; 
-        padding: 15px; 
+        padding: 20px; 
         text-align: center; 
         border-radius: 10px 10px 0 0; 
-        margin: -20px -20px 20px -20px;
+        margin: -30px -30px 25px -30px;
+        font-size: 22px;
     }}
     .section {{ 
-        margin-bottom: 20px; 
+        margin-bottom: 25px; 
         border: 2px solid #ecf0f1; 
         border-radius: 8px; 
-        padding: 15px; 
+        padding: 20px; 
     }}
     .section-title {{ 
-        font-size: 14px; 
+        font-size: 16px; 
         font-weight: bold; 
         color: #2c3e50; 
-        margin-bottom: 10px;
+        margin-bottom: 15px;
         text-transform: uppercase;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 8px;
     }}
-    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    
+    /* ESTILOS DE FORMULÁRIO MELHORADOS (LETRAS MAIORES) */
     .form-group label {{ 
         display: block; 
-        margin-bottom: 3px; 
-        font-weight: 600; 
+        margin-bottom: 6px; 
+        font-weight: bold; 
         color: #2c3e50; 
-        font-size: 11px; 
+        font-size: 14px; 
     }}
     .form-group input {{ 
         width: 100%; 
-        padding: 6px; 
+        padding: 12px; 
         border: 1px solid #ddd; 
-        border-radius: 4px; 
-        font-size: 12px; 
+        border-radius: 6px; 
+        font-size: 16px; 
+        color: #333;
+        background: #fff;
     }}
+    .form-group input:focus {{
+        border-color: #3498db;
+        outline: none;
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }}
+    
     .btn {{ 
-        padding: 10px 20px; 
+        padding: 12px 25px; 
         background: #27ae60; 
         color: white; 
         border: none; 
-        border-radius: 5px; 
+        border-radius: 6px; 
         cursor: pointer; 
-        font-size: 14px; 
+        font-size: 16px; 
         font-weight: bold; 
         margin: 5px; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }}
+    .btn:hover {{ background: #219150; }}
     .btn-purple {{ background: #8e44ad; }}
+    .btn-purple:hover {{ background: #732d91; }}
     .btn-blue {{ background: #3498db; }}
-    .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+    .btn-blue:hover {{ background: #2980b9; }}
+    .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; font-size: 16px; font-weight: 500; }}
     
     /* ETIQUETA PARA IMPRESSÃO TÉRMICA */
     .etiqueta {{ 
         border: 2px solid #2c3e50; 
         padding: 15px; 
-        margin: 20px 0; 
+        margin: 20px auto; /* Centraliza na tela */
         background: #fff;
         width: 100mm;
-        min-height: 150mm;
+        min-height: 140mm;
         page-break-inside: avoid;
+        position: relative;
     }}
     .etiqueta-header {{ 
         display: flex; 
@@ -1666,7 +1684,7 @@ def gerar_etiqueta(id):
         margin-bottom: 15px; 
     }}
     .etiqueta-logo {{ 
-        font-size: 18px; 
+        font-size: 20px; 
         font-weight: bold; 
         color: #2c3e50; 
     }}
@@ -1677,43 +1695,45 @@ def gerar_etiqueta(id):
         text-transform: uppercase; 
     }}
     .etiqueta-bloco {{ 
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         padding: 10px;
-        background: #f8f9fa;
         border-radius: 5px;
     }}
     .etiqueta-label {{ 
-        font-size: 9px; 
+        font-size: 10px; 
         text-transform: uppercase; 
         color: #7f8c8d; 
         font-weight: bold; 
-        margin-bottom: 5px; 
+        margin-bottom: 8px; 
+        letter-spacing: 1px;
     }}
     .etiqueta-valor {{ 
-        font-size: 12px; 
+        font-size: 13px; 
         color: #2c3e50; 
         font-weight: 600; 
-        margin-bottom: 5px; 
+        margin-bottom: 6px; 
         line-height: 1.4; 
     }}
     .etiqueta-cep {{ 
-        font-size: 14px; 
+        font-size: 15px; 
         font-weight: bold; 
         color: #2c3e50; 
         background: #ecf0f1; 
-        padding: 5px 10px; 
+        padding: 6px 12px; 
         border-radius: 4px; 
         display: inline-block; 
-        margin-top: 8px; 
+        margin-top: 10px; 
     }}
     .etiqueta-ac {{
-        font-size: 11px;
+        font-size: 12px;
         color: #e74c3c;
         font-weight: bold;
         margin-top: 5px;
         font-style: italic;
+        display: block;
     }}
     
+    /* CONFIGURAÇÃO DE IMPRESSÃO PARA REMOVER PÁGINA EM BRANCO */
     @media print {{
         @page {{ 
             size: auto;
@@ -1723,6 +1743,7 @@ def gerar_etiqueta(id):
             background: white; 
             padding: 0; 
             margin: 0;
+            -webkit-print-color-adjust: exact;
         }}
         .no-print {{ 
             display: none !important; 
@@ -1733,19 +1754,28 @@ def gerar_etiqueta(id):
             padding: 0;
             margin: 0;
             max-width: 100%;
+            width: 100%;
         }}
         .etiqueta {{ 
             border: 2px solid #000;
-            width: 100mm;
-            margin: 0;
-            padding: 10px;
+            width: 100%; /* Ocupa a largura da etiqueta térmica */
+            max-width: 100mm;
+            margin: 0 auto; /* Centraliza */
+            padding: 5mm;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }}
+        .etiqueta-bloco {{
+            padding: 5px 0;
         }}
     }}
     </style>
     </head>
     <body>
     <div class="container">
-        <div class="header"><h1 style="margin:0; font-size: 20px;">📬 Etiqueta de Postagem</h1></div>
+        <div class="header no-print">📬 Etiqueta de Postagem</div>
         
         <div class="no-print">
             <a href="/empresa/{id}" class="back-link">← Voltar</a>
@@ -1782,7 +1812,7 @@ def gerar_etiqueta(id):
                     </div>
                 </div>
                 
-                <div style="text-align: center; margin: 20px 0;">
+                <div style="text-align: center; margin: 30px 0;">
                     <button type="button" class="btn btn-purple" onclick="imprimirEtiqueta()">🖨️ Imprimir Etiqueta</button>
                     <button type="button" class="btn btn-blue" onclick="window.location.href='/empresa/{id}'">← Voltar</button>
                 </div>
@@ -1831,8 +1861,10 @@ def gerar_etiqueta(id):
         // Destinatário
         document.getElementById('view_dest_nome').textContent = document.getElementById('dest_nome').value;
         const responsavel = document.getElementById('dest_responsavel').value;
-        document.getElementById('view_dest_ac').textContent = responsavel ? 'A/C: ' + responsavel : '';
-        document.getElementById('view_dest_ac').style.display = responsavel ? 'block' : 'none';
+        const acElement = document.getElementById('view_dest_ac');
+        acElement.textContent = responsavel ? 'A/C: ' + responsavel : '';
+        acElement.style.display = responsavel ? 'block' : 'none';
+        
         document.getElementById('view_dest_endereco').textContent = document.getElementById('dest_endereco').value;
         document.getElementById('view_dest_bairro').textContent = document.getElementById('dest_bairro').value;
         document.getElementById('view_dest_cidade_uf').textContent = document.getElementById('dest_cidade_uf').value;
