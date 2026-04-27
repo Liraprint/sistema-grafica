@@ -973,6 +973,144 @@ def editar_empresa(id):
     </html>
     '''
 
+@app.route('/adicionar_servico', methods=['GET', 'POST'])
+def adicionar_servico():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        titulo = request.form.get('titulo')
+        empresa_id = request.form.get('empresa_id')
+        tipo = request.form.get('tipo')
+        quantidade = request.form.get('quantidade')
+        dimensao = request.form.get('dimensao')
+        numero_cores = request.form.get('numero_cores')
+        aplicacao = request.form.get('aplicacao')
+        status = request.form.get('status', 'Pendente')
+        data_abertura = request.form.get('data_abertura')
+        previsao_entrega = request.form.get('previsao_entrega')
+        valor_cobrado = request.form.get('valor_cobrado') or 0.0
+        observacoes = request.form.get('observacoes')
+        
+        if not titulo or not empresa_id:
+            flash("Título e Cliente são obrigatórios!")
+            return redirect(request.url)
+        
+        try:
+            valor_cobrado = float(valor_cobrado.replace('.', '').replace(',', '.'))
+        except:
+            valor_cobrado = 0.0
+        
+        try:
+            # Gera código do serviço
+            ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
+            n = int(ult[0]['codigo_servico'].split('-')[1]) + 1 if ult and len(ult) > 0 else 1
+            cod = f"OS-{n:03d}"
+            
+            url = f"{SUPABASE_URL}/rest/v1/servicos"
+            dados = {
+                "codigo_servico": cod,
+                "titulo": titulo,
+                "empresa_id": int(empresa_id),
+                "tipo": tipo,
+                "status": status,
+                "quantidade": quantidade,
+                "dimensao": dimensao,
+                "numero_cores": numero_cores,
+                "aplicacao": aplicacao,
+                "data_abertura": data_abertura,
+                "previsao_entrega": previsao_entrega,
+                "valor_cobrado": valor_cobrado,
+                "observacoes": observacoes
+            }
+            
+            response = requests.post(url, json=dados, headers=headers)
+            
+            if response.status_code == 201:
+                flash("✅ Serviço cadastrado com sucesso!")
+                return redirect(url_for('listar_servicos'))
+            else:
+                flash("❌ Erro ao cadastrar serviço.")
+        except Exception as e:
+            print(f"Erro: {e}")
+            flash("❌ Erro de conexão.")
+        return redirect(request.url)
+    
+    # GET - Renderiza formulário
+    try:
+        empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
+    except:
+        empresas = []
+    
+    opts_empresas = "".join([f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas])
+    
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Serviço</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>📋 Adicionar Novo Serviço</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <a href="/servicos" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container">
+    <div><label>Título do Serviço *</label><input type="text" name="titulo" required></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{opts_empresas}</select></div>
+    <div class="grid-2">
+        <div><label>Tipo</label><select name="tipo"><option value="Produção">Produção</option><option value="Orçamento">Orçamento</option><option value="Equipamento">Equipamento</option></select></div>
+        <div><label>Status</label><select name="status"><option value="Pendente">Pendente</option><option value="Em Produção">Em Produção</option><option value="Concluído">Concluído</option><option value="Entregue">Entregue</option></select></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Quantidade / Lote</label><input type="text" name="quantidade"></div>
+        <div><label>Nº de Cores</label><input type="number" name="numero_cores" step="1"></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao"></div>
+        <div><label>Valor Cobrado (R$)</label><input type="text" name="valor_cobrado" class="valor-input" placeholder="0,00"></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Data de Abertura</label><input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}"></div>
+        <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div>
+    </div>
+    <div><label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="2"></textarea></div>
+    <div><label>Observações</label><textarea name="observacoes" rows="3"></textarea></div>
+    <button type="submit" class="btn">💾 Salvar Serviço</button>
+    </form>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+    </div>
+    <script>
+    // Formatação de valor monetário
+    document.addEventListener('input', function(e) {{
+        if (e.target.classList.contains('valor-input')) {{
+            let value = e.target.value.replace(/\D/g, '');
+            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+            e.target.value = value;
+        }}
+    }});
+    </script>
+    </body>
+    </html>
+    '''
+
 @app.route('/servicos_empresa/<int:id>')
 def servicos_empresa(id):
     if 'usuario' not in session:
