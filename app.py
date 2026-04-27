@@ -1668,72 +1668,68 @@ def gerar_etiqueta(id):
     /* ETIQUETA PARA IMPRESSÃO TÉRMICA */
     .etiqueta {{ 
         border: 2px solid #2c3e50; 
-        padding: 15px; 
-        margin: 20px auto; /* Centraliza na tela */
+        padding: 20px; /* Mais padding para respiro */
+        margin: 20px auto; 
         background: #fff;
         width: 100mm;
         min-height: 140mm;
         page-break-inside: avoid;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; /* Distribui bem o espaço */
     }}
-    .etiqueta-header {{ 
-        display: flex; 
-        justify-content: space-between; 
-        border-bottom: 2px solid #2c3e50; 
-        padding-bottom: 10px; 
-        margin-bottom: 15px; 
-    }}
-    .etiqueta-logo {{ 
-        font-size: 20px; 
-        font-weight: bold; 
-        color: #2c3e50; 
-    }}
-    .etiqueta-titulo {{ 
-        font-size: 16px; 
-        font-weight: bold; 
-        color: #2c3e50; 
-        text-transform: uppercase; 
-    }}
+    
+    /* Blocos de texto */
     .etiqueta-bloco {{ 
-        margin-bottom: 25px;
-        padding: 10px;
-        border-radius: 5px;
+        margin-bottom: 30px;
+        padding: 5px;
     }}
+    
+    /* Títulos pequenos (REMETENTE/DESTINATÁRIO) */
     .etiqueta-label {{ 
-        font-size: 10px; 
+        font-size: 12px; 
         text-transform: uppercase; 
         color: #7f8c8d; 
         font-weight: bold; 
-        margin-bottom: 8px; 
+        margin-bottom: 5px; 
         letter-spacing: 1px;
     }}
+    
+    /* FONTES GRANDES PARA O CARTEIRO */
     .etiqueta-valor {{ 
-        font-size: 13px; 
+        font-size: 18px; /* Aumentado */
         color: #2c3e50; 
-        font-weight: 600; 
-        margin-bottom: 6px; 
-        line-height: 1.4; 
+        font-weight: bold; /* Negrito para leitura fácil */
+        margin-bottom: 4px; 
+        line-height: 1.3; 
     }}
-    .etiqueta-cep {{ 
-        font-size: 15px; 
-        font-weight: bold; 
-        color: #2c3e50; 
-        background: #ecf0f1; 
-        padding: 6px 12px; 
-        border-radius: 4px; 
-        display: inline-block; 
-        margin-top: 10px; 
-    }}
+    
+    /* Campo A/C - Ajustado para ficar colado ao nome */
     .etiqueta-ac {{
-        font-size: 12px;
+        font-size: 16px;
         color: #e74c3c;
         font-weight: bold;
-        margin-top: 5px;
+        margin-top: 0px; /* Sem espaço extra */
+        margin-bottom: 8px;
         font-style: italic;
         display: block;
     }}
     
-    /* CONFIGURAÇÃO DE IMPRESSÃO PARA REMOVER PÁGINA EM BRANCO */
+    /* CEPs bem grandes */
+    .etiqueta-cep {{ 
+        font-size: 24px; /* Bem grande */
+        font-weight: 900; 
+        color: #2c3e50; 
+        background: #ecf0f1; 
+        padding: 8px 15px; 
+        border-radius: 6px; 
+        display: inline-block; 
+        margin-top: 15px; 
+        letter-spacing: 1px;
+    }}
+    
+    /* CONFIGURAÇÃO DE IMPRESSÃO */
     @media print {{
         @page {{ 
             size: auto;
@@ -1758,17 +1754,14 @@ def gerar_etiqueta(id):
         }}
         .etiqueta {{ 
             border: 2px solid #000;
-            width: 100%; /* Ocupa a largura da etiqueta térmica */
+            width: 100%;
             max-width: 100mm;
-            margin: 0 auto; /* Centraliza */
-            padding: 5mm;
+            margin: 0 auto;
+            padding: 10mm;
             position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-        }}
-        .etiqueta-bloco {{
-            padding: 5px 0;
         }}
     }}
     </style>
@@ -1821,22 +1814,18 @@ def gerar_etiqueta(id):
         
         <!-- ETIQUETA PARA IMPRESSÃO -->
         <div id="areaEtiqueta" class="etiqueta">
-            <div class="etiqueta-header">
-                <div class="etiqueta-logo">LIRAPRINT</div>
-                <div class="etiqueta-titulo">ETIQUETA DE POSTAGEM</div>
-            </div>
             
-            <!-- REMETENTE -->
+            <!-- REMETENTE (Topo) -->
             <div class="etiqueta-bloco">
                 <div class="etiqueta-label">REMETENTE</div>
                 <div class="etiqueta-valor" id="view_rem_nome">{remetente_padrao['nome']}</div>
                 <div class="etiqueta-valor" id="view_rem_endereco">{remetente_padrao['endereco']}</div>
                 <div class="etiqueta-valor" id="view_rem_bairro">{remetente_padrao['bairro']}</div>
                 <div class="etiqueta-valor" id="view_rem_cidade_uf">{remetente_padrao['cidade']} - {remetente_padrao['estado']}</div>
-                <div class="etiqueta-cep" id="view_rem_cep">CEP: {remetente_padrao['cep']}</div>
+                <div class="etiqueta-cep" id="view_rem_cep">{remetente_padrao['cep']}</div>
             </div>
             
-            <!-- DESTINATÁRIO -->
+            <!-- DESTINATÁRIO (Centro/Baixo) -->
             <div class="etiqueta-bloco">
                 <div class="etiqueta-label">DESTINATÁRIO</div>
                 <div class="etiqueta-valor" id="view_dest_nome">{destinatario_padrao['nome']}</div>
@@ -1844,8 +1833,9 @@ def gerar_etiqueta(id):
                 <div class="etiqueta-valor" id="view_dest_endereco">{destinatario_padrao['endereco']}</div>
                 <div class="etiqueta-valor" id="view_dest_bairro">{destinatario_padrao['bairro']}</div>
                 <div class="etiqueta-valor" id="view_dest_cidade_uf">{destinatario_padrao['cidade']} - {destinatario_padrao['estado']}</div>
-                <div class="etiqueta-cep" id="view_dest_cep">CEP: {destinatario_padrao['cep']}</div>
+                <div class="etiqueta-cep" id="view_dest_cep">{destinatario_padrao['cep']}</div>
             </div>
+            
         </div>
     </div>
     
@@ -1856,7 +1846,7 @@ def gerar_etiqueta(id):
         document.getElementById('view_rem_endereco').textContent = document.getElementById('rem_endereco').value;
         document.getElementById('view_rem_bairro').textContent = document.getElementById('rem_bairro').value;
         document.getElementById('view_rem_cidade_uf').textContent = document.getElementById('rem_cidade_uf').value;
-        document.getElementById('view_rem_cep').textContent = 'CEP: ' + document.getElementById('rem_cep').value;
+        document.getElementById('view_rem_cep').textContent = document.getElementById('rem_cep').value;
         
         // Destinatário
         document.getElementById('view_dest_nome').textContent = document.getElementById('dest_nome').value;
@@ -1868,7 +1858,7 @@ def gerar_etiqueta(id):
         document.getElementById('view_dest_endereco').textContent = document.getElementById('dest_endereco').value;
         document.getElementById('view_dest_bairro').textContent = document.getElementById('dest_bairro').value;
         document.getElementById('view_dest_cidade_uf').textContent = document.getElementById('dest_cidade_uf').value;
-        document.getElementById('view_dest_cep').textContent = 'CEP: ' + document.getElementById('dest_cep').value;
+        document.getElementById('view_dest_cep').textContent = document.getElementById('dest_cep').value;
     }}
     
     document.querySelectorAll('#formEtiqueta input').forEach(input => {{
