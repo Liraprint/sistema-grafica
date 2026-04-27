@@ -1531,9 +1531,9 @@ def gerar_etiqueta(id):
             flash("Empresa não encontrada!")
             return redirect(url_for('listar_empresas'))
         
-        # Dados do Remetente (Lira Print)
+        # Dados do Remetente (Lira Print) - ATUALIZADO
         remetente = {
-            "nome": "LIRAPRINT - Gráfica Rápida",
+            "nome": "LIRAPRINT",
             "endereco": "R. Dr. Roberto Fernandes, 81",
             "bairro": "Jardim Palmira",
             "cidade": "Guarulhos",
@@ -1582,91 +1582,55 @@ def gerar_etiqueta(id):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Etiqueta - {empresa['nome_empresa']}</title>
     <style>
-        /* TELA DE EDIÇÃO */
         body {{ font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }}
+        
+        /* BOTÃO VOLTAR (TOPO) */
+        .top-bar {{ max-width: 600px; margin: 0 auto 15px auto; text-align: center; }}
+        .btn-back {{ padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+        .btn-back:hover {{ background: #2980b9; }}
+
+        /* TELA DE EDIÇÃO */
         .editor {{ max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
         .form-group {{ margin-bottom: 10px; }}
         label {{ font-weight: bold; display: block; font-size: 13px; margin-bottom: 3px; }}
         input {{ width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }}
-        .btn {{ padding: 10px 20px; background: #2c3e50; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin: 5px; }}
-        .btn:hover {{ background: #1a252f; }}
+        .btn-print {{ padding: 10px 20px; background: #2c3e50; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin-top: 10px; width: 100%; }}
         
-        /* ETIQUETA PADRÃO (Visível na tela e na impressão) */
+        /* ETIQUETA PADRÃO */
         .etiqueta {{
             background: #fff;
             width: 100%;
-            max-width: 100mm; /* Largura padrão etiqueta térmica */
+            max-width: 100mm;
             margin: 20px auto;
             padding: 10mm;
             box-sizing: border-box;
             font-family: Arial, sans-serif;
-            page-break-inside: avoid; /* IMPEDIR QUEBRAR EM DUAS PÁGINAS */
+            page-break-inside: avoid;
             page-break-after: avoid;
+            border: 1px solid #eee; /* Apenas visual na tela */
         }}
         
-        /* ESTILO UNIFICADO PARA DESTINATÁRIO E REMETENTE */
         .bloco {{ margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #999; }}
         .bloco:last-child {{ border-bottom: none; margin-bottom: 0; padding-bottom: 0; }}
         
-        .titulo {{ 
-            font-size: 14px; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            margin-bottom: 6px; 
-            color: #000; 
-            letter-spacing: 0.5px;
-        }}
-        
-        .texto {{ 
-            font-size: 14px; /* MESMO TAMANHO PARA OS DOIS */
-            font-weight: 600; 
-            line-height: 1.3; 
-            color: #000; 
-            margin-bottom: 2px;
-        }}
-        
-        .ac {{ 
-            font-size: 13px; 
-            font-weight: bold; 
-            color: #d35400; 
-            margin-bottom: 4px; 
-        }}
-        
-        .cep-destaque {{ 
-            font-size: 16px; 
-            font-weight: 900; 
-            margin-top: 6px; 
-            display: block; 
-        }}
+        .titulo {{ font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; color: #000; }}
+        .texto {{ font-size: 14px; font-weight: 600; line-height: 1.3; color: #000; margin-bottom: 2px; }}
+        .ac {{ font-size: 13px; font-weight: bold; color: #d35400; margin-bottom: 4px; }}
+        .cep-destaque {{ font-size: 16px; font-weight: 900; margin-top: 6px; display: block; }}
 
-        /* CONFIGURAÇÃO DE IMPRESSÃO LIMPA */
+        /* IMPRESSÃO LIMPA */
         @media print {{
-            @page {{ 
-                size: auto; 
-                margin: 0mm; /* REMOVE MARGENS DO NAVEGADOR */
-            }}
-            body {{ 
-                background: #fff; 
-                padding: 0; 
-                margin: 0; 
-                -webkit-print-color-adjust: exact; 
-            }}
-            .no-print {{ 
-                display: none !important; 
-            }}
-            .editor {{ 
-                display: none !important; 
-            }}
+            @page {{ size: auto; margin: 0mm; }}
+            body {{ background: #fff; padding: 0; margin: 0; -webkit-print-color-adjust: exact; }}
+            .no-print {{ display: none !important; }}
             .etiqueta {{ 
                 width: 100%; 
                 max-width: 100%; 
                 margin: 0; 
                 padding: 5mm; 
+                border: none; 
                 height: auto; 
-                min-height: 0; /* REMOVE FORÇA DE ALTURA */
-                page-break-inside: avoid; 
-            }}
-            .bloco {{ 
+                min-height: 0; 
                 page-break-inside: avoid; 
             }}
         }}
@@ -1674,9 +1638,14 @@ def gerar_etiqueta(id):
     </head>
     <body>
 
-    <!-- TELA DE EDIÇÃO (NÃO IMPRIME) -->
+    <!-- BOTÃO VOLTAR (SÓ APARECE NA TELA) -->
+    <div class="top-bar no-print">
+        <a href="/empresa/{id}" class="btn-back">← Voltar para Empresa</a>
+    </div>
+
+    <!-- FORMULÁRIO DE EDIÇÃO (SÓ APARECE NA TELA) -->
     <div class="editor no-print">
-        <h3 style="text-align:center; margin-top:0;">✏️ Dados da Etiqueta</h3>
+        <h3 style="text-align:center; margin-top:0;">✏️ Ajustar Dados</h3>
         <form id="formDados">
             <h4>📥 Destinatário</h4>
             <div class="form-group"><label>Nome da Empresa</label><input type="text" id="in_dest_nome" value="{destinatario['nome']}"></div>
@@ -1692,16 +1661,12 @@ def gerar_etiqueta(id):
             <div class="form-group"><label>Bairro - Cidade/UF</label><input type="text" id="in_rem_cidade" value="{remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}"></div>
             <div class="form-group"><label>CEP</label><input type="text" id="in_rem_cep" value="{remetente['cep']}"></div>
             
-            <div style="text-align:center; margin-top:15px;">
-                <button type="button" class="btn" onclick="window.print()">🖨️ IMPRIMIR ETIQUETA</button>
-            </div>
+            <button type="button" class="btn-print" onclick="window.print()">🖨️ IMPRIMIR ETIQUETA</button>
         </form>
     </div>
 
-    <!-- ETIQUETA FINAL (IMPRIME) -->
-    <div class="etiqueta" id="etiquetaFinal">
-        
-        <!-- DESTINATÁRIO -->
+    <!-- ETIQUETA FINAL -->
+    <div class="etiqueta">
         <div class="bloco">
             <div class="titulo">Destinatário</div>
             <div class="texto" id="out_dest_nome" style="font-size:15px; font-weight:800;">{destinatario['nome']}</div>
@@ -1712,7 +1677,6 @@ def gerar_etiqueta(id):
             <div class="cep-destaque" id="out_dest_cep">{destinatario['cep']}</div>
         </div>
 
-        <!-- REMETENTE -->
         <div class="bloco">
             <div class="titulo">Remetente</div>
             <div class="texto" id="out_rem_nome">{remetente['nome']}</div>
@@ -1720,15 +1684,12 @@ def gerar_etiqueta(id):
             <div class="texto" id="out_rem_cidade">{remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}</div>
             <div class="texto" id="out_rem_cep">{remetente['cep']}</div>
         </div>
-
     </div>
 
     <script>
-        // Atualização em tempo real
         const inputs = document.querySelectorAll('#formDados input');
         inputs.forEach(input => {{
             input.addEventListener('input', function() {{
-                // Destinatário
                 document.getElementById('out_dest_nome').textContent = document.getElementById('in_dest_nome').value;
                 
                 const acVal = document.getElementById('in_dest_ac').value;
@@ -1741,7 +1702,6 @@ def gerar_etiqueta(id):
                 document.getElementById('out_dest_cidade').textContent = document.getElementById('in_dest_cidade').value;
                 document.getElementById('out_dest_cep').textContent = document.getElementById('in_dest_cep').value;
 
-                // Remetente
                 document.getElementById('out_rem_nome').textContent = document.getElementById('in_rem_nome').value;
                 document.getElementById('out_rem_end').textContent = document.getElementById('in_rem_end').value;
                 document.getElementById('out_rem_cidade').textContent = document.getElementById('in_rem_cidade').value;
