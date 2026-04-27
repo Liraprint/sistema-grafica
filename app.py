@@ -1212,6 +1212,18 @@ def listar_servicos():
 def adicionar_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    # Busca dados para o formulário (empresas e materiais)
+    try:
+        empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
+        materiais = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?select=*", headers=headers).json() or []
+    except:
+        empresas = []
+        materiais = []
+    
+    opts_empresas = "".join([f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas])
+    opts_materiais = "".join([f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]}) - R$ {m["valor_unitario"]:.2f}</option>' for m in materiais])
+    
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         empresa_id = request.form.get('empresa_id')
@@ -1225,14 +1237,19 @@ def adicionar_servico():
         previsao_entrega = request.form.get('previsao_entrega')
         valor_cobrado = request.form.get('valor_cobrado') or 0.0
         observacoes = request.form.get('observacoes')
+        
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
             return redirect(url_for('adicionar_servico'))
+        
         try:
-            valor_cobrado = float(valor_cobrado)
+            # Formata valor monetário (remove vírgula/ponto para salvar como float)
+            valor_cobrado = float(valor_cobrado.replace('.', '').replace(',', '.'))
         except:
             valor_cobrado = 0.0
+        
         try:
+            # Gera código automático OS-001, OS-002...
             url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
             response = requests.get(url_seq, headers=headers)
             if response.status_code == 200 and response.json():
@@ -1243,7 +1260,9 @@ def adicionar_servico():
             codigo_servico = f"OS-{numero:03d}"
         except:
             codigo_servico = "OS-001"
+        
         try:
+            # Cria o serviço
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados = {
                 "codigo_servico": codigo_servico,
@@ -1261,17 +1280,22 @@ def adicionar_servico():
                 "observacoes": observacoes
             }
             response = requests.post(url, json=dados, headers=headers)
+            
             if response.status_code == 201:
                 servico_id = response.json()['id']
                 flash("✅ Serviço criado com sucesso!")
+                
+                # Salva materiais usados (se houver)
                 materiais_ids = request.form.getlist('material_id[]')
                 quantidades = request.form.getlist('quantidade_usada[]')
                 valores_unitarios = request.form.getlist('valor_unitario[]')
+                
                 for i in range(len(materiais_ids)):
                     try:
+                        if not materiais_ids[i]: continue
                         material_id = int(materiais_ids[i])
-                        qtd = float(quantidades[i])
-                        vlr = float(valores_unitarios[i])
+                        qtd = float(quantidades[i]) if quantidades[i] else 0
+                        vlr = float(valores_unitarios[i].replace(',', '.')) if valores_unitarios[i] else 0
                         total = qtd * vlr
                         dados_mat = {
                             "servico_id": servico_id,
@@ -1283,93 +1307,114 @@ def adicionar_servico():
                         requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
                     except:
                         continue
+                
                 return redirect(url_for('listar_servicos'))
             else:
                 flash("❌ Erro ao salvar serviço.")
         except Exception as e:
+            print(f"Erro: {e}")
             flash("❌ Erro de conexão.")
-        empresas = buscar_empresas()
-        materiais = buscar_materiais()
-        return f'''
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Adicionar Serviço</title>
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-        .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-        .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
-        h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
-        .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-        .form-container {{ padding: 30px; }}
-        .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-        .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
-        .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-        .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-        .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
-        .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
-        </style>
-        </head>
-        <body>\n
-        <div class="container">
-        <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
-        <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-        <a href="/servicos" class="back-link">← Voltar à lista</a>
-        <form method="post" class="form-container">
-        <label>Código do Serviço (OS)</label><input type="text" readonly value="(será gerado automaticamente)" style="background: #eee;">
-        <label>Título do Serviço *</label><input type="text" name="titulo" required>
-        <label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{''.join(f'<option value="{e["id"]}">{e["nome_empresa"]}</option>' for e in empresas)}</select>
-        <div class="grid-2">
-            <div><label>Tipo</label><select name="tipo"><option value="">Selecione</option><option value="Orçamento">Orçamento</option><option value="Produção">Produção</option><option value="Equipamento">Equipamento</option></select></div>
-            <div><label>Status</label><select name="status"><option value="Pendente">Pendente</option><option value="Em Produção">Em Produção</option><option value="Concluído">Concluído</option><option value="Entregue">Entregue</option></select></div>
-        </div>
-        <div class="grid-2">
-            <div><label>Quantidade / Lote</label><input type="number" name="quantidade" step="1"></div>
-            <div><label>Nº de Cores</label><input type="number" name="numero_cores" step="1"></div>
-        </div>
-        <div class="grid-2">
-            <div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao"></div>
-            <div><label>Valor Cobrado (R$)</label><input type="number" name="valor_cobrado" step="0.01"></div>
-        </div>
-        <div class="grid-2">
-            <div><label>Data de Abertura</label><input type="date" name="data_abertura"></div>
-            <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div>
-        </div>
-        <label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="3"></textarea>
-        <label>Observações</label><textarea name="observacoes" rows="3"></textarea>
-        <h3>Materiais Usados</h3>
-        <div id="materiais-lista">
+        return redirect(url_for('adicionar_servico'))
+    
+    # GET - Renderiza o formulário (FORA do bloco POST!)
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Serviço</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .form-container {{ padding: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
+    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .btn-add {{ background: #3498db; }}
+    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .material-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <a href="/servicos" class="back-link">← Voltar à lista</a>
+    <form method="post" class="form-container">
+    <div><label>Título do Serviço *</label><input type="text" name="titulo" required></div>
+    <div><label>Cliente *</label><select name="empresa_id" required><option value="">Selecione uma empresa</option>{opts_empresas}</select></div>
+    <div class="grid-2">
+        <div><label>Tipo</label><select name="tipo"><option value="Produção">Produção</option><option value="Orçamento">Orçamento</option><option value="Equipamento">Equipamento</option></select></div>
+        <div><label>Status</label><select name="status"><option value="Pendente">Pendente</option><option value="Em Produção">Em Produção</option><option value="Concluído">Concluído</option><option value="Entregue">Entregue</option></select></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Quantidade / Lote</label><input type="text" name="quantidade"></div>
+        <div><label>Nº de Cores</label><input type="number" name="numero_cores" step="1"></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Dimensão (ex: 60x90 cm)</label><input type="text" name="dimensao"></div>
+        <div><label>Valor Cobrado (R$)</label><input type="text" name="valor_cobrado" class="valor-input" placeholder="0,00"></div>
+    </div>
+    <div class="grid-2">
+        <div><label>Data de Abertura</label><input type="date" name="data_abertura" value="{datetime.now().strftime('%Y-%m-%d')}"></div>
+        <div><label>Previsão de Entrega</label><input type="date" name="previsao_entrega"></div>
+    </div>
+    <div><label>Aplicação / Uso / Ambiente</label><textarea name="aplicacao" rows="2"></textarea></div>
+    <div><label>Observações</label><textarea name="observacoes" rows="3"></textarea></div>
+    
+    <h3 style="margin-top: 30px; color: #2c3e50;">📦 Materiais Usados (Opcional)</h3>
+    <div id="materiais-container">
+        <div class="material-row">
             <div class="grid-3">
-                <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
-                <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
-                <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
+                <div><label>Material</label><select name="material_id[]"><option value="">Selecione...</option>{opts_materiais}</select></div>
+                <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" placeholder="0"></div>
+                <div><label>Valor Unitário (R$)</label><input type="text" name="valor_unitario[]" class="valor-input" placeholder="0,00"></div>
             </div>
         </div>
-        <button type="button" onclick="adicionarMaterial()" style="margin: 10px 0;">+ Adicionar outro material</button>
-        <button type="submit" class="btn">💾 Salvar Serviço</button>
-        </form>
-        <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-        </div>
-        <script>
-        function adicionarMaterial() {{
-            const container = document.getElementById('materiais-lista');
-            const div = document.createElement('div');
-            div.className = 'grid-3';
-            div.innerHTML = `
-            <div><label>Material</label><select name="material_id[]" required><option value="">Selecione</option>{''.join(f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais)}</select></div>
-            <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" required></div>
-            <div><label>Valor Unitário (R$)</label><input type="number" name="valor_unitario[]" step="0.01" required></div>
-            `;
-            container.appendChild(div);
+    </div>
+    <button type="button" onclick="addMaterial()" class="btn btn-add" style="margin: 10px 0; width: 100%;">+ Adicionar Material</button>
+    
+    <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">💾 Salvar Serviço</button>
+    </form>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+    </div>
+    
+    <script>
+    // Formatação de valor monetário
+    document.addEventListener('input', function(e) {{
+        if (e.target.classList.contains('valor-input')) {{
+            let value = e.target.value.replace(/\\D/g, '');
+            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+            e.target.value = value;
         }}
-        </script>
-        </body>
-        </html>
-        '''
+    }});
+    
+    // Adicionar linha de material
+    function addMaterial() {{
+        const container = document.getElementById('materiais-container');
+        const div = document.createElement('div');
+        div.className = 'material-row';
+        div.innerHTML = `
+            <div class="grid-3">
+                <div><label>Material</label><select name="material_id[]"><option value="">Selecione...</option>{opts_materiais}</select></div>
+                <div><label>Qtd Usada</label><input type="number" name="quantidade_usada[]" step="0.01" placeholder="0"></div>
+                <div><label>Valor Unitário (R$)</label><input type="text" name="valor_unitario[]" class="valor-input" placeholder="0,00"></div>
+            </div>
+        `;
+        container.appendChild(div);
+    }}
+    </script>
+    </body>
+    </html>
+    '''
 
 @app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
 def editar_servico(id):
