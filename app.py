@@ -1047,6 +1047,7 @@ def servicos_empresa(id):
 def listar_servicos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     busca = request.args.get('q', '').strip()
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc&tipo=neq.Orçamento"
@@ -1093,6 +1094,16 @@ def listar_servicos():
         except:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Erro"}
 
+    # Função auxiliar para cor do status
+    def get_status_color(status):
+        cores = {
+            'Pendente': '#e67e22',
+            'Em Produção': '#3498db',
+            'Concluído': '#27ae60',
+            'Entregue': '#2c3e50'
+        }
+        return cores.get(status, '#95a5a6')
+
     html_todos = ""
     html_andamento = ""
     html_concluidos = ""
@@ -1102,17 +1113,20 @@ def listar_servicos():
         custo_materiais = calcular_custo(s['id'])
         valor_cobrado = float(s.get('valor_cobrado', 0) or 0)
         lucro = valor_cobrado - custo_materiais
-        status_class = {
-            'Pendente': 'status-pendente',
-            'Em Produção': 'status-producao',
-            'Concluído': 'status-concluido',
-            'Entregue': 'status-entregue'
-        }.get(s.get('status', ''), 'status-pendente')
-        prazo = calcular_prazo_restante(s.get('previsao_entrega'), s.get('status'))
+        status_atual = s.get('status', 'Pendente')
+        prazo = calcular_prazo_restante(s.get('previsao_entrega'), status_atual)
 
-        # ✅ CORREÇÃO: Botões com espaçamento adequado e nowrap para não quebrar
+        # Dropdown de status editável
+        status_options = ['Pendente', 'Em Produção', 'Concluído', 'Entregue']
+        status_select = f'''
+        <select onchange="atualizarStatus({s['id']}, this.value)" 
+                style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; font-weight: bold; color: {get_status_color(status_atual)}; background: white;">
+            {"".join(f'<option value="{opt}" {"selected" if opt == status_atual else ""}>{opt}</option>' for opt in status_options)}
+        </select>
+        '''
+
         botoes_html = f'''
-        <div style="display: flex; gap: 8px; align-items: center; white-space: nowrap;">
+        <div style="display: flex; gap: 5px; align-items: center;">
             <a href="/os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">📄 OS</a>
             <a href="/editar_servico/{s['id']}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a>
             <a href="/excluir_servico/{s['id']}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
@@ -1129,15 +1143,15 @@ def listar_servicos():
         <td>R$ {custo_materiais:.2f}</td>
         <td>R$ {valor_cobrado:.2f}</td>
         <td>R$ {lucro:.2f}</td>
-        <td><span class="{status_class}">{s.get('status', 'Pendente')}</span></td>
+        <td>{status_select}</td>
         <td><span style="color: {prazo['cor']}; font-weight: bold;">{prazo['texto']}</span></td>
         <td>{botoes_html}</td>
         </tr>
         '''
         html_todos += linha
-        if s.get('status') in ['Pendente', 'Em Produção']:
+        if status_atual in ['Pendente', 'Em Produção']:
             html_andamento += linha
-        elif s.get('status') in ['Concluído', 'Entregue']:
+        elif status_atual in ['Concluído', 'Entregue']:
             html_concluidos += linha
 
     return f'''
@@ -1165,10 +1179,6 @@ def listar_servicos():
     th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; }}
     th {{ background: #f8f9fa; color: #2c3e50; font-weight: 600; white-space: nowrap; }}
     tr:nth-child(even) {{ background: #fafbfc; }}
-    .status-pendente {{ color: #e67e22; font-weight: bold; }}
-    .status-producao {{ color: #3498db; font-weight: bold; }}
-    .status-concluido {{ color: #27ae60; font-weight: bold; }}
-    .status-entregue {{ color: #2c3e50; font-weight: bold; }}
     .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .tab-content {{ display: none; }}
@@ -1177,7 +1187,7 @@ def listar_servicos():
     .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
@@ -1201,12 +1211,81 @@ def listar_servicos():
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
+    
+    <!-- SCRIPT DAS ABAS E ATUALIZAÇÃO DE STATUS -->
     <script>
-    function mostrarTab(nome) {{ document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById('tab-' + nome).classList.add('active'); document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); }}
+    function mostrarTab(nome) {{ 
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); 
+        document.getElementById('tab-' + nome).classList.add('active'); 
+        document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); 
+    }}
+
+    // Atualizar status via AJAX
+    function atualizarStatus(id, novoStatus) {{
+        if (!confirm('Deseja mudar o status para "' + novoStatus + '"?')) {{
+            location.reload();
+            return;
+        }}
+        
+        fetch('/atualizar_status_servico/' + id, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ status: novoStatus }})
+        }})
+        .then(response => response.json())
+        .then(data => {{
+            if (data.sucesso) {{
+                alert('✅ Status atualizado para: ' + novoStatus);
+                location.reload();
+            }} else {{
+                alert('❌ Erro: ' + data.mensagem);
+                location.reload();
+            }}
+        }})
+        .catch(error => {{
+            console.error('Erro:', error);
+            alert('❌ Erro de conexão ao atualizar status');
+            location.reload();
+        }});
+    }}
     </script>
     </body>
     </html>
     '''
+
+# Função auxiliar para cor do status
+def get_status_color(status):
+    cores = {
+        'Pendente': '#e67e22',
+        'Em Produção': '#3498db',
+        'Concluído': '#27ae60',
+        'Entregue': '#2c3e50'
+    }
+    return cores.get(status, '#95a5a6')
+
+# Rota AJAX para atualizar status
+@app.route('/atualizar_status_servico/<int:id>', methods=['POST'])
+def atualizar_status_servico(id):
+    if 'usuario' not in session:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autorizado'}), 401
+    
+    try:
+        novo_status = request.json.get('status')
+        if not novo_status:
+            return jsonify({'sucesso': False, 'mensagem': 'Status não fornecido'}), 400
+        
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        dados = {"status": novo_status}
+        response = requests.patch(url, json=dados, headers=headers)
+        
+        if response.status_code == 204:
+            return jsonify({'sucesso': True, 'mensagem': 'Status atualizado!'})
+        else:
+            return jsonify({'sucesso': False, 'mensagem': 'Erro ao atualizar'}), 500
+    except Exception as e:
+        print(f"Erro ao atualizar status: {e}")
+        return jsonify({'sucesso': False, 'mensagem': 'Erro interno'}), 500
 
 @app.route('/adicionar_servico', methods=['GET', 'POST'])
 def adicionar_servico():
