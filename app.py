@@ -1531,8 +1531,8 @@ def gerar_etiqueta(id):
             flash("Empresa não encontrada!")
             return redirect(url_for('listar_empresas'))
         
-        # Dados do remetente
-        remetente_padrao = {
+        # Dados do Remetente (Lira Print)
+        remetente = {
             "nome": "LIRAPRINT - Gráfica Rápida",
             "endereco": "R. Dr. Roberto Fernandes, 81",
             "bairro": "Jardim Palmira",
@@ -1541,30 +1541,33 @@ def gerar_etiqueta(id):
             "cep": "07076-070"
         }
         
-        # Dados do destinatário
+        # Dados do Destinatário (Cliente)
         if empresa.get('entrega_endereco'):
-            dest_endereco = empresa['entrega_endereco']
-            dest_numero = empresa.get('entrega_numero', '')
-            dest_bairro = empresa.get('entrega_bairro', '')
-            dest_cidade = empresa.get('entrega_cidade', '')
-            dest_estado = empresa.get('entrega_estado', '')
-            dest_cep = empresa.get('entrega_cep', '')
+            end_ent = empresa['entrega_endereco']
+            num_ent = empresa.get('entrega_numero', '')
+            bairro_ent = empresa.get('entrega_bairro', '')
+            cid_ent = empresa.get('entrega_cidade', '')
+            est_ent = empresa.get('entrega_estado', '')
+            cep_ent = empresa.get('entrega_cep', '')
         else:
-            dest_endereco = empresa['endereco']
-            dest_numero = empresa.get('numero', '')
-            dest_bairro = empresa['bairro']
-            dest_cidade = empresa['cidade']
-            dest_estado = empresa['estado']
-            dest_cep = empresa['cep']
+            end_ent = empresa['endereco']
+            num_ent = empresa.get('numero', '')
+            bairro_ent = empresa['bairro']
+            cid_ent = empresa['cidade']
+            est_ent = empresa['estado']
+            cep_ent = empresa['cep']
         
-        destinatario_padrao = {
+        # Formata o endereço completo
+        endereco_completo = f"{end_ent}, {num_ent}"
+        
+        destinatario = {
             "nome": empresa['nome_empresa'],
             "responsavel": empresa.get('responsavel', ''),
-            "endereco": f"{dest_endereco}, {dest_numero}",
-            "bairro": dest_bairro,
-            "cidade": dest_cidade,
-            "estado": dest_estado,
-            "cep": dest_cep
+            "endereco": endereco_completo,
+            "bairro": bairro_ent,
+            "cidade": cid_ent,
+            "estado": est_ent,
+            "cep": cep_ent
         }
         
     except Exception as e:
@@ -1572,269 +1575,149 @@ def gerar_etiqueta(id):
         flash("Erro ao carregar dados.")
         return redirect(url_for('listar_empresas'))
     
+    # HTML SIMPLES PADRÃO ETIQUETA
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Etiqueta - {empresa['nome_empresa']}</title>
+    <title>Etiqueta de Postagem</title>
     <style>
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{ 
-        font-family: Arial, Helvetica, sans-serif; 
-        background: #f5f7fa; 
-        padding: 20px;
-    }}
-    .container {{ 
-        max-width: 800px; 
-        margin: 0 auto; 
-        background: white; 
-        border-radius: 10px; 
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-        padding: 20px;
-    }}
-    .header {{ 
-        background: #2c3e50; 
-        color: white; 
-        padding: 15px; 
-        text-align: center; 
-        border-radius: 10px 10px 0 0; 
-        margin: -20px -20px 20px -20px;
-    }}
-    .section {{ 
-        margin-bottom: 20px; 
-        border: 1px solid #ddd; 
-        border-radius: 8px; 
-        padding: 15px; 
-    }}
-    .form-group label {{ display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }}
-    .form-group input {{ width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }}
-    .btn {{ 
-        padding: 10px 20px; 
-        background: #27ae60; 
-        color: white; 
-        border: none; 
-        border-radius: 5px; 
-        cursor: pointer; 
-        font-size: 15px; 
-        font-weight: bold; 
-        margin: 5px; 
-    }}
-    .btn-purple {{ background: #8e44ad; }}
-    .btn-blue {{ background: #3498db; }}
-    
-    /* ESTILO DA ETIQUETA PROFISSIONAL */
-    .etiqueta {{ 
-        border: 3px solid #000; /* Borda grossa externa */
-        background: #fff;
-        width: 100mm;
-        height: 150mm; /* Força altura A6/Adesivo */
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        padding: 5mm;
-        position: relative;
-    }}
-    
-    /* Cabeçalho da Etiqueta */
-    .etiqueta-head {{ 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        border-bottom: 2px solid #000;
-        padding-bottom: 5px;
-        margin-bottom: 5px;
-    }}
-    .etiqueta-logo {{ font-size: 16px; font-weight: 900; letter-spacing: 1px; }}
-    .etiqueta-titulo {{ font-size: 14px; font-weight: bold; background: #000; color: #fff; padding: 2px 8px; }}
-    
-    /* Bloco Remetente */
-    .etiqueta-remetente {{ 
-        font-size: 10px; 
-        margin-bottom: 10px;
-        border-bottom: 2px dashed #999;
-        padding-bottom: 10px;
-    }}
-    .etiqueta-remetente strong {{ display: block; font-size: 11px; margin-bottom: 2px; }}
-    .etiqueta-remetente div {{ margin-bottom: 1px; line-height: 1.2; }}
-    
-    /* Bloco Destinatário (Principal) */
-    .etiqueta-destinatario {{ 
-        flex: 1; /* Ocupa o espaço restante */
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }}
-    .etiqueta-dest-label {{ font-size: 11px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; color: #555; }}
-    
-    .etiqueta-nome {{ 
-        font-size: 20px; /* Nome Grande */
-        font-weight: 900; 
-        margin-bottom: 5px; 
-        line-height: 1.1;
-        text-transform: uppercase;
-    }}
-    
-    .etiqueta-ac {{ 
-        font-size: 14px; 
-        font-weight: bold; 
-        margin-bottom: 10px; 
-        color: #d35400; /* Laranja escuro para destaque */
-        background: #fef5e7;
-        padding: 2px 5px;
-        display: inline-block;
-        border-radius: 3px;
-    }}
-    
-    .etiqueta-endereco {{ 
-        font-size: 16px; /* Endereço Grande */
-        font-weight: bold; 
-        line-height: 1.2; 
-    }}
-    .etiqueta-endereco div {{ margin-bottom: 4px; }}
-    
-    .etiqueta-cidade {{ 
-        font-size: 16px; 
-        font-weight: bold; 
-        margin-top: 5px; 
-        text-transform: uppercase;
-    }}
-    
-    /* Rodapé CEP Gigante */
-    .etiqueta-cep-box {{
-        margin-top: 10px;
-        background: #000;
-        color: #fff;
-        padding: 8px 15px;
-        border-radius: 5px;
-        text-align: center;
-    }}
-    .etiqueta-cep-numero {{
-        font-size: 28px; /* CEP GIGANTE */
-        font-weight: 900;
-        letter-spacing: 2px;
-    }}
-
-    /* IMPRESSÃO */
-    @media print {{
-        @page {{ size: auto; margin: 0mm; }}
-        body {{ background: white; padding: 0; }}
-        .no-print {{ display: none !important; }}
-        .container {{ box-shadow: none; border: none; padding: 0; margin: 0; width: 100%; }}
-        .etiqueta {{ 
-            width: 100%; 
-            height: auto; 
-            min-height: 100vh; /* Força ocupar a folha inteira */
-            border: none; 
-            padding: 10mm;
+        body {{ font-family: Arial, sans-serif; background: #eee; padding: 20px; }}
+        
+        /* Área de edição (Tela) */
+        .container-editor {{ 
+            max-width: 700px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
-        /* Linhas de impressão em preto sólido */
-        .etiqueta-remetente {{ border-bottom: 2px solid #000; }}
-        .etiqueta-cep-box {{ background: #fff; border: 2px solid #000; color: #000; }}
-        .etiqueta-ac {{ background: none; border: 1px solid #ccc; color: #000; }}
-    }}
+        .form-group {{ margin-bottom: 10px; }}
+        label {{ font-weight: bold; display: block; font-size: 14px; }}
+        input {{ width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }}
+        .btn {{ padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin: 5px; }}
+        .btn-print {{ background: #2c3e50; }}
+        
+        /* ETIQUETA (Visualização e Impressão) */
+        .etiqueta {{
+            border: 2px solid #000;
+            background: white;
+            width: 100%;
+            max-width: 400px; /* Largura padrão etiqueta */
+            min-height: 250px;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            box-sizing: border-box;
+        }}
+        
+        /* Seção Destinatário (Topo) */
+        .bloco-dest {{ border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 15px; }}
+        .titulo-secao {{ font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; color: #333; }}
+        
+        .nome-dest {{ font-size: 18px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; line-height: 1.1; }}
+        .ac-dest {{ font-size: 14px; font-weight: bold; color: #d35400; margin-bottom: 8px; }}
+        .endereco {{ font-size: 15px; font-weight: 600; margin-bottom: 5px; line-height: 1.2; }}
+        .cidade-uf {{ font-size: 15px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }}
+        .cep {{ font-size: 16px; font-weight: 900; color: #000; }}
+        
+        /* Seção Remetente (Fundo) */
+        .bloco-rem {{ padding-top: 10px; }}
+        .nome-rem {{ font-size: 14px; font-weight: bold; }}
+        .endereco-rem {{ font-size: 13px; line-height: 1.2; }}
+
+        /* Configuração de Impressão */
+        @media print {{
+            body {{ background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; }}
+            .no-print {{ display: none !important; }}
+            .container-editor {{ box-shadow: none; padding: 0; margin: 0; width: 100%; }}
+            .etiqueta {{ 
+                border: 2px solid #000; 
+                width: 100%; 
+                max-width: 100mm; /* Força largura da etiqueta térmica */
+                height: 100%;     /* Ocupa a folha */
+                min-height: 150mm;
+                margin: 0 auto;
+                page-break-inside: avoid;
+            }}
+        }}
     </style>
     </head>
     <body>
-    <div class="container">
-        <div class="header no-print">📬 Etiqueta de Postagem</div>
-        
-        <div class="no-print">
-            <form id="formEtiqueta">
-                <div class="section">
-                    <h3>📤 Remetente</h3>
-                    <div class="form-group"><label>Nome</label><input type="text" id="rem_nome" value="{remetente_padrao['nome']}"></div>
-                    <div class="form-group"><label>Endereço</label><input type="text" id="rem_endereco" value="{remetente_padrao['endereco']}"></div>
-                    <div class="grid-2">
-                        <div class="form-group"><label>Bairro</label><input type="text" id="rem_bairro" value="{remetente_padrao['bairro']}"></div>
-                        <div class="form-group"><label>Cidade/UF</label><input type="text" id="rem_cidade" value="{remetente_padrao['cidade']} - {remetente_padrao['estado']}"></div>
-                    </div>
-                    <div class="form-group"><label>CEP</label><input type="text" id="rem_cep" value="{remetente_padrao['cep']}"></div>
-                </div>
-                
-                <div class="section">
-                    <h3>📥 Destinatário</h3>
-                    <div class="form-group"><label>Nome/Razão Social</label><input type="text" id="dest_nome" value="{destinatario_padrao['nome']}"></div>
-                    <div class="form-group"><label>A/C (Aos Cuidados de)</label><input type="text" id="dest_responsavel" value="{destinatario_padrao['responsavel']}"></div>
-                    <div class="form-group"><label>Endereço</label><input type="text" id="dest_endereco" value="{destinatario_padrao['endereco']}"></div>
-                    <div class="grid-2">
-                        <div class="form-group"><label>Bairro</label><input type="text" id="dest_bairro" value="{destinatario_padrao['bairro']}"></div>
-                        <div class="form-group"><label>Cidade/UF</label><input type="text" id="dest_cidade" value="{destinatario_padrao['cidade']} - {destinatario_padrao['estado']}"></div>
-                    </div>
-                    <div class="form-group"><label>CEP</label><input type="text" id="dest_cep" value="{destinatario_padrao['cep']}"></div>
-                </div>
-                
-                <div style="text-align: center;">
-                    <button type="button" class="btn btn-purple" onclick="imprimirEtiqueta()">🖨️ Imprimir</button>
-                    <button type="button" class="btn btn-blue" onclick="window.location.href='/empresa/{id}'">← Voltar</button>
-                </div>
-            </form>
+
+    <!-- TELA DE EDIÇÃO -->
+    <div class="container-editor no-print">
+        <h2 style="text-align:center; color:#2c3e50;">✏️ Editar Dados da Etiqueta</h2>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="btn btn-print" onclick="window.print()">🖨️ IMPRIMIR AGORA</button>
+            <button class="btn" onclick="window.location.href='/empresa/{id}'">Voltar</button>
         </div>
         
-        <!-- ETIQUETA FINAL -->
-        <div id="areaEtiqueta" class="etiqueta">
-            <!-- Cabeçalho -->
-            <div class="etiqueta-head">
-                <div class="etiqueta-logo">LIRAPRINT</div>
-                <div class="etiqueta-titulo">ETIQUETA DE POSTAGEM</div>
-            </div>
+        <form id="formDados">
+            <h3>📥 Destinatário</h3>
+            <div class="form-group"><label>Nome da Empresa/Cliente</label><input type="text" id="in_dest_nome" value="{destinatario['nome']}"></div>
+            <div class="form-group"><label>A/C (Aos Cuidados)</label><input type="text" id="in_dest_ac" value="{destinatario['responsavel']}"></div>
+            <div class="form-group"><label>Endereço (Rua, Nº)</label><input type="text" id="in_dest_end" value="{destinatario['endereco']}"></div>
+            <div class="form-group"><label>Bairro</label><input type="text" id="in_dest_bairro" value="{destinatario['bairro']}"></div>
+            <div class="form-group"><label>Cidade / UF</label><input type="text" id="in_dest_cidade" value="{destinatario['cidade']} - {destinatario['estado']}"></div>
+            <div class="form-group"><label>CEP</label><input type="text" id="in_dest_cep" value="{destinatario['cep']}"></div>
             
-            <!-- Remetente (Topo) -->
-            <div class="etiqueta-remetente">
-                <strong>REMETENTE</strong>
-                <div id="view_rem_nome">{remetente_padrao['nome']}</div>
-                <div id="view_rem_endereco">{remetente_padrao['endereco']}</div>
-                <div><span id="view_rem_bairro">{remetente_padrao['bairro']}</span> - <span id="view_rem_cidade">{remetente_padrao['cidade']}</span></div>
-            </div>
-            
-            <!-- Destinatário (Corpo Principal) -->
-            <div class="etiqueta-destinatario">
-                <div class="etiqueta-dest-label">DESTINATÁRIO</div>
-                
-                <div class="etiqueta-nome" id="view_dest_nome">{destinatario_padrao['nome']}</div>
-                <div class="etiqueta-ac" id="view_dest_ac">A/C: {destinatario_padrao['responsavel']}</div>
-                
-                <div class="etiqueta-endereco">
-                    <div id="view_dest_endereco">{destinatario_padrao['endereco']}</div>
-                    <div id="view_dest_bairro">{destinatario_padrao['bairro']}</div>
-                </div>
-                
-                <div class="etiqueta-cidade" id="view_dest_cidade">{destinatario_padrao['cidade']} - {destinatario_padrao['estado']}</div>
-            </div>
-            
-            <!-- Rodapé CEP -->
-            <div class="etiqueta-cep-box">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">CEP</div>
-                <div class="etiqueta-cep-numero" id="view_dest_cep">{destinatario_padrao['cep']}</div>
-            </div>
+            <h3>📤 Remetente</h3>
+            <div class="form-group"><label>Nome</label><input type="text" id="in_rem_nome" value="{remetente['nome']}"></div>
+            <div class="form-group"><label>Endereço</label><input type="text" id="in_rem_end" value="{remetente['endereco']}"></div>
+            <div class="form-group"><label>Bairro - Cidade/UF</label><input type="text" id="in_rem_cidade" value="{remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}"></div>
+            <div class="form-group"><label>CEP</label><input type="text" id="in_rem_cep" value="{remetente['cep']}"></div>
+        </form>
+    </div>
+
+    <!-- ETIQUETA FINAL -->
+    <div class="etiqueta">
+        <!-- PARTE DE CIMA: DESTINATÁRIO -->
+        <div class="bloco-dest">
+            <div class="titulo-secao">Destinatário</div>
+            <div class="nome-dest" id="out_dest_nome">{destinatario['nome']}</div>
+            <div class="ac-dest" id="out_dest_ac">A/C: {destinatario['responsavel']}</div>
+            <div class="endereco" id="out_dest_end">{destinatario['endereco']}</div>
+            <div class="endereco" id="out_dest_bairro">{destinatario['bairro']}</div>
+            <div class="cidade-uf" id="out_dest_cidade">{destinatario['cidade']} - {destinatario['estado']}</div>
+            <div class="cep" id="out_dest_cep">{destinatario['cep']}</div>
+        </div>
+
+        <!-- PARTE DE BAIXO: REMETENTE -->
+        <div class="bloco-rem">
+            <div class="titulo-secao">Remetente</div>
+            <div class="nome-rem" id="out_rem_nome">{remetente['nome']}</div>
+            <div class="endereco-rem" id="out_rem_end">{remetente['endereco']}</div>
+            <div class="endereco-rem" id="out_rem_cidade">{remetente['bairro']} - {remetente['cidade']} - {remetente['estado']}</div>
+            <div class="endereco-rem" id="out_rem_cep">{remetente['cep']}</div>
         </div>
     </div>
 
     <script>
-    function atualizarEtiqueta() {{
-        // Remetente
-        document.getElementById('view_rem_nome').textContent = document.getElementById('rem_nome').value;
-        document.getElementById('view_rem_endereco').textContent = document.getElementById('rem_endereco').value;
-        document.getElementById('view_rem_bairro').textContent = document.getElementById('rem_bairro').value;
-        document.getElementById('view_rem_cidade').textContent = document.getElementById('rem_cidade').value;
-        
-        // Destinatário
-        document.getElementById('view_dest_nome').textContent = document.getElementById('dest_nome').value;
-        
-        const resp = document.getElementById('dest_responsavel').value;
-        const ac = document.getElementById('view_dest_ac');
-        if(resp) {{ ac.textContent = 'A/C: ' + resp; ac.style.display = 'inline-block'; }}
-        else {{ ac.style.display = 'none'; }}
-        
-        document.getElementById('view_dest_endereco').textContent = document.getElementById('dest_endereco').value;
-        document.getElementById('view_dest_bairro').textContent = document.getElementById('dest_bairro').value;
-        document.getElementById('view_dest_cidade').textContent = document.getElementById('dest_cidade').value;
-        document.getElementById('view_dest_cep').textContent = document.getElementById('dest_cep').value;
-    }}
-    
-    document.querySelectorAll('input').forEach(i => i.addEventListener('input', atualizarEtiqueta));
-    function imprimirEtiqueta() {{ window.print(); }}
+        // Script para atualizar a etiqueta em tempo real
+        const inputs = document.querySelectorAll('#formDados input');
+        inputs.forEach(input => {{
+            input.addEventListener('input', function() {{
+                // Destinatário
+                document.getElementById('out_dest_nome').textContent = document.getElementById('in_dest_nome').value;
+                
+                const acVal = document.getElementById('in_dest_ac').value;
+                const acEl = document.getElementById('out_dest_ac');
+                acEl.textContent = acVal ? 'A/C: ' + acVal : '';
+                acEl.style.display = acVal ? 'block' : 'none';
+                
+                document.getElementById('out_dest_end').textContent = document.getElementById('in_dest_end').value;
+                document.getElementById('out_dest_bairro').textContent = document.getElementById('in_dest_bairro').value;
+                document.getElementById('out_dest_cidade').textContent = document.getElementById('in_dest_cidade').value;
+                document.getElementById('out_dest_cep').textContent = document.getElementById('in_dest_cep').value;
+
+                // Remetente
+                document.getElementById('out_rem_nome').textContent = document.getElementById('in_rem_nome').value;
+                document.getElementById('out_rem_end').textContent = document.getElementById('in_rem_end').value;
+                document.getElementById('out_rem_cidade').textContent = document.getElementById('in_rem_cidade').value;
+                document.getElementById('out_rem_cep').textContent = document.getElementById('in_rem_cep').value;
+            }});
+        }});
     </script>
     </body>
     </html>
