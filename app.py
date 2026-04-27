@@ -2312,6 +2312,7 @@ def editar_material(id):
 def cadastrar_material():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     if request.method == 'POST':
         denominacao = request.form.get('denominacao')
         marca = request.form.get('marca')
@@ -2321,19 +2322,24 @@ def cadastrar_material():
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
         fornecedor_id = request.form.get('fornecedor_id')
+        
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
         elif not unidade_medida:
             flash("Unidade de Medida é obrigatória!")
             return redirect(request.url)
+        
         if not denominacao or not valor_unitario:
             flash("Denominação e Valor Unitário são obrigatórios!")
             return redirect(request.url)
+        
         try:
-            valor_unitario = float(valor_unitario)
+            # Remove formatação (pontos e vírgulas) antes de salvar
+            valor_unitario = float(valor_unitario.replace('.', '').replace(',', '.'))
         except:
             flash("Valor unitário deve ser um número!")
             return redirect(request.url)
+        
         try:
             url = f"{SUPABASE_URL}/rest/v1/materiais"
             dados = {
@@ -2350,15 +2356,18 @@ def cadastrar_material():
                 fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
                 if fornecedor:
                     dados["fornecedor"] = fornecedor["nome"]
+            
             response = requests.post(url, json=dados, headers=headers)
+            
             if response.status_code == 201:
                 flash("✅ Material cadastrado com sucesso!")
-                return redirect(url_for('listar_materiais'))
+                return redirect(url_for('listar_estoque'))
             else:
                 flash("❌ Erro ao cadastrar material.")
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(request.url)
+    
     fornecedores = buscar_fornecedores()
     return f'''
     <!DOCTYPE html>
@@ -2382,11 +2391,11 @@ def cadastrar_material():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/materiais" class="back-link">← Voltar à Lista</a>
+    <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <form method="post" class="form-container">
     <div><label>Denominação *</label><input type="text" name="denominacao" required></div>
     <div><label>Marca</label><input type="text" name="marca"></div>
@@ -2399,7 +2408,7 @@ def cadastrar_material():
     </select>
     <input type="text" name="unidade_outro" id="unidade_outro" placeholder="Digite a unidade" style="display: none; margin-top: 10px;" oninput="this.value = this.value.toLowerCase()">
     </div>
-    <div><label>Valor Unitário *</label><input type="number" name="valor_unitario" step="0.01" required></div>
+    <div><label>Valor Unitário *</label><input type="text" name="valor_unitario" id="valor_unitario" class="valor-input" placeholder="0,00" required></div>
     <div><label>Especificação</label><textarea name="especificacao" rows="3"></textarea></div>
     <div>
     <label>Fornecedor</label>
@@ -2413,6 +2422,15 @@ def cadastrar_material():
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
+    // Formatação automática de valor monetário
+    document.addEventListener('input', function(e) {{
+        if (e.target.classList.contains('valor-input')) {{
+            let value = e.target.value.replace(/\D/g, '');
+            value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
+            e.target.value = value;
+        }}
+    }});
+    
     function toggleOutro() {{
         const select = document.getElementById('unidade_medida');
         const input = document.getElementById('unidade_outro');
