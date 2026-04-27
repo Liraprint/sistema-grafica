@@ -3698,8 +3698,13 @@ def calcular_data_entrega_api():
 
 # MÓDULO DE RASTREAMENTO DE ENVIOS
 
+# ========================
+# MÓDULO DE RASTREAMENTO AUTOMÁTICO (API PÚBLICA GRATUITA)
+# ========================
+
 def buscar_envios():
     try:
+        # Busca envios ordenados por data
         url = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -3709,7 +3714,7 @@ def buscar_envios():
         print("Erro ao buscar envios:", e)
         return []
 
-def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
+def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio, servico_id=None):
     try:
         url = f"{SUPABASE_URL}/rest/v1/envios"
         dados = {
@@ -3720,6 +3725,8 @@ def criar_envio(tipo_envio, empresa_id, descricao, codigo_rastreio):
             "data_envio": datetime.now().isoformat(),
             "status": "Enviado"
         }
+        if servico_id:
+            dados["servico_id"] = int(servico_id)
         response = requests.post(url, json=dados, headers=headers)
         return response.status_code == 201
     except Exception as e:
@@ -3739,10 +3746,140 @@ def marcar_entregue(id):
         print("Erro ao marcar entrega:", e)
         return False
 
+def consultar_rastreio_publico(codigo_rastreio):
+    """
+    Consulta API pública gratuita (SeuRastreio)
+    Retorna dict com o último status encontrado.
+    """
+    try:
+        # API Pública que não requer chave
+        url = f"https://seurastreio.com.br/api/rastreio/{codigo_rastreio}"
+        
+        # Adiciona User-Agent para não ser bloqueado
+        headers_api = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(url, headers=headers_api, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # A API retorna uma lista de eventos no campo 'result'
+            if data.get('result') and len(data['result']) > 0:
+                # Pega o último evento da lista (o mais recente)
+                ultimo_evento = data['result'][0]
+                
+                # Traduz status para o padrão do seu sistema
+                status_api = ultimo_evento.get('status', 'Em Trânsito')
+                
+                # Mapeamento simples de status
+                if 'entregue' in status_api.lower():
+                    novo_status = 'Entregue'
+                elif 'saiu para entrega' in status_api.lower():
+                    novo_status = 'Saiu para Entrega'
+                elif 'objeto postado' in status_api.lower():
+                    novo_status = 'Postado'
+                else:
+                    novo_status = 'Em Trânsito'
+                    
+                return {
+                    'status': novo_status,
+                    'detalhes': ultimo_evento.get('location', '') + ' - ' + ultimo_evento.get('date', '')
+                }
+        return None
+    except Exception as e:
+        print(f"Erro API Rastreio: {e}")
+        return None
+
+@app.route('/atualizar_rastreio/<int:id>')
+def atualizar_rastreio(id):
+    """Atualiza o status de um único envio via API Pública"""
+    if 'usuario' not in session:
+        flash("❌ Acesso negado!")
+        return redirect(url_for('login'))
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/envios?id=eq.{id}"
+        resp = requests.get(url, headers=headers)
+        if not resp.json():
+            flash("❌ Envio não encontrado!")
+            return redirect(url_for('envios'))
+        
+        envio = resp.json()[0]
+        codigo = envio.get('codigo_rastreio', '')
+        
+        if not codigo:
+            flash("⚠️ Este envio não possui código de rastreio.")
+            return redirect(url_for('envios'))
+        
+        flash("⏳ Consultando Correios...")
+        
+        resultado = consultar_rastreio_publico(codigo)
+        
+        if resultado:
+            dados_patch = {
+                "status": resultado['status'],
+                "observacoes": resultado['detalhes'],
+                "ultima_consulta": datetime.now().isoformat()
+            }
+            
+            resp_patch = requests.patch(url, json=dados_patch, headers=headers)
+            if resp_patch.status_code == 204:
+                flash(f"✅ Atualizado! Status: {resultado['status']}")
+            else:
+                flash("❌ Erro ao salvar no banco.")
+        else:
+            flash("⚠️ Não foi possível consultar. Verifique o código.")
+            
+    except Exception as e:
+        print(f"Erro ao atualizar rastreio: {e}")
+        flash("❌ Erro ao consultar rastreamento.")
+    
+    return redirect(url_for('envios'))
+
+@app.route('/atualizar_todos_rastreios')
+def atualizar_todos_rastreios():
+    """Atualiza todos os envios pendentes automaticamente"""
+    if 'usuario' not in session:
+        flash("❌ Acesso negado!")
+        return redirect(url_for('login'))
+    
+    try:
+        # Busca apenas envios que NÃO estão entregues e têm código
+        url = f"{SUPABASE_URL}/rest/v1/envios?select=id,codigo_rastreio,status&status=neq.Entregue&codigo_rastreio=not.is.null"
+        resp = requests.get(url, headers=headers)
+        envios = resp.json() if resp.status_code == 200 else []
+        
+        atualizados = 0
+        erros = 0
+        
+        for e in envios:
+            res = consultar_rastreio_publico(e['codigo_rastreio'])
+            if res:
+                requests.patch(f"{SUPABASE_URL}/rest/v1/envios?id=eq.{e['id']}", 
+                    json={
+                        "status": res['status'], 
+                        "observacoes": res['detalhes'],
+                        "ultima_consulta": datetime.now().isoformat()
+                    }, 
+                    headers=headers)
+                atualizados += 1
+            else:
+                erros += 1
+        
+        flash(f"✅ {atualizados} atualizados | ⚠️ {erros} falhas")
+        
+    except Exception as e:
+        print(f"Erro ao atualizar todos: {e}")
+        flash("❌ Erro no processo em lote.")
+    
+    return redirect(url_for('envios'))
+
 @app.route('/registrar_envio')
 def registrar_envio():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     empresas = buscar_empresas()
     try:
         url_serv = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico,titulo&tipo=neq.Orçamento&order=codigo_servico.desc"
@@ -3750,6 +3887,7 @@ def registrar_envio():
         servicos = response.json() if response.status_code == 200 else []
     except:
         servicos = []
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3844,6 +3982,7 @@ def envios():
             envios_entregues.append(e)
         else:
             envios_enviados.append(e)
+            
     html_enviados = ""
     for e in envios_enviados:
         data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
@@ -3857,15 +3996,17 @@ def envios():
         <td><span style="color: #e67e22; font-weight: bold;">{e['status']}</span></td>
         <td>{data_entrega}</td>
         <td>
-        <div style="display: flex; gap: 5px; align-items: center;">
-        <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
-        <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
-        <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-        <a href="/marcar_entregue/{e['id']}" class="btn btn-green">✅ Entregue</a>
+        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+            <a href="/atualizar_rastreio/{e['id']}" class="btn" style="background: #8e44ad;">🔄 Atualizar</a>
+            <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
+            <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+            <a href="/marcar_entregue/{e['id']}" class="btn btn-green">✅ Entregue</a>
         </div>
         </td>
         </tr>
         '''
+        
     html_entregues = ""
     for e in envios_entregues:
         data_entrega = format_data(e.get('data_entrega')) if e.get('data_entrega') else "—"
@@ -3879,15 +4020,16 @@ def envios():
         <td><span style="color: #27ae60; font-weight: bold;">{e['status']}</span></td>
         <td>{data_entrega}</td>
         <td>
-        <div style="display: flex; gap: 5px; align-items: center;">
-        <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
-        <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
-        <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-        <span style="color: #95a5a6;">Já entregue</span>
+        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
+            <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
+            <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+            <span style="color: #95a5a6; font-size: 13px;">Já entregue</span>
         </div>
         </td>
         </tr>
         '''
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3911,6 +4053,7 @@ def envios():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .section {{ padding: 20px 30px; }}
     .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
+    .update-all-btn {{ display: inline-block; margin: 0 30px 20px 30px; padding: 10px 20px; background: #8e44ad; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }}
     </style>
     </head>
     <body>
@@ -3918,7 +4061,9 @@ def envios():
     <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
-    <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 0 30px;">➕ Novo Envio</a>
+    <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 20px 30px 0 30px;">➕ Novo Envio</a>
+    <a href="/atualizar_todos_rastreios" class="update-all-btn">🔄 Atualizar Todos Automaticamente</a>
+    
     <div class="section">
     <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
     <table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}</tbody></table>
