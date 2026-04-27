@@ -8,6 +8,25 @@ from io import BytesIO
 from datetime import datetime
 import pdfkit
 
+# Script global de máscara de CNPJ
+SCRIPT_MASCARA_CNPJ = """
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.mascara-cnpj');
+    inputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, "");
+            value = value.replace(/^(\\d{2})(\\d)/, "$1.$2");
+            value = value.replace(/^(\\d{2})\\.(\\d{3})(\\d)/, "$1.$2.$3");
+            value = value.replace(/\\.(\\d{3})(\\d)/, ".$1/$2");
+            value = value.replace(/(\\d{4})(\\d)/, "$1-$2");
+            e.target.value = value;
+        });
+    });
+});
+</script>
+"""
+
 # ========================
 # 🧩 MENU FLUTUANTE
 # ========================
@@ -666,6 +685,7 @@ def cadastrar_cliente():
 def listar_empresas():
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     busca = request.args.get('q', '').strip()
     try:
         if busca:
@@ -681,6 +701,10 @@ def listar_empresas():
     except Exception as e:
         flash("Erro de conexão.")
         empresas = []
+    
+    # Botão Voltar só aparece quando há busca
+    btn_voltar = f'<a href="/empresas" style="margin-right: 10px; padding: 10px 15px; background: #95a5a6; color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">← Voltar / Limpar</a>' if busca else ''
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -706,13 +730,17 @@ def listar_empresas():
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
     <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
     <div class="search-box">
-    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
+    <form method="get" style="display: inline;">
+        {btn_voltar}
+        <input type="text" name="q" class="mascara-cnpj" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+        <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+    </form>
     </div>
     <table>
     <thead><tr><th>ID</th><th>Empresa</th><th>CNPJ</th><th>Responsável</th><th>WhatsApp</th><th>Ações</th></tr></thead>
@@ -723,6 +751,23 @@ def listar_empresas():
     <div style="text-align: center; padding: 20px;"><a href="/cadastrar_cliente" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">➕ Cadastrar Nova Empresa</a></div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
+    
+    <!-- SCRIPT DA MÁSCARA DE CNPJ -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {{
+        const inputs = document.querySelectorAll('.mascara-cnpj');
+        inputs.forEach(input => {{
+            input.addEventListener('input', function(e) {{
+                let value = e.target.value.replace(/\D/g, "");
+                value = value.replace(/^(\\d{{2}})(\\d)/, "$1.$2");
+                value = value.replace(/^(\\d{{2}})\\.(\\d{{3}})(\\d)/, "$1.$2.$3");
+                value = value.replace(/\\.(\\d{{3}})(\\d)/, ".$1/$2");
+                value = value.replace(/(\\d{{4}})(\\d)/, "$1-$2");
+                e.target.value = value;
+            }});
+        }});
+    }});
+    </script>
     </body>
     </html>
     '''
