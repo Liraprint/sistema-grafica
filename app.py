@@ -4444,118 +4444,119 @@ def pdf_orcamento(id):
                 linhas_html += f'''
                 <tr>
                     <td class="text-center">{qtd}</td>
-                    <td>{desc}</td>
+                    <td style="font-weight: 500;">{desc}</td>
                     <td class="text-center">{cor}</td>
                     <td class="text-right">R$ {vu:,.2f}</td>
-                    <td class="text-right">R$ {vt:,.2f}</td>
+                    <td class="text-right" style="font-weight: bold;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
-            linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 20px; color: #999;">Nenhum item adicionado</td></tr>'
+            linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 30px; color: #999;">Nenhum item adicionado</td></tr>'
 
-        # Nome do usuário logado (Vendedor/Responsável)
+        # Nome do usuário logado
         usuario_logado = session.get('usuario', 'Departamento de Vendas')
         
-        # URL do Logo (Usei um placeholder, substitua pela sua URL real se tiver)
+        # URL do Logo (use a sua URL real)
         logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
 
-        # HTML Profissional - Estilo Limpo e Centralizado
+        # HTML Profissional com FONTES GRANDES
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 12mm 15mm; }}
+    @page {{ size: A4; margin: 15mm 20mm; }} /* Margens otimizadas */
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 10.5px; 
-        color: #333; 
+        font-size: 13px; /* Fonte base maior */
+        color: #222; 
         line-height: 1.5;
         -webkit-print-color-adjust: exact;
     }}
     
     /* CABEÇALHO */
-    .header {{ text-align: center; margin-bottom: 25px; }}
-    .logo {{ max-width: 180px; margin-bottom: 10px; }}
+    .header {{ text-align: center; margin-bottom: 30px; }}
+    .logo {{ max-width: 200px; margin-bottom: 15px; }} /* Logo maior */
     .titulo {{ 
-        font-size: 16px; 
-        font-weight: bold; 
+        font-size: 22px; /* Título bem maior */
+        font-weight: 800; 
         text-transform: uppercase; 
-        letter-spacing: 3px; 
+        letter-spacing: 4px; 
         color: #2c3e50;
         border-bottom: 2px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 5px;
-        margin-bottom: 15px;
+        padding-bottom: 8px;
+        margin-bottom: 20px;
     }}
-    .data-line {{ font-size: 10px; color: #666; margin-bottom: 20px; }}
+    .data-line {{ font-size: 12px; color: #555; margin-bottom: 25px; font-weight: 500; }}
     
     /* DADOS DO CLIENTE */
     .client-info {{ 
-        background: #f9f9f9; 
-        padding: 15px; 
-        border-radius: 5px; 
-        margin-bottom: 25px; 
-        border-left: 4px solid #2c3e50;
+        background: #f4f6f7; 
+        padding: 18px 22px; 
+        border-radius: 6px; 
+        margin-bottom: 35px; 
+        border-left: 5px solid #2c3e50;
     }}
-    .client-info p {{ margin: 2px 0; }}
+    .client-info p {{ margin: 4px 0; font-size: 13px; }}
     .client-info strong {{ color: #2c3e50; }}
     
     /* TABELA */
-    .table-title {{ font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; color: #555; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 8px 5px; text-align: left; border-bottom: 1px solid #eee; font-size: 10px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 600; text-transform: uppercase; font-size: 9px; }}
+    .table-title {{ font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 30px; }}
+    th, td {{ padding: 12px 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
     /* TOTAIS */
     .total-block {{ 
         text-align: right; 
-        margin-top: 10px; 
-        font-size: 13px; 
-        font-weight: bold; 
+        margin-top: 20px; 
+        font-size: 20px; /* Valor Total Grande */
+        font-weight: 900; 
         color: #2c3e50; 
         border-top: 2px solid #2c3e50;
-        padding-top: 10px;
+        padding-top: 15px;
         margin-right: 5px;
     }}
     
     /* TERMOS */
     .terms {{ 
-        margin-top: 30px; 
-        font-size: 10px; 
-        color: #555; 
+        margin-top: 40px; 
+        font-size: 12px; 
+        color: #444; 
+        padding: 15px;
         background: #fff;
-        padding: 10px;
-        border-top: 1px solid #eee;
+        border: 1px solid #eee;
+        border-radius: 5px;
     }}
-    .terms strong {{ color: #333; }}
+    .terms strong {{ color: #000; }}
     
     /* RODAPÉ E ASSINATURA */
     .footer-area {{ 
-        margin-top: 50px; 
+        margin-top: 60px; 
         text-align: center; 
     }}
-    .signature {{ margin-bottom: 15px; }}
-    .signature p {{ margin: 2px 0; }}
-    .signature .name {{ font-size: 13px; font-weight: bold; margin-top: 10px; }}
-    .signature .role {{ font-size: 10px; color: #777; }}
+    .signature {{ margin-bottom: 20px; }}
+    .signature p {{ margin: 4px 0; }}
+    .signature .name {{ font-size: 16px; font-weight: 800; color: #2c3e50; margin-top: 20px; }}
+    .signature .role {{ font-size: 12px; color: #555; font-weight: 600; }}
     
-    .empresa-info {{ font-size: 9px; color: #999; margin-top: 30px; }}
+    .empresa-info {{ font-size: 10px; color: #888; margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px; }}
     
     .ref-num {{ 
         text-align: right; 
-        font-size: 9px; 
+        font-size: 11px; 
         font-weight: bold; 
-        color: #2c3e50;
-        margin-top: 10px;
+        color: #7f8c8d;
+        margin-top: 15px;
     }}
 </style>
 </head>
 <body>
 
-<!-- CABEÇALHO COM LOGO -->
+<!-- CABEÇALHO -->
 <div class="header">
     <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
     <br>
@@ -4570,7 +4571,7 @@ def pdf_orcamento(id):
     <p><strong>Tel:</strong> {tel} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
 </div>
 
-<!-- TABELA DE ITENS -->
+<!-- TABELA -->
 <div class="table-title">Itens Orçados</div>
 <table>
     <thead>
@@ -4595,7 +4596,7 @@ def pdf_orcamento(id):
     <strong>Pagamento:</strong> 28 dias &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> a combinar
 </div>
 
-<!-- ASSINATURA E RODAPÉ -->
+<!-- ASSINATURA -->
 <div class="footer-area">
     <div class="signature">
         <p>Atenciosamente,</p>
@@ -4620,10 +4621,10 @@ def pdf_orcamento(id):
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            "margin-top": "5mm",
+            "margin-top": "10mm",
             "margin-bottom": "15mm",
-            "margin-left": "15mm",
-            "margin-right": "15mm"
+            "margin-left": "20mm",
+            "margin-right": "20mm"
         })
         
         return send_file(
