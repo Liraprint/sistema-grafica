@@ -3321,6 +3321,11 @@ def adicionar_orcamento():
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = request.form.get('prazo_dias', '7')
+        
+        # ✅ NOVOS CAMPOS EDITÁVEIS
+        condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
+        condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
+        
         observacoes = request.form.get('observacoes_gerais', '')
         
         if not empresa_id:
@@ -3337,7 +3342,7 @@ def adicionar_orcamento():
             cod = f"OR-001"
         
         try:
-            # Cria o orçamento
+            # Cria o orçamento COM OS NOVOS CAMPOS
             json_data = {
                 "codigo_servico": cod,
                 "titulo": "Orçamento Múltiplo",
@@ -3347,6 +3352,9 @@ def adicionar_orcamento():
                 "data_abertura": data_abertura,
                 "previsao_entrega": None,
                 "valor_cobrado": 0.0,
+                "prazo_dias": int(prazo_dias),
+                "condicao_pagamento": condicao_pagamento,  # ✅ NOVO
+                "condicao_entrega": condicao_entrega,      # ✅ NOVO
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
             }
             
@@ -3474,6 +3482,19 @@ def adicionar_orcamento():
                     <input type="number" name="prazo_dias" value="7" min="1">
                     <small style="color: #7f8c8d;">* A contagem inicia após aprovação da arte</small>
                 </div>
+                
+                <!-- ✅ NOVOS CAMPOS DE PAGAMENTO E ENTREGA -->
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Condições de Pagamento *</label>
+                        <input type="text" name="condicao_pagamento" value="28 dias" placeholder="Ex: À vista, 30 dias, 50% entrada" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Condições de Entrega *</label>
+                        <input type="text" name="condicao_entrega" value="a combinar" placeholder="Ex: Retirada no local, Sedex, Transportadora" required>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>Observações Gerais</label>
                     <textarea name="observacoes_gerais" rows="2"></textarea>
@@ -4453,12 +4474,11 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO (CORRIGIDO)
+        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         
         try:
-            # Busca pelo nome de usuário (coluna com espaço)
             url_user = f'{SUPABASE_URL}/rest/v1/usuarios?select=telefone&"nome de usuário"=eq.{usuario_logado}'
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
@@ -4470,12 +4490,10 @@ def pdf_orcamento(id):
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         
-        obs = orc.get('observacoes', '')
-        prazo = '7'
-        if 'prazo' in obs.lower():
-            import re
-            match = re.search(r'(\d+)\s*dias', obs, re.IGNORECASE)
-            if match: prazo = match.group(1)
+        # Pega prazo e condições do banco (ou usa padrão)
+        prazo = orc.get('prazo_dias', '7')
+        condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
+        condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
         linhas_html = ""
         total_geral = 0.0
@@ -4628,7 +4646,7 @@ def pdf_orcamento(id):
 
 <div class="terms">
     <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-    <strong>Pagamento:</strong> 28 dias &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> a combinar
+    <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
 </div>
 
 <div class="footer-area">
