@@ -1905,7 +1905,7 @@ def imprimir_os(id):
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
-    logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
+    logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
     html = f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
