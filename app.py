@@ -4399,309 +4399,197 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        url = SUPABASE_URL + "/rest/v1/servicos?id=eq." + str(id) + "&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
+        # Busca dados do orçamento
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
-        orc = resp.json()[0]
+        orc = resp.json()[0] if resp.json() else None
+        
+        if not orc:
+            flash("Orçamento não encontrado!")
+            return redirect(url_for('listar_orcamentos'))
         
         emp = orc.get('empresas', {})
-        cliente = emp.get('nome_empresa', 'Cliente')
-        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
+        cliente = emp.get('nome_empresa', '—')
+        responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
+        cnpj = emp.get('cnpj', '—')
+        tel = emp.get('telefone', '—')
+        email = emp.get('email', '—')
         
-        def fmt(data):
-            return "/".join(str(data)[:10].split("-")[::-1]) if data and len(str(data)) >= 10 else "—"
+        # Formata data
+        data_abr = orc.get('data_abertura', '')
+        data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         
-        data_abr = fmt(orc.get('data_abertura'))
-        total = sum(float(i.get('valor_total', 0) or 0) for i in orc.get('itens_orcamento', []))
+        # Prazo (pega do campo observacoes ou usa padrão)
+        obs = orc.get('observacoes', '')
+        prazo = '7' # Padrão
+        if 'prazo' in obs.lower():
+            import re
+            match = re.search(r'(\d+)\s*dias', obs, re.IGNORECASE)
+            if match: prazo = match.group(1)
+            
+        # Gera linhas da tabela
+        linhas_html = ""
+        total_geral = 0.0
+        itens = orc.get('itens_orcamento', [])
         
-        # HTML Profissional - Layout Moderno A4
+        if itens:
+            for item in itens:
+                qtd = item.get('quantidade', '1')
+                desc = item.get('titulo', '—')
+                cor = item.get('numero_cores', '—')
+                vu = float(item.get('valor_unitario', 0) or 0)
+                vt = float(item.get('valor_total', 0) or 0)
+                total_geral += vt
+                
+                linhas_html += f'''
+                <tr>
+                    <td class="text-center">{qtd}</td>
+                    <td>{desc}</td>
+                    <td class="text-center">{cor}</td>
+                    <td class="text-right">R$ {vu:,.2f}</td>
+                    <td class="text-right">R$ {vt:,.2f}</td>
+                </tr>'''
+        else:
+            linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 20px; color: #999;">Nenhum item adicionado</td></tr>'
+        
+        # HTML Profissional (Idêntico ao modelo de referência)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Orçamento {orc.get('codigo_servico','')}</title>
 <style>
-@page {{ 
-    size: A4; 
-    margin: 2cm; 
-}}
-* {{ 
-    margin: 0; 
-    padding: 0; 
-    box-sizing: border-box; 
-}}
-body {{ 
-    font-family: Arial, sans-serif; 
-    font-size: 12px; 
-    color: #333; 
-    line-height: 1.6;
-}}
-.container {{ 
-    max-width: 794px; 
-    margin: 0 auto; 
-}}
-/* Header */
-.header {{ 
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 4px solid #2c3e50;
-}}
-.logo {{ 
-    max-width: 200px; 
-    margin-bottom: 15px; 
-}}
-.titulo {{ 
-    font-size: 36px; 
-    font-weight: bold; 
-    color: #2c3e50; 
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    margin: 10px 0;
-}}
-.codigo {{
-    font-size: 20px;
-    font-weight: bold;
-    color: #7f8c8d;
-    background: #ecf0f1;
-    padding: 8px 25px;
-    border-radius: 5px;
-    display: inline-block;
-}}
-/* Info Section */
-.info-section {{ 
-    display: flex;
-    gap: 25px;
-    margin-bottom: 30px;
-}}
-.info-box {{ 
-    flex: 1;
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-}}
-.info-label {{ 
-    font-size: 11px; 
-    text-transform: uppercase; 
-    color: #7f8c8d; 
-    font-weight: bold; 
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-}}
-.cliente-nome {{ 
-    font-size: 20px; 
-    color: #2c3e50; 
-    font-weight: bold; 
-    margin-bottom: 15px;
-}}
-.info-detail {{
-    font-size: 12px;
-    color: #555;
-    margin: 8px 0;
-}}
-/* Delivery Box */
-.entrega-box {{ 
-    background: #e8f5e9; 
-    border-left: 5px solid #27ae60; 
-    padding: 15px 20px; 
-    margin: 25px 0;
-    border-radius: 5px;
-}}
-.entrega-label {{
-    font-size: 12px; 
-    color: #27ae60; 
-    font-weight: bold; 
-    margin-bottom: 8px;
-    text-transform: uppercase;
-}}
-.entrega-text {{ 
-    font-size: 13px; 
-    color: #27ae60; 
-    line-height: 1.6;
-}}
-/* Items Table */
-.items-section {{ 
-    margin: 30px 0;
-}}
-.section-title {{
-    font-size: 16px; 
-    font-weight: bold; 
-    color: #2c3e50; 
-    margin-bottom: 15px;
-    text-transform: uppercase;
-    border-bottom: 2px solid #ecf0f1;
-    padding-bottom: 8px;
-}}
-.items-table {{ 
-    width: 100%; 
-    border-collapse: collapse;
-    margin: 20px 0;
-}}
-.items-table thead {{
-    background: #2c3e50; 
-    color: white;
-}}
-.items-table th {{ 
-    padding: 14px 12px; 
-    text-align: left; 
-    font-size: 11px;
-    font-weight: bold;
-    text-transform: uppercase;
-}}
-.items-table td {{ 
-    padding: 16px 12px; 
-    border-bottom: 2px solid #ecf0f1; 
-    font-size: 13px;
-}}
-.items-table tbody tr:nth-child(even) {{
-    background: #f8f9fa;
-}}
-.text-center {{ text-align: center; }}
-.text-right {{ text-align: right; }}
-/* Total Section */
-.total-section {{
-    margin-top: 40px;
-    text-align: right;
-}}
-.total-box {{ 
-    background: #2c3e50; 
-    color: white; 
-    padding: 25px 35px; 
-    border-radius: 8px; 
-    display: inline-block;
-    min-width: 280px;
-}}
-.total-label {{ 
-    font-size: 13px; 
-    text-transform: uppercase; 
-    margin-bottom: 12px;
-    opacity: 0.9;
-}}
-.total-value {{ 
-    font-size: 36px; 
-    font-weight: bold;
-    letter-spacing: 2px;
-}}
-/* Footer */
-.footer {{
-    margin-top: 50px;
-    padding-top: 20px;
-    border-top: 2px solid #ecf0f1;
-    text-align: center;
-    font-size: 10px;
-    color: #95a5a6;
-}}
-.footer strong {{
-    color: #2c3e50;
-    font-size: 11px;
-}}
+    @page {{ size: A4; margin: 15mm 20mm; }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{ 
+        font-family: Arial, Helvetica, sans-serif; 
+        font-size: 10.5px; 
+        color: #000; 
+        line-height: 1.45;
+        -webkit-print-color-adjust: exact;
+    }}
+    .header-top {{ text-align: right; font-size: 10px; color: #444; margin-bottom: 5px; }}
+    .title {{ 
+        text-align: center; 
+        font-size: 16px; 
+        font-weight: bold; 
+        text-transform: uppercase; 
+        letter-spacing: 2px; 
+        margin: 10px 0 15px 0; 
+        border-bottom: 1px solid #000;
+        padding-bottom: 8px;
+    }}
+    .date-line {{ text-align: right; font-size: 10px; margin-bottom: 20px; }}
+    .client-block {{ margin-bottom: 25px; }}
+    .client-block p {{ margin: 3px 0; }}
+    .section-label {{ font-weight: bold; margin-top: 15px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; }}
+    
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+    th, td {{ padding: 5px 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 10px; }}
+    th {{ font-weight: bold; border-bottom: 1px solid #000; background: #fafafa; }}
+    .text-right {{ text-align: right; }}
+    .text-center {{ text-align: center; }}
+    
+    .total-line {{ 
+        text-align: right; 
+        font-size: 12px; 
+        font-weight: bold; 
+        margin-top: 5px; 
+        padding-top: 8px; 
+        border-top: 1px solid #000;
+    }}
+    
+    .terms {{ 
+        margin-top: 35px; 
+        font-size: 10px; 
+        line-height: 1.5; 
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+    }}
+    
+    .signature {{ margin-top: 40px; }}
+    .signature p {{ margin: 2px 0; }}
+    .signature strong {{ font-size: 11px; }}
+    
+    .ref-number {{ 
+        text-align: right; 
+        margin-top: 25px; 
+        font-weight: bold; 
+        font-size: 10px; 
+        color: #333;
+    }}
 </style>
 </head>
 <body>
-<div class="container">
-    <!-- Header com Logo Centralizado -->
-    <div class="header">
-        <img src="{logo_url}" class="logo" alt="Liraprint" onerror="this.style.display='none'">
-        <div class="titulo">ORÇAMENTO</div>
-        <div class="codigo">{orc.get('codigo_servico','—')}</div>
-    </div>
-    
-    <!-- Informações do Cliente e Dados -->
-    <div class="info-section">
-        <div class="info-box">
-            <div class="info-label">Cliente</div>
-            <div class="cliente-nome">{cliente}</div>
-            <div class="info-detail"><strong>CNPJ:</strong> {emp.get('cnpj','—')}</div>
-            <div class="info-detail"><strong>Tel:</strong> {emp.get('telefone','—')}</div>
-            <div class="info-detail"><strong>Email:</strong> {emp.get('email','—')}</div>
-        </div>
-        <div class="info-box">
-            <div class="info-label">Dados do Orçamento</div>
-            <div class="info-detail"><strong>Emissão:</strong> {data_abr}</div>
-            <div class="info-detail"><strong>Status:</strong> {orc.get('status','Pendente')}</div>
-            <div class="info-detail"><strong>Validade:</strong> 30 dias</div>
-        </div>
-    </div>
-    
-    <!-- Prazo de Entrega -->
-    <div class="entrega-box">
-        <div class="entrega-label">📅 Prazo de Entrega</div>
-        <div class="entrega-text">
-            Dias úteis após aprovação da arte.<br>
-            <em style="font-size: 11px;">* A contagem inicia após aprovação.</em>
-        </div>
-    </div>
-    
-    <!-- Itens Orçados -->
-    <div class="items-section">
-        <div class="section-title">Itens Orçados</div>
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th width="5%">#</th>
-                    <th width="45%">Descrição</th>
-                    <th width="15%" class="text-center">Qtd</th>
-                    <th width="20%">Dimensão</th>
-                    <th width="15%" class="text-right">Valor</th>
-                </tr>
-            </thead>
-            <tbody>'''
-        
-        itens = orc.get('itens_orcamento', [])
-        if itens and len(itens) > 0:
-            for i, item in enumerate(itens):
-                html += f'''
-                <tr>
-                    <td class="text-center">{i+1}</td>
-                    <td><strong>{item.get('titulo','—')}</strong></td>
-                    <td class="text-center">{item.get('quantidade','1')}</td>
-                    <td>{item.get('dimensao','—')}</td>
-                    <td class="text-right" style="font-size: 14px; font-weight: 600;">R$ {float(item.get('valor_total',0) or 0):.2f}</td>
-                </tr>'''
-        else:
-            html += '''
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #95a5a6; padding: 40px; font-size: 14px;">
-                        Nenhum item adicionado
-                    </td>
-                </tr>'''
-        
-        html += f'''
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Total -->
-    <div class="total-section">
-        <div class="total-box">
-            <div class="total-label">Total do Orçamento</div>
-            <div class="total-value">R$ {total:.2f}</div>
-        </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="footer">
-        <div style="margin-bottom: 8px;">
-            <strong>LIRAPRINT</strong> - Gráfica Rápida<br>
-            R. Dr. Roberto Fernandes, 81 - Jardim Palmira - Guarulhos/SP - CEP: 07076-070
-        </div>
-        <div>
-            Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}<br>
-            Este orçamento é válido por 30 dias a partir da data de emissão
-        </div>
-    </div>
+
+<div class="header-top">Guarulhos-SP</div>
+<div class="title">PROPOSTA COMERCIAL</div>
+<div class="date-line">Guarulhos, {data_fmt}</div>
+
+<div class="client-block">
+    <p><strong>Cliente:</strong> {cliente} &nbsp;|&nbsp; <strong>At:</strong> {responsavel}</p>
+    <p><strong>CNPJ:</strong> {cnpj} &nbsp;|&nbsp; <strong>Tel:</strong> {tel} &nbsp;|&nbsp; <strong>Email:</strong> {email}</p>
 </div>
+
+<div class="section-label">Itens Orçados</div>
+<table>
+    <thead>
+        <tr>
+            <th width="10%" class="text-center">Quant.</th>
+            <th width="40%">Material / Descrição</th>
+            <th width="10%" class="text-center">Cor</th>
+            <th width="20%" class="text-right">Valor Unit.</th>
+            <th width="20%" class="text-right">Valor Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {linhas_html}
+    </tbody>
+</table>
+
+<div class="total-line">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+
+<div class="terms">
+    <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
+    <strong>Pagamento:</strong> 28 dias &nbsp;|&nbsp; <strong>Entrega:</strong> a combinar
+</div>
+
+<div class="signature">
+    <p>Atenciosamente,</p>
+    <br>
+    <p><strong>Depto de Vendas</strong></p>
+    <p>LIRAPRINT - Gráfica Rápida</p>
+    <p>Tel: (11) 2468-1234</p>
+</div>
+
+<div class="ref-number">Orçamento nº: {orc.get('codigo_servico', '—')}</div>
+
 </body>
 </html>'''
         
-        pdf = pdfkit.from_string(html, False, options={"quiet": "", "encoding": "UTF-8", "page-size": "A4", "dpi": 300})
-        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"Orcamento_{orc.get('codigo_servico','')}.pdf", mimetype="application/pdf")
+        # Gera PDF
+        pdf = pdfkit.from_string(html, False, options={
+            "quiet": "", 
+            "encoding": "UTF-8", 
+            "page-size": "A4",
+            "margin-top": "10mm",
+            "margin-bottom": "10mm",
+            "margin-left": "15mm",
+            "margin-right": "15mm"
+        })
+        
+        return send_file(
+            BytesIO(pdf), 
+            as_attachment=True, 
+            download_name=f"Proposta_{orc.get('codigo_servico','')}.pdf", 
+            mimetype="application/pdf"
+        )
         
     except Exception as e:
         print("ERRO PDF:", str(e))
         import traceback
         traceback.print_exc()
         flash("❌ Erro ao gerar PDF: " + str(e))
-        return redirect(url_for('listar_orcamentos'))
+        return redirect(url_for('listar_orcamentos'))        
 
 
 # ========================
