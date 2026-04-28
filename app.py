@@ -1292,7 +1292,7 @@ def adicionar_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Busca dados para o formulário (empresas e materiais)
+    # Busca dados para o formulário
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         materiais = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?select=*", headers=headers).json() or []
@@ -1322,23 +1322,36 @@ def adicionar_servico():
             return redirect(url_for('adicionar_servico'))
         
         try:
-            # Formata valor monetário (remove vírgula/ponto para salvar como float)
             valor_cobrado = float(valor_cobrado.replace('.', '').replace(',', '.'))
         except:
             valor_cobrado = 0.0
         
+        # 🔢 GERAR CÓDIGO ÚNICO E SEQUENCIAL (À PROVA DE DUPLICATAS)
         try:
-            # Gera código automático OS-001, OS-002...
-            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1"
+            # Busca TODAS as OS ordenadas por ID decrescente (mais recente primeiro)
+            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico&order=id.desc&limit=1"
             response = requests.get(url_seq, headers=headers)
+            
             if response.status_code == 200 and response.json():
-                ultimo = response.json()[0]['codigo_servico']
-                numero = int(ultimo.split('-')[1]) + 1
+                ultimo_servico = response.json()[0]
+                ultimo_codigo = ultimo_servico.get('codigo_servico', 'OS-000')
+                
+                # Extrai o número do último código
+                try:
+                    numero = int(ultimo_codigo.split('-')[1]) + 1
+                except:
+                    # Se não conseguir extrair, usa o ID + 1
+                    numero = ultimo_servico.get('id', 0) + 1
             else:
                 numero = 1
-            codigo_servico = f"OS-{numero:03d}"
-        except:
-            codigo_servico = "OS-001"
+            
+            # Determina o prefixo baseado no tipo
+            prefixo = 'OR' if tipo == 'Orçamento' else 'OS'
+            codigo_servico = f"{prefixo}-{numero:03d}"
+            
+        except Exception as e:
+            print(f"Erro ao gerar código: {e}")
+            codigo_servico = f"OS-{datetime.now().strftime('%Y%m%d%H%M%S')}"  # Fallback com timestamp
         
         try:
             # Cria o serviço
@@ -1362,9 +1375,9 @@ def adicionar_servico():
             
             if response.status_code == 201:
                 servico_id = response.json()['id']
-                flash("✅ Serviço criado com sucesso!")
+                flash(f"✅ Serviço {codigo_servico} criado com sucesso!")
                 
-                # Salva materiais usados (se houver)
+                # Salva materiais usados
                 materiais_ids = request.form.getlist('material_id[]')
                 quantidades = request.form.getlist('quantidade_usada[]')
                 valores_unitarios = request.form.getlist('valor_unitario[]')
@@ -1395,7 +1408,7 @@ def adicionar_servico():
             flash("❌ Erro de conexão.")
         return redirect(url_for('adicionar_servico'))
     
-    # GET - Renderiza o formulário (FORA do bloco POST!)
+    # GET - Renderiza o formulário
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -2005,6 +2018,7 @@ def pdf_os(id):
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
+    
     def calcular_custo():
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
@@ -2015,11 +2029,18 @@ def pdf_os(id):
             return 0.0
         except:
             return 0.0
+    
     custo_materiais = calcular_custo()
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
+    
+    # 🔢 CALCULAR VALOR POR UNIDADE
+    quantidade = float(servico.get('quantidade', 1) or 1)
+    valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
+    
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
+    
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -2035,10 +2056,11 @@ def pdf_os(id):
     th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
     th {{ background-color: #ecf0f1; color: #2c3e50; }}
     .total-box {{ text-align: right; font-size: 18px; margin-top: 20px; }}
+    .valor-unidade {{ font-size: 15px; color: #555; margin-top: 5px; }}
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -2054,7 +2076,8 @@ def pdf_os(id):
     <tr><th>Aplicação</th><td>{servico.get('aplicacao', '—')}</td></tr>
     <tr><th>Data Abertura</th><td>{format_data(servico.get('data_abertura'))}</td></tr>
     <tr><th>Previsão Entrega</th><td>{format_data(servico.get('previsao_entrega'))}</td></tr>
-    <tr><th>Valor Cobrado</th><td>R$ {valor_cobrado:.2f}</td></tr>
+    <tr><th>Valor Cobrado Total</th><td>R$ {valor_cobrado:.2f}</td></tr>
+    <tr><th>Valor por Unidade</th><td style="color: #27ae60; font-weight: bold;">R$ {valor_por_unidade:.2f}</td></tr>
     <tr><th>Custo Materiais</th><td>R$ {custo_materiais:.2f}</td></tr>
     <tr><th>Lucro</th><td>R$ {lucro:.2f}</td></tr>
     <tr><th>Observações</th><td>{servico.get('observacoes', '—')}</td></tr>
@@ -2073,7 +2096,10 @@ def pdf_os(id):
     """ for m in servico.get('materiais_usados', []) if m.get('materiais'))}
     </tbody>
     </table>
-    <div class="total-box"><p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p></div>
+    <div class="total-box">
+    <p><strong>Lucro Final:</strong> R$ {lucro:.2f}</p>
+    <div class="valor-unidade">Valor médio por unidade: R$ {valor_por_unidade:.2f}</div>
+    </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </body>
     </html>
