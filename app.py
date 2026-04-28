@@ -4399,6 +4399,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
+        # Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -4411,8 +4412,20 @@ def pdf_orcamento(id):
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
         cnpj = emp.get('cnpj', '—')
-        tel = emp.get('telefone', '—')
+        tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
+        
+        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO
+        usuario_logado = session.get('usuario', 'Departamento de Vendas')
+        tel_vendedor = "(11) 2468-1234"  # Número padrão
+        
+        try:
+            url_user = f"{SUPABASE_URL}/rest/v1/usuarios?select=telefone&nome_de_usuario=eq.{usuario_logado}"
+            resp_user = requests.get(url_user, headers=headers)
+            if resp_user.status_code == 200 and resp_user.json():
+                tel_vendedor = resp_user.json()[0].get('telefone', tel_vendedor)
+        except:
+            pass  # Mantém o número padrão se der erro
         
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
@@ -4448,9 +4461,6 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        usuario_logado = session.get('usuario', 'Departamento de Vendas')
-        
-        # 🔑 ALTERE AQUI A URL DO SEU LOGO NOVO
         logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
 
         html = f'''<!DOCTYPE html>
@@ -4462,7 +4472,7 @@ def pdf_orcamento(id):
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 15px; /* AUMENTADO */
+        font-size: 15px;
         color: #1a1a1a; 
         line-height: 1.6;
         -webkit-print-color-adjust: exact;
@@ -4471,7 +4481,7 @@ def pdf_orcamento(id):
     .header {{ text-align: center; margin-bottom: 35px; }}
     .logo {{ max-width: 220px; margin-bottom: 20px; }}
     .titulo {{ 
-        font-size: 28px; /* AUMENTADO */
+        font-size: 28px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 6px; 
@@ -4503,7 +4513,7 @@ def pdf_orcamento(id):
     .total-block {{ 
         text-align: right; 
         margin-top: 25px; 
-        font-size: 24px; /* AUMENTADO */
+        font-size: 24px;
         font-weight: 900; 
         color: #2c3e50; 
         border-top: 3px solid #2c3e50;
@@ -4555,7 +4565,7 @@ def pdf_orcamento(id):
 <div class="client-info">
     <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
     <p><strong>CNPJ:</strong> {cnpj}</p>
-    <p><strong>Tel:</strong> {tel} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
+    <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
 </div>
 
 <div class="table-title">Itens Orçados</div>
@@ -4587,7 +4597,7 @@ def pdf_orcamento(id):
         <br><br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
-        <p class="role">Tel: (11) 2468-1234</p>
+        <p class="role">Tel: {tel_vendedor}</p>
     </div>
     
     <div class="empresa-info">
