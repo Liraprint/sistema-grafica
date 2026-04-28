@@ -2006,7 +2006,7 @@ def pdf_os(id):
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
-    logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png"
+    logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
     html = f'''
     <!DOCTYPE html>
     <html>
@@ -4461,7 +4461,7 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
+        logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png" 
 
         html = f'''<!DOCTYPE html>
 <html>
