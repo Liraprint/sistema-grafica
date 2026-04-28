@@ -4417,15 +4417,16 @@ def pdf_orcamento(id):
         
         # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO
         usuario_logado = session.get('usuario', 'Departamento de Vendas')
-        tel_vendedor = "(11) 2468-1234"  # Número padrão
+        tel_vendedor = ""  # Começa vazio - SEM número fictício!
         
         try:
+            # Tenta buscar na tabela de usuários
             url_user = f"{SUPABASE_URL}/rest/v1/usuarios?select=telefone&nome_de_usuario=eq.{usuario_logado}"
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
-                tel_vendedor = resp_user.json()[0].get('telefone', tel_vendedor)
+                tel_vendedor = resp_user.json()[0].get('telefone', '')
         except:
-            pass  # Mantém o número padrão se der erro
+            tel_vendedor = ""  # Mantém vazio se der erro
         
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
@@ -4462,6 +4463,12 @@ def pdf_orcamento(id):
             linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png" 
+
+        # Formata telefone para exibição (adiciona formatação se necessário)
+        if tel_vendedor:
+            tel_formatado = tel_vendedor
+        else:
+            tel_formatado = ""  # Vazio se não tiver telefone
 
         html = f'''<!DOCTYPE html>
 <html>
@@ -4597,7 +4604,7 @@ def pdf_orcamento(id):
         <br><br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
-        <p class="role">Tel: {tel_vendedor}</p>
+        {f'<p class="role">Tel: {tel_formatado}</p>' if tel_formatado else ''}
     </div>
     
     <div class="empresa-info">
