@@ -4419,7 +4419,7 @@ def pdf_orcamento(id):
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         
-        # Prazo (pega do campo observacoes ou usa padrão)
+        # Prazo (tenta pegar do campo observacoes)
         obs = orc.get('observacoes', '')
         prazo = '7' # Padrão
         if 'prazo' in obs.lower():
@@ -4451,94 +4451,135 @@ def pdf_orcamento(id):
                 </tr>'''
         else:
             linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 20px; color: #999;">Nenhum item adicionado</td></tr>'
+
+        # Nome do usuário logado (Vendedor/Responsável)
+        usuario_logado = session.get('usuario', 'Departamento de Vendas')
         
-        # HTML Profissional (Idêntico ao modelo de referência)
+        # URL do Logo (Usei um placeholder, substitua pela sua URL real se tiver)
+        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
+
+        # HTML Profissional - Estilo Limpo e Centralizado
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 15mm 20mm; }}
+    @page {{ size: A4; margin: 12mm 15mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
-        font-family: Arial, Helvetica, sans-serif; 
+        font-family: "Segoe UI", Arial, sans-serif; 
         font-size: 10.5px; 
-        color: #000; 
-        line-height: 1.45;
+        color: #333; 
+        line-height: 1.5;
         -webkit-print-color-adjust: exact;
     }}
-    .header-top {{ text-align: right; font-size: 10px; color: #444; margin-bottom: 5px; }}
-    .title {{ 
-        text-align: center; 
+    
+    /* CABEÇALHO */
+    .header {{ text-align: center; margin-bottom: 25px; }}
+    .logo {{ max-width: 180px; margin-bottom: 10px; }}
+    .titulo {{ 
         font-size: 16px; 
         font-weight: bold; 
         text-transform: uppercase; 
-        letter-spacing: 2px; 
-        margin: 10px 0 15px 0; 
-        border-bottom: 1px solid #000;
-        padding-bottom: 8px;
+        letter-spacing: 3px; 
+        color: #2c3e50;
+        border-bottom: 2px solid #2c3e50;
+        display: inline-block;
+        padding-bottom: 5px;
+        margin-bottom: 15px;
     }}
-    .date-line {{ text-align: right; font-size: 10px; margin-bottom: 20px; }}
-    .client-block {{ margin-bottom: 25px; }}
-    .client-block p {{ margin: 3px 0; }}
-    .section-label {{ font-weight: bold; margin-top: 15px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; }}
+    .data-line {{ font-size: 10px; color: #666; margin-bottom: 20px; }}
     
+    /* DADOS DO CLIENTE */
+    .client-info {{ 
+        background: #f9f9f9; 
+        padding: 15px; 
+        border-radius: 5px; 
+        margin-bottom: 25px; 
+        border-left: 4px solid #2c3e50;
+    }}
+    .client-info p {{ margin: 2px 0; }}
+    .client-info strong {{ color: #2c3e50; }}
+    
+    /* TABELA */
+    .table-title {{ font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; color: #555; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 5px 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 10px; }}
-    th {{ font-weight: bold; border-bottom: 1px solid #000; background: #fafafa; }}
+    th, td {{ padding: 8px 5px; text-align: left; border-bottom: 1px solid #eee; font-size: 10px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 600; text-transform: uppercase; font-size: 9px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
-    .total-line {{ 
+    /* TOTAIS */
+    .total-block {{ 
         text-align: right; 
-        font-size: 12px; 
+        margin-top: 10px; 
+        font-size: 13px; 
         font-weight: bold; 
-        margin-top: 5px; 
-        padding-top: 8px; 
-        border-top: 1px solid #000;
-    }}
-    
-    .terms {{ 
-        margin-top: 35px; 
-        font-size: 10px; 
-        line-height: 1.5; 
-        border-top: 1px solid #ccc;
+        color: #2c3e50; 
+        border-top: 2px solid #2c3e50;
         padding-top: 10px;
+        margin-right: 5px;
     }}
     
-    .signature {{ margin-top: 40px; }}
-    .signature p {{ margin: 2px 0; }}
-    .signature strong {{ font-size: 11px; }}
-    
-    .ref-number {{ 
-        text-align: right; 
-        margin-top: 25px; 
-        font-weight: bold; 
+    /* TERMOS */
+    .terms {{ 
+        margin-top: 30px; 
         font-size: 10px; 
-        color: #333;
+        color: #555; 
+        background: #fff;
+        padding: 10px;
+        border-top: 1px solid #eee;
+    }}
+    .terms strong {{ color: #333; }}
+    
+    /* RODAPÉ E ASSINATURA */
+    .footer-area {{ 
+        margin-top: 50px; 
+        text-align: center; 
+    }}
+    .signature {{ margin-bottom: 15px; }}
+    .signature p {{ margin: 2px 0; }}
+    .signature .name {{ font-size: 13px; font-weight: bold; margin-top: 10px; }}
+    .signature .role {{ font-size: 10px; color: #777; }}
+    
+    .empresa-info {{ font-size: 9px; color: #999; margin-top: 30px; }}
+    
+    .ref-num {{ 
+        text-align: right; 
+        font-size: 9px; 
+        font-weight: bold; 
+        color: #2c3e50;
+        margin-top: 10px;
     }}
 </style>
 </head>
 <body>
 
-<div class="header-top">Guarulhos-SP</div>
-<div class="title">PROPOSTA COMERCIAL</div>
-<div class="date-line">Guarulhos, {data_fmt}</div>
+<!-- CABEÇALHO COM LOGO -->
+<div class="header">
+    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+    <br>
+    <div class="titulo">Proposta Comercial</div>
+</div>
+<div class="data-line">Guarulhos, {data_fmt}</div>
 
-<div class="client-block">
-    <p><strong>Cliente:</strong> {cliente} &nbsp;|&nbsp; <strong>At:</strong> {responsavel}</p>
-    <p><strong>CNPJ:</strong> {cnpj} &nbsp;|&nbsp; <strong>Tel:</strong> {tel} &nbsp;|&nbsp; <strong>Email:</strong> {email}</p>
+<!-- DADOS DO CLIENTE -->
+<div class="client-info">
+    <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
+    <p><strong>CNPJ:</strong> {cnpj}</p>
+    <p><strong>Tel:</strong> {tel} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
 </div>
 
-<div class="section-label">Itens Orçados</div>
+<!-- TABELA DE ITENS -->
+<div class="table-title">Itens Orçados</div>
 <table>
     <thead>
         <tr>
-            <th width="10%" class="text-center">Quant.</th>
+            <th width="10%" class="text-center">Qtd</th>
             <th width="40%">Material / Descrição</th>
             <th width="10%" class="text-center">Cor</th>
             <th width="20%" class="text-right">Valor Unit.</th>
-            <th width="20%" class="text-right">Valor Total</th>
+            <th width="20%" class="text-right">Total</th>
         </tr>
     </thead>
     <tbody>
@@ -4546,22 +4587,30 @@ def pdf_orcamento(id):
     </tbody>
 </table>
 
-<div class="total-line">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
 
+<!-- TERMOS -->
 <div class="terms">
     <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-    <strong>Pagamento:</strong> 28 dias &nbsp;|&nbsp; <strong>Entrega:</strong> a combinar
+    <strong>Pagamento:</strong> 28 dias &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> a combinar
 </div>
 
-<div class="signature">
-    <p>Atenciosamente,</p>
-    <br>
-    <p><strong>Depto de Vendas</strong></p>
-    <p>LIRAPRINT - Gráfica Rápida</p>
-    <p>Tel: (11) 2468-1234</p>
+<!-- ASSINATURA E RODAPÉ -->
+<div class="footer-area">
+    <div class="signature">
+        <p>Atenciosamente,</p>
+        <br><br>
+        <p class="name">{usuario_logado}</p>
+        <p class="role">LIRAPRINT - Depto de Vendas</p>
+        <p class="role">Tel: (11) 2468-1234</p>
+    </div>
+    
+    <div class="empresa-info">
+        LIRAPRINT &nbsp;|&nbsp; Guarulhos - SP
+    </div>
 </div>
 
-<div class="ref-number">Orçamento nº: {orc.get('codigo_servico', '—')}</div>
+<div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
 
 </body>
 </html>'''
@@ -4571,8 +4620,8 @@ def pdf_orcamento(id):
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            "margin-top": "10mm",
-            "margin-bottom": "10mm",
+            "margin-top": "5mm",
+            "margin-bottom": "15mm",
             "margin-left": "15mm",
             "margin-right": "15mm"
         })
@@ -4589,7 +4638,7 @@ def pdf_orcamento(id):
         import traceback
         traceback.print_exc()
         flash("❌ Erro ao gerar PDF: " + str(e))
-        return redirect(url_for('listar_orcamentos'))        
+        return redirect(url_for('listar_orcamentos'))
 
 
 # ========================
