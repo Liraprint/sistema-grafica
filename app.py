@@ -1891,6 +1891,7 @@ def imprimir_os(id):
     except Exception as e:
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
+    
     def calcular_custo():
         try:
             url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
@@ -1901,18 +1902,25 @@ def imprimir_os(id):
             return 0.0
         except:
             return 0.0
+    
     custo_materiais = calcular_custo()
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
+    
+    # 🔢 CALCULAR VALOR POR UNIDADE
+    quantidade = float(servico.get('quantidade', 1) or 1)
+    valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
+    
     empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
+    
     html = f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS {servico['codigo_servico']} - Impressão</title>
+    <title>OS {servico['codigo_servico']} - Detalhes</title>
     <style>
     body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; }}
     .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}
@@ -1920,6 +1928,7 @@ def imprimir_os(id):
     .header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}
     .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
     .info-item strong {{ display: block; font-size: 14px; color: #555; }}
+    .valor-destaque {{ color: #27ae60; font-weight: bold; font-size: 15px; }}
     table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
     th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
     th {{ background-color: #ecf0f1; color: #2c3e50; }}
@@ -1929,7 +1938,7 @@ def imprimir_os(id):
     .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="header">
     <img src="{logo_url}" alt="Logo da Empresa">
     <h1>ORDEM DE SERVIÇO</h1>
@@ -1946,6 +1955,9 @@ def imprimir_os(id):
     <div class="info-item"><strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}</div>
     <div class="info-item"><strong>Aplicação:</strong> {servico.get('aplicacao', '-')}</div>
     <div class="info-item"><strong>Observações:</strong> {servico.get('observacoes', '-')}</div>
+    <!-- ✅ NOVO: VALOR POR UNIDADE -->
+    <div class="info-item"><strong>Valor Cobrado Total:</strong> <span class="valor-destaque">R$ {valor_cobrado:.2f}</span></div>
+    <div class="info-item"><strong>Valor por Unidade:</strong> <span class="valor-destaque">R$ {valor_por_unidade:.2f}</span></div>
     </div>
     <h3>Materiais Utilizados</h3>
     <table>
@@ -1968,10 +1980,11 @@ def imprimir_os(id):
     <p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p>
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+    
+    <!-- ✅ BOTÕES ATUALIZADOS (SEM IMPRIMIR) -->
     <div style="text-align: center; margin-top: 40px;">
-    <button onclick="window.print()" class="no-print" style="padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Imprimir</button>
-    <a href="/pdf_os/{id}" class="no-print" style="margin-left: 10px; padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px;">📄 Gerar PDF</a>
-    <a href="/servicos" class="no-print" style="margin-left: 10px; color: #3498db;">← Voltar</a>
+    <a href="/pdf_os/{id}" class="no-print" style="padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px; margin-right: 10px;">📄 Gerar PDF</a>
+    <a href="/servicos" class="no-print" style="color: #3498db;">← Voltar</a>
     </div>
     </body>
     </html>
@@ -4399,7 +4412,6 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -4415,18 +4427,19 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO
-        usuario_logado = session.get('usuario', 'Departamento de Vendas')
-        tel_vendedor = ""  # Começa vazio - SEM número fictício!
+        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO (CORRIGIDO)
+        usuario_logado = session.get('usuario', '')
+        tel_vendedor = ""
         
         try:
-            # Tenta buscar na tabela de usuários
-            url_user = f"{SUPABASE_URL}/rest/v1/usuarios?select=telefone&nome_de_usuario=eq.{usuario_logado}"
+            # Busca pelo nome de usuário (coluna com espaço)
+            url_user = f'{SUPABASE_URL}/rest/v1/usuarios?select=telefone&"nome de usuário"=eq.{usuario_logado}'
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
-        except:
-            tel_vendedor = ""  # Mantém vazio se der erro
+        except Exception as e:
+            print(f"Erro ao buscar telefone: {e}")
+            tel_vendedor = ""
         
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
@@ -4462,13 +4475,7 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png" 
-
-        # Formata telefone para exibição (adiciona formatação se necessário)
-        if tel_vendedor:
-            tel_formatado = tel_vendedor
-        else:
-            tel_formatado = ""  # Vazio se não tiver telefone
+        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
 
         html = f'''<!DOCTYPE html>
 <html>
@@ -4604,7 +4611,7 @@ def pdf_orcamento(id):
         <br><br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
-        {f'<p class="role">Tel: {tel_formatado}</p>' if tel_formatado else ''}
+        {f'<p class="role">Tel: {tel_vendedor}</p>' if tel_vendedor else ''}
     </div>
     
     <div class="empresa-info">
