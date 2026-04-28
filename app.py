@@ -3321,11 +3321,8 @@ def adicionar_orcamento():
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = request.form.get('prazo_dias', '7')
-        
-        # ✅ NOVOS CAMPOS EDITÁVEIS
         condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
         condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
-        
         observacoes = request.form.get('observacoes_gerais', '')
         
         if not empresa_id:
@@ -3342,7 +3339,6 @@ def adicionar_orcamento():
             cod = f"OR-001"
         
         try:
-            # Cria o orçamento COM OS NOVOS CAMPOS
             json_data = {
                 "codigo_servico": cod,
                 "titulo": "Orçamento Múltiplo",
@@ -3353,8 +3349,8 @@ def adicionar_orcamento():
                 "previsao_entrega": None,
                 "valor_cobrado": 0.0,
                 "prazo_dias": int(prazo_dias),
-                "condicao_pagamento": condicao_pagamento,  # ✅ NOVO
-                "condicao_entrega": condicao_entrega,      # ✅ NOVO
+                "condicao_pagamento": condicao_pagamento,
+                "condicao_entrega": condicao_entrega,
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
             }
             
@@ -3375,17 +3371,20 @@ def adicionar_orcamento():
                     flash("❌ Erro ao criar orçamento.")
                     return redirect(url_for('adicionar_orcamento'))
                 
-                # Processa os itens
+                # Processa os itens COM MATERIAL E DESCRIÇÃO SEPARADOS
                 vt = 0.0
-                titulos = request.form.getlist('item_titulo[]')
+                descricoes = request.form.getlist('item_descricao[]')  # ✅ NOVO
+                materiais = request.form.getlist('item_material[]')      # ✅ NOVO
                 quantidades = request.form.getlist('item_quantidade[]')
                 valores_unit = request.form.getlist('item_valor_unit[]')
                 dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
                 
-                for i in range(len(titulos)):
-                    t = titulos[i].strip()
-                    if not t:
+                for i in range(len(descricoes)):
+                    desc = descricoes[i].strip()
+                    mat = materiais[i].strip() if i < len(materiais) else ''
+                    
+                    if not desc:
                         continue
                     
                     try:
@@ -3405,7 +3404,8 @@ def adicionar_orcamento():
                     
                     requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
                         "orcamento_id": oid,
-                        "titulo": t,
+                        "titulo": desc,           # Descrição vai em titulo
+                        "material": mat,          # ✅ Material separado
                         "quantidade": q,
                         "dimensao": dim,
                         "numero_cores": cor,
@@ -3413,7 +3413,6 @@ def adicionar_orcamento():
                         "valor_total": total_item
                     }, headers=headers)
                 
-                # Atualiza valor total
                 requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                     json={"valor_cobrado": vt}, headers=headers)
                 
@@ -3445,7 +3444,7 @@ def adicionar_orcamento():
     <title>Novo Orçamento</title>
     <style>
         body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1100px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
         .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
         .content {{ padding: 30px; }}
         .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
@@ -3482,19 +3481,16 @@ def adicionar_orcamento():
                     <input type="number" name="prazo_dias" value="7" min="1">
                     <small style="color: #7f8c8d;">* A contagem inicia após aprovação da arte</small>
                 </div>
-                
-                <!-- ✅ NOVOS CAMPOS DE PAGAMENTO E ENTREGA -->
                 <div class="grid">
                     <div class="form-group">
                         <label>Condições de Pagamento *</label>
-                        <input type="text" name="condicao_pagamento" value="28 dias" placeholder="Ex: À vista, 30 dias, 50% entrada" required>
+                        <input type="text" name="condicao_pagamento" value="28 dias" placeholder="Ex: À vista, 30 dias" required>
                     </div>
                     <div class="form-group">
                         <label>Condições de Entrega *</label>
-                        <input type="text" name="condicao_entrega" value="a combinar" placeholder="Ex: Retirada no local, Sedex, Transportadora" required>
+                        <input type="text" name="condicao_entrega" value="a combinar" placeholder="Ex: Retirada, Sedex" required>
                     </div>
                 </div>
-                
                 <div class="form-group">
                     <label>Observações Gerais</label>
                     <textarea name="observacoes_gerais" rows="2"></textarea>
@@ -3502,10 +3498,14 @@ def adicionar_orcamento():
                 <h3 style="color: #2c3e50; margin: 25px 0 15px 0;">Itens do Orçamento</h3>
                 <div id="itens-container">
                     <div class="item-row">
-                        <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
+                        <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
                             <div>
-                                <label>Material/Descrição *</label>
-                                <input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required>
+                                <label>Descrição *</label>
+                                <input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required>
+                            </div>
+                            <div>
+                                <label>Material *</label>
+                                <input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required>
                             </div>
                             <div>
                                 <label>Quantidade *</label>
@@ -3516,7 +3516,7 @@ def adicionar_orcamento():
                                 <input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required>
                             </div>
                             <div>
-                                <label>Dimensão (opcional)</label>
+                                <label>Dimensão</label>
                                 <input type="text" name="item_dimensao[]" placeholder="Ex: 100x50">
                             </div>
                             <div>
@@ -3536,7 +3536,6 @@ def adicionar_orcamento():
     </div>
     
     <script>
-    // Formatação CORRETA de valor monetário - SEM ZEROS À ESQUERDA
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
             let value = e.target.value.replace(/\\D/g, '');
@@ -3549,11 +3548,12 @@ def adicionar_orcamento():
         const div = document.createElement('div');
         div.className = 'item-row';
         div.innerHTML = `
-            <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
-                <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+            <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
+                <div><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
+                <div><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required></div>
                 <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
                 <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
-                <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
                 <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
                 <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
             </div>
@@ -3582,10 +3582,13 @@ def editar_orcamento(id):
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         
         if request.method == 'POST':
-            # Atualiza dados do orçamento
+            # Atualiza dados do orçamento COM OS NOVOS CAMPOS
             dados = {
                 "empresa_id": int(request.form['empresa_id']),
                 "data_abertura": request.form['data_abertura'],
+                "prazo_dias": int(request.form.get('prazo_dias', '7')),
+                "condicao_pagamento": request.form.get('condicao_pagamento', '28 dias'),
+                "condicao_entrega": request.form.get('condicao_entrega', 'a combinar'),
                 "observacoes": request.form.get('observacoes_gerais', '')
             }
             requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
@@ -3696,6 +3699,23 @@ def editar_orcamento(id):
                             <input type="date" name="data_abertura" value="{orc.get('data_abertura','')[:10] if orc.get('data_abertura') else ''}" required>
                         </div>
                     </div>
+                    
+                    <!-- ✅ NOVOS CAMPOS DE PAGAMENTO E ENTREGA -->
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Prazo de Entrega (dias úteis)</label>
+                            <input type="number" name="prazo_dias" value="{orc.get('prazo_dias', 7)}" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Condições de Pagamento *</label>
+                            <input type="text" name="condicao_pagamento" value="{orc.get('condicao_pagamento', '28 dias')}" placeholder="Ex: À vista, 30 dias" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Condições de Entrega *</label>
+                        <input type="text" name="condicao_entrega" value="{orc.get('condicao_entrega', 'a combinar')}" placeholder="Ex: Retirada no local, Sedex" required>
+                    </div>
+                    
                     <div class="form-group">
                         <label>Observações</label>
                         <textarea name="observacoes_gerais" rows="2">{orc.get('observacoes','')}</textarea>
@@ -4630,11 +4650,12 @@ def pdf_orcamento(id):
 <table>
     <thead>
         <tr>
-            <th width="12%" class="text-center">Qtd</th>
-            <th width="38%">Material / Descrição</th>
-            <th width="12%" class="text-center">Cor</th>
-            <th width="19%" class="text-right">Valor Unit.</th>
-            <th width="19%" class="text-right">Total</th>
+            <th width="10%" class="text-center">Qtd</th>
+            <th width="35%">Descrição</th>
+            <th width="25%">Material</th>
+            <th width="10%" class="text-center">Cor</th>
+            <th width="10%" class="text-right">Valor Unit.</th>
+            <th width="10%" class="text-right">Total</th>
         </tr>
     </thead>
     <tbody>
