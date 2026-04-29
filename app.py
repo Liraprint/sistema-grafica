@@ -4479,6 +4479,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
+        # 1. Busca dados do orçamento e itens
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -4487,6 +4488,7 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
+        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -4494,11 +4496,11 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 🔍 BUSCA TELEFONE DO USUÁRIO LOGADO
+        # 3. Dados do Vendedor (Telefone)
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
-        
         try:
+            # Busca telefone do usuário logado
             url_user = f'{SUPABASE_URL}/rest/v1/usuarios?select=telefone&"nome de usuário"=eq.{usuario_logado}'
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
@@ -4507,14 +4509,16 @@ def pdf_orcamento(id):
             print(f"Erro ao buscar telefone: {e}")
             tel_vendedor = ""
         
+        # 4. Formatação de Data e Prazo
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         
-        # Pega prazo e condições do banco (ou usa padrão)
+        # Pega condições do banco (ou usa padrão)
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
+        # 5. Geração das Linhas da Tabela (Corrigido para Material separado)
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -4522,7 +4526,13 @@ def pdf_orcamento(id):
         if itens:
             for item in itens:
                 qtd = item.get('quantidade', '1')
-                desc = item.get('titulo', '—')
+                
+                # Descrição vem do campo 'titulo' (conforme conversamos)
+                desc = item.get('titulo', '—') 
+                
+                # Material vem do novo campo 'material'
+                material = item.get('material', '—') 
+                
                 cor = item.get('numero_cores', '—')
                 vu = float(item.get('valor_unitario', 0) or 0)
                 vt = float(item.get('valor_total', 0) or 0)
@@ -4530,103 +4540,109 @@ def pdf_orcamento(id):
                 
                 linhas_html += f'''
                 <tr>
-                    <td class="text-center">{qtd}</td>
+                    <td class="text-center" style="font-weight:bold;">{qtd}</td>
                     <td style="font-weight: 600;">{desc}</td>
+                    <td>{material}</td>
                     <td class="text-center">{cor}</td>
                     <td class="text-right">R$ {vu:,.2f}</td>
                     <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
-            linhas_html = '<tr><td colspan="5" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
+            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        logo_url = "https://i.postimg.cc/RVqcJzzQ/logo.png" 
+        logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png" 
 
+        # 6. HTML Final
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 12mm 25mm; }}
+    @page {{ size: A4; margin: 15mm 20mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 15px;
+        font-size: 11px; /* Ajustado para caber melhor */
         color: #1a1a1a; 
-        line-height: 1.6;
+        line-height: 1.4;
         -webkit-print-color-adjust: exact;
     }}
     
-    .header {{ text-align: center; margin-bottom: 35px; }}
-    .logo {{ max-width: 220px; margin-bottom: 20px; }}
+    /* CABEÇALHO */
+    .header {{ text-align: center; margin-bottom: 25px; }}
+    .logo {{ max-width: 180px; margin-bottom: 10px; }}
     .titulo {{ 
-        font-size: 28px;
+        font-size: 18px;
         font-weight: 800; 
         text-transform: uppercase; 
-        letter-spacing: 6px; 
+        letter-spacing: 4px; 
         color: #2c3e50;
-        border-bottom: 3px solid #2c3e50;
+        border-bottom: 2px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 10px;
-        margin-bottom: 25px;
+        padding-bottom: 5px;
+        margin-bottom: 15px;
     }}
-    .data-line {{ font-size: 14px; color: #555; margin-bottom: 30px; font-weight: 600; }}
+    .data-line {{ text-align: right; font-size: 12px; color: #555; margin-bottom: 20px; }}
     
+    /* DADOS DO CLIENTE */
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 25px 30px; 
-        border-radius: 8px; 
-        margin-bottom: 45px; 
-        border-left: 6px solid #2c3e50;
+        padding: 15px 20px; 
+        border-radius: 6px; 
+        margin-bottom: 30px; 
+        border-left: 4px solid #2c3e50;
     }}
-    .client-info p {{ margin: 6px 0; font-size: 15px; }}
+    .client-info p {{ margin: 3px 0; font-size: 12px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
     
-    .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 15px; color: #2c3e50; letter-spacing: 1px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 35px; }}
-    th, td {{ padding: 16px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 15px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 1.5px; }}
+    /* TABELA */
+    .table-title {{ font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
+    /* TOTAIS */
     .total-block {{ 
         text-align: right; 
-        margin-top: 25px; 
-        font-size: 24px;
+        margin-top: 15px; 
+        font-size: 16px;
         font-weight: 900; 
         color: #2c3e50; 
-        border-top: 3px solid #2c3e50;
-        padding-top: 18px;
-        margin-right: 10px;
+        border-top: 2px solid #2c3e50;
+        padding-top: 10px;
+        margin-right: 5px;
     }}
     
+    /* TERMOS */
     .terms {{ 
-        margin-top: 50px; 
-        font-size: 14px; 
+        margin-top: 30px; 
+        font-size: 11px; 
         color: #444; 
-        padding: 20px;
-        background: #fff;
-        border: 2px solid #eee;
-        border-radius: 6px;
+        padding: 10px 0;
+        border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
+    /* RODAPÉ E ASSINATURA */
     .footer-area {{ 
-        margin-top: 70px; 
+        margin-top: 40px; 
         text-align: center; 
     }}
-    .signature {{ margin-bottom: 25px; }}
-    .signature p {{ margin: 5px 0; }}
-    .signature .name {{ font-size: 20px; font-weight: 800; color: #2c3e50; margin-top: 25px; }}
-    .signature .role {{ font-size: 14px; color: #555; font-weight: 600; }}
+    .signature {{ margin-bottom: 20px; }}
+    .signature p {{ margin: 3px 0; }}
+    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
+    .signature .role {{ font-size: 11px; color: #555; font-weight: 600; }}
     
-    .empresa-info {{ font-size: 12px; color: #888; margin-top: 50px; border-top: 2px solid #eee; padding-top: 15px; }}
+    .empresa-info {{ font-size: 10px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
     
     .ref-num {{ 
         text-align: right; 
-        font-size: 13px; 
+        font-size: 10px; 
         font-weight: 800; 
         color: #7f8c8d;
-        margin-top: 20px;
+        margin-top: 15px;
         letter-spacing: 1px;
     }}
 </style>
@@ -4650,12 +4666,12 @@ def pdf_orcamento(id):
 <table>
     <thead>
         <tr>
-            <th width="10%" class="text-center">Qtd</th>
-            <th width="35%">Descrição</th>
-            <th width="25%">Material</th>
-            <th width="10%" class="text-center">Cor</th>
-            <th width="10%" class="text-right">Valor Unit.</th>
-            <th width="10%" class="text-right">Total</th>
+            <th width="10%" class="text-center">QTD</th>
+            <th width="30%">DESCRIÇÃO</th>
+            <th width="30%">MATERIAL</th>
+            <th width="10%" class="text-center">COR</th>
+            <th width="10%" class="text-right">VALOR UNIT.</th>
+            <th width="10%" class="text-right">TOTAL</th>
         </tr>
     </thead>
     <tbody>
@@ -4673,7 +4689,7 @@ def pdf_orcamento(id):
 <div class="footer-area">
     <div class="signature">
         <p>Atenciosamente,</p>
-        <br><br>
+        <br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
         {f'<p class="role">Tel: {tel_vendedor}</p>' if tel_vendedor else ''}
@@ -4689,14 +4705,15 @@ def pdf_orcamento(id):
 </body>
 </html>'''
         
+        # Gera PDF
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            "margin-top": "8mm",
-            "margin-bottom": "12mm",
-            "margin-left": "25mm",
-            "margin-right": "25mm"
+            "margin-top": "5mm",
+            "margin-bottom": "10mm",
+            "margin-left": "15mm",
+            "margin-right": "15mm"
         })
         
         return send_file(
