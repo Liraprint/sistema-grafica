@@ -1972,66 +1972,45 @@ def excluir_servico(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Descobre o tipo do serviço
-        url_check = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
-        resp = requests.get(url_check, headers=headers)
+        print(f"🗑️ Iniciando exclusão do serviço ID: {id}")
         
-        if not resp.json() or len(resp.json()) == 0:
-            flash("❌ Serviço não encontrado!")
+        # 1. Remove PRIMEIRO os registros filhos (segurança contra FK)
+        # Tenta limpar itens de orçamento
+        resp_itens = requests.delete(
+            f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", 
+            headers=headers
+        )
+        print(f"📦 Limpeza itens_orcamento: Status {resp_itens.status_code}")
+        
+        # Tenta limpar materiais usados
+        resp_mats = requests.delete(
+            f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}", 
+            headers=headers
+        )
+        print(f"📦 Limpeza materiais_usados: Status {resp_mats.status_code}")
+        
+        # 2. Agora remove o serviço principal
+        resp_serv = requests.delete(
+            f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", 
+            headers=headers
+        )
+        print(f"🗑️ Exclusão serviço principal: Status {resp_serv.status_code}")
+        
+        # 3. Verifica se deu certo
+        if resp_serv.status_code in [200, 204]:
+            flash("✅ Serviço e todos os vínculos excluídos com sucesso!")
             return redirect(url_for('listar_servicos'))
-        
-        tipo = resp.json()[0].get('tipo', '')
-        print(f"🔍 Tipo do serviço {id}: {tipo}")
-        
-        # 2. Exclui os registros filhos PRIMEIRO (ordem importa!)
-        if tipo == 'Orçamento':
-            # Exclui itens do orçamento (tabela: itens_orcamento)
-            try:
-                url_del_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
-                resp_del_itens = requests.delete(url_del_itens, headers=headers)
-                print(f"✅ Itens do orçamento excluídos (status: {resp_del_itens.status_code})")
-            except Exception as e:
-                print(f"⚠️ Erro ao excluir itens: {e}")
-                flash("⚠️ Erro ao excluir itens do orçamento.")
-                return redirect(url_for('listar_orcamentos'))
         else:
-            # Exclui materiais usados (tabela: materiais_usados)
-            try:
-                url_del_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
-                resp_del_mats = requests.delete(url_del_mats, headers=headers)
-                print(f"✅ Materiais usados excluídos (status: {resp_del_mats.status_code})")
-            except Exception as e:
-                print(f"⚠️ Erro ao excluir materiais: {e}")
-                # Continua mesmo assim, pois materiais_usados pode não existir
-        
-        # 3. Agora sim, exclui o serviço principal
-        try:
-            url_del_servico = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
-            resp_del_servico = requests.delete(url_del_servico, headers=headers)
-            
-            print(f"✅ Serviço principal excluído (status: {resp_del_servico.status_code})")
-            
-            if resp_del_servico.status_code in [204, 200]:
-                flash("🗑️ Serviço excluído com sucesso!")
-            else:
-                flash(f"❌ Erro ao excluir serviço. Status: {resp_del_servico.status_code}")
-                print(f"❌ Resposta: {resp_del_servico.text}")
-                
-        except Exception as e:
-            print(f"❌ Erro ao excluir serviço principal: {e}")
-            flash("❌ Erro ao excluir serviço principal.")
+            flash(f"❌ Erro ao excluir. Detalhes: {resp_serv.text}")
+            print(f"❌ Resposta do Supabase: {resp_serv.text}")
             
     except Exception as e:
-        print(f"❌ Erro interno: {e}")
+        print(f"❌ Exceção ao excluir: {e}")
         import traceback
         traceback.print_exc()
-        flash("❌ Erro ao excluir serviço.")
-    
-    # 4. Redireciona conforme o tipo
-    if tipo == 'Orçamento':
-        return redirect(url_for('listar_orcamentos'))
-    else:
-        return redirect(url_for('listar_servicos'))
+        flash("❌ Erro interno ao excluir serviço.")
+        
+    return redirect(url_for('listar_servicos'))
 
 
 @app.route('/os/<int:id>')
@@ -2050,14 +2029,35 @@ def imprimir_os(id):
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Dados seguros - TRATAMENTO CORRETO DE NONE
+    # --- TRATAMENTO DOS DADOS ---
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
     whatsapp = empresa.get('whatsapp') or '—'
     email = empresa.get('email') or '—'
     
-    # Cálculo de custos seguro
+    # Quantidade formatada
+    qtd_raw = servico.get('quantidade')
+    qtd_display = '—'
+    if qtd_raw is not None and qtd_raw != 'None':
+        try:
+            q = float(qtd_raw)
+            if q.is_integer():
+                qtd_display = str(int(q))
+            else:
+                qtd_display = str(q).replace('.', ',')
+        except:
+            qtd_display = str(qtd_raw)
+            
+    # Dimensão limpa
+    dim_raw = servico.get('dimensao')
+    dim_display = '—' if (not dim_raw or dim_raw == 'None') else dim_raw
+    
+    # Cores limpas
+    cor_raw = servico.get('numero_cores')
+    cor_display = '—' if (not cor_raw or cor_raw == 'None') else cor_raw
+    
+    # Cálculos
     try:
         custo_materiais = sum(float(m.get('valor_total', 0) or 0) for m in servico.get('materiais_usados', []) if m and m.get('materiais'))
     except:
@@ -2065,62 +2065,28 @@ def imprimir_os(id):
         
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
-    
-    # Tratamento correto de quantidade - EVITAR None
-    try:
-        quantidade = float(servico.get('quantidade') or 1)
-    except:
-        quantidade = 1
-        
+    quantidade = float(servico.get('quantidade', 1) or 1)
     valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    # Extrair dados de entrega das observações - FORMATO CORRETO
+    # Dados de entrega
     obs = servico.get('observacoes') or ''
     dados_entrega = {}
-    
     if '--- DADOS DE ENTREGA/NF ---' in obs:
         partes = obs.split('--- DADOS DE ENTREGA/NF ---')[1].strip().split('\n')
         for p in partes:
             p = p.strip()
             if ':' in p:
-                # Suporta ambos os formatos
-                if 'Nota Fiscal para CNPJ' in p:
-                    chave = 'CNPJ para NF'
-                    valor = p.split(':', 1)[1].strip()
-                elif 'CNPJ para NF' in p:
-                    chave = 'CNPJ para NF'
-                    valor = p.split(':', 1)[1].strip()
+                if 'Nota Fiscal para CNPJ' in p or 'CNPJ para NF' in p:
+                    dados_entrega['CNPJ para NF'] = p.split(':', 1)[1].strip()
                 elif 'Endereço de entrega' in p or 'Entregar em' in p:
-                    chave = 'Endereço de entrega'
-                    valor = p.split(':', 1)[1].strip()
+                    dados_entrega['Endereço de entrega'] = p.split(':', 1)[1].strip()
                 elif 'Aos cuidados de' in p:
-                    chave = 'Aos cuidados de'
-                    valor = p.split(':', 1)[1].strip()
+                    dados_entrega['Aos cuidados de'] = p.split(':', 1)[1].strip()
                 elif 'Observações' in p or 'Obs. entrega' in p:
-                    chave = 'Observações'
-                    valor = p.split(':', 1)[1].strip()
-                else:
-                    partes_linha = p.split(':', 1)
-                    if len(partes_linha) == 2:
-                        chave = partes_linha[0].strip()
-                        valor = partes_linha[1].strip()
-                    else:
-                        continue
-                dados_entrega[chave] = valor
-                
-    # Dados diretos das colunas (se existirem)
-    if servico.get('cnpj_nota_fiscal'):
-        dados_entrega['CNPJ para NF'] = servico.get('cnpj_nota_fiscal')
-    if servico.get('endereco_entrega_os'):
-        dados_entrega['Endereço de entrega'] = servico.get('endereco_entrega_os')
-    if servico.get('aos_cuidados_de'):
-        dados_entrega['Aos cuidados de'] = servico.get('aos_cuidados_de')
-    if servico.get('observacoes_entrega'):
-        dados_entrega['Observações'] = servico.get('observacoes_entrega')
-                
+                    dados_entrega['Observações'] = p.split(':', 1)[1].strip()
+    
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
     
-    # Formatação segura de datas
     def format_data_safe(data):
         if not data or data == 'None':
             return '—'
@@ -2130,7 +2096,7 @@ def imprimir_os(id):
             return str(data)[:10]
         except:
             return '—'
-    
+
     html = f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -2141,185 +2107,44 @@ def imprimir_os(id):
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ 
-            font-family: 'Inter', Arial, sans-serif; 
-            background: #f8fafc; 
-            color: #1e293b; 
-            line-height: 1.6;
-            padding: 20px;
-        }}
-        .os-container {{ 
-            max-width: 900px; 
-            margin: 0 auto; 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-            overflow: hidden;
-        }}
-        .os-header {{ 
-            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); 
-            color: white; 
-            padding: 30px 40px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-        }}
+        body {{ font-family: 'Inter', Arial, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; padding: 20px; }}
+        .os-container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }}
+        .os-header {{ background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; }}
         .os-header .logo {{ max-width: 150px; }}
         .os-header .info {{ text-align: right; }}
         .os-header h1 {{ font-size: 24px; font-weight: 700; margin-bottom: 5px; }}
         .os-header .codigo {{ font-size: 18px; opacity: 0.9; font-weight: 500; }}
-        .os-header .status {{ 
-            display: inline-block; 
-            margin-top: 10px; 
-            padding: 5px 15px; 
-            border-radius: 20px; 
-            font-size: 13px; 
-            font-weight: 600;
-            background: rgba(255,255,255,0.2);
-        }}
+        .os-header .status {{ display: inline-block; margin-top: 10px; padding: 5px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.2); }}
         .os-body {{ padding: 30px 40px; }}
         .section {{ margin-bottom: 30px; }}
-        .section-title {{ 
-            font-size: 16px; 
-            font-weight: 700; 
-            color: #1e3a5f; 
-            margin-bottom: 15px; 
-            padding-bottom: 8px; 
-            border-bottom: 2px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        .section-title::before {{
-            content: "";
-            display: inline-block;
-            width: 4px;
-            height: 16px;
-            background: #3b82f6;
-            border-radius: 2px;
-        }}
-        .info-grid {{ 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 20px; 
-        }}
-        .info-item {{ }}
-        .info-item label {{ 
-            display: block; 
-            font-size: 12px; 
-            color: #64748b; 
-            margin-bottom: 4px; 
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }}
-        .info-item span {{ 
-            font-size: 15px; 
-            font-weight: 500; 
-            color: #1e293b;
-        }}
-        .info-item .destaque {{ 
-            color: #059669; 
-            font-weight: 700;
-            font-size: 16px;
-        }}
-        table {{ 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 15px 0;
-            font-size: 14px;
-        }}
-        th {{ 
-            background: #f1f5f9; 
-            color: #334155; 
-            font-weight: 600; 
-            padding: 12px 15px; 
-            text-align: left;
-            border-bottom: 2px solid #e2e8f0;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }}
-        td {{ 
-            padding: 12px 15px; 
-            border-bottom: 1px solid #f1f5f9; 
-        }}
+        .section-title {{ font-size: 16px; font-weight: 700; color: #1e3a5f; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }}
+        .section-title::before {{ content: ""; display: inline-block; width: 4px; height: 16px; background: #3b82f6; border-radius: 2px; }}
+        .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }}
+        .info-item label {{ display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }}
+        .info-item span {{ font-size: 15px; font-weight: 500; color: #1e293b; }}
+        .info-item .destaque {{ color: #059669; font-weight: 700; font-size: 16px; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }}
+        th {{ background: #f1f5f9; color: #334155; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }}
+        td {{ padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }}
         tr:last-child td {{ border-bottom: none; }}
         tr:hover {{ background: #f8fafc; }}
-        .total-box {{ 
-            background: #f8fafc; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-top: 20px;
-            border-left: 4px solid #3b82f6;
-        }}
-        .total-box p {{ 
-            margin: 8px 0; 
-            font-size: 15px;
-            display: flex;
-            justify-content: space-between;
-        }}
-        .total-box .valor {{ 
-            font-weight: 700; 
-            color: #1e293b;
-        }}
-        .total-box .destaque {{ 
-            color: #059669; 
-            font-size: 18px;
-        }}
-        .os-footer {{ 
-            background: #f8fafc; 
-            padding: 20px 40px; 
-            text-align: center; 
-            font-size: 13px; 
-            color: #64748b;
-            border-top: 1px solid #e2e8f0;
-        }}
-        .btn-group {{ 
-            text-align: center; 
-            margin: 30px 0; 
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 8px;
-        }}
-        .btn {{ 
-            display: inline-block;
-            padding: 12px 25px; 
-            background: #3b82f6; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            margin: 0 8px;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }}
+        .total-box {{ background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #3b82f6; }}
+        .total-box p {{ margin: 8px 0; font-size: 15px; display: flex; justify-content: space-between; }}
+        .total-box .valor {{ font-weight: 700; color: #1e293b; }}
+        .total-box .destaque {{ color: #059669; font-size: 18px; }}
+        .os-footer {{ background: #f8fafc; padding: 20px 40px; text-align: center; font-size: 13px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+        .btn-group {{ text-align: center; margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px; }}
+        .btn {{ display: inline-block; padding: 12px 25px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; margin: 0 8px; font-weight: 600; font-size: 14px; transition: all 0.2s; border: none; cursor: pointer; }}
         .btn:hover {{ background: #2563eb; transform: translateY(-2px); }}
         .btn-orange {{ background: #f97316; }}
-        .btn-orange:hover {{ background: #ea580c; }}
         .btn-green {{ background: #059669; }}
-        .btn-green:hover {{ background: #047857; }}
-        .entrega-box {{ 
-            background: #eff6ff; 
-            padding: 15px 20px; 
-            border-radius: 8px; 
-            margin-top: 10px;
-            border-left: 4px solid #3b82f6;
-            font-size: 14px;
-        }}
+        .entrega-box {{ background: #eff6ff; padding: 15px 20px; border-radius: 8px; margin-top: 10px; border-left: 4px solid #3b82f6; font-size: 14px; }}
         .entrega-box strong {{ color: #1e40af; }}
-        @media print {{ 
-            body {{ background: white; padding: 0; }} 
-            .os-container {{ box-shadow: none; border-radius: 0; }}
-            .btn-group {{ display: none; }}
-        }}
+        @media print {{ body {{ background: white; padding: 0; }} .os-container {{ box-shadow: none; border-radius: 0; }} .btn-group {{ display: none; }} }}
     </style>
     </head>
     <body>
     <div class="os-container">
-        <!-- CABEÇALHO -->
         <div class="os-header">
             <img src="{logo_url}" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
             <div class="info">
@@ -2328,9 +2153,7 @@ def imprimir_os(id):
                 <span class="status">{'✅ ' if servico.get('status') == 'Entregue' else '⏳ '}{servico.get('status', 'Pendente')}</span>
             </div>
         </div>
-        
         <div class="os-body">
-            <!-- DADOS DO CLIENTE -->
             <div class="section">
                 <div class="section-title">Cliente</div>
                 <div class="info-grid">
@@ -2340,22 +2163,18 @@ def imprimir_os(id):
                     <div class="info-item"><label>E-mail</label><span>{email}</span></div>
                 </div>
             </div>
-            
-            <!-- DADOS DA OS -->
             <div class="section">
                 <div class="section-title">Detalhes do Serviço</div>
                 <div class="info-grid">
                     <div class="info-item"><label>Título</label><span>{servico.get('titulo') or '—'}</span></div>
-                    <div class="info-item"><label>Quantidade</label><span class="destaque">{servico.get('quantidade') or '—'}</span></div>
-                    <div class="info-item"><label>Dimensão</label><span>{servico.get('dimensao') or '—'}</span></div>
-                    <div class="info-item"><label>Cores</label><span>{servico.get('numero_cores') or '—'}</span></div>
+                    <div class="info-item"><label>Quantidade</label><span class="destaque">{qtd_display}</span></div>
+                    <div class="info-item"><label>Dimensão</label><span>{dim_display}</span></div>
+                    <div class="info-item"><label>Cores</label><span>{cor_display}</span></div>
                     <div class="info-item"><label>Abertura</label><span>{format_data_safe(servico.get('data_abertura'))}</span></div>
                     <div class="info-item"><label>Previsão</label><span>{format_data_safe(servico.get('previsao_entrega'))}</span></div>
                     <div class="info-item"><label>Aplicação</label><span>{servico.get('aplicacao') or '—'}</span></div>
                 </div>
             </div>
-            
-            <!-- DADOS DE ENTREGA (NOVO) -->
             {f'''
             <div class="section">
                 <div class="section-title">📦 Dados de Entrega / Nota Fiscal</div>
@@ -2367,51 +2186,30 @@ def imprimir_os(id):
                 </div>
             </div>
             ''' if dados_entrega else ''}
-            
-            <!-- MATERIAIS -->
             <div class="section">
                 <div class="section-title">Materiais Utilizados</div>
                 <table>
                     <thead><tr><th>Material</th><th>Unidade</th><th>Qtd</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
                     <tbody>
-                    {''.join(f'''
-                    <tr>
-                    <td>{m['materiais']['denominacao']}</td>
-                    <td>{m['materiais']['unidade_medida']}</td>
-                    <td>{m['quantidade_usada']}</td>
-                    <td>R$ {m['valor_unitario']:.2f}</td>
-                    <td>R$ {m['valor_total']:.2f}</td>
-                    </tr>
-                    ''' for m in servico.get('materiais_usados', []) if m and m.get('materiais'))}
+                    {''.join(f'''<tr><td>{m['materiais']['denominacao']}</td><td>{m['materiais']['unidade_medida']}</td><td>{m['quantidade_usada']}</td><td>R$ {m['valor_unitario']:.2f}</td><td>R$ {m['valor_total']:.2f}</td></tr>''' for m in servico.get('materiais_usados', []) if m and m.get('materiais'))}
                     </tbody>
                 </table>
                 {f'<p style="text-align: center; color: #888; padding: 20px;">Nenhum material registrado</p>' if not servico.get('materiais_usados') else ''}
             </div>
-            
-            <!-- VALORES -->
             <div class="total-box">
                 <p>Custo com Materiais: <span class="valor">R$ {custo_materiais:.2f}</span></p>
                 <p>Valor Cobrado Total: <span class="valor">R$ {valor_cobrado:.2f}</span></p>
                 <p>Valor por Unidade: <span class="valor">R$ {valor_por_unidade:.2f}</span></p>
-                <p style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 10px;">
-                    <strong>Lucro Estimado:</strong> <span class="destaque">R$ {lucro:.2f}</span>
-                </p>
+                <p style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 10px;"><strong>Lucro Estimado:</strong> <span class="destaque">R$ {lucro:.2f}</span></p>
             </div>
-            
-            <!-- OBSERVAÇÕES GERAIS (sem os dados de entrega) -->
             {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{obs.split("--- DADOS DE ENTREGA/NF ---")[0].strip().replace(chr(10), "<br>") if "--- DADOS DE ENTREGA/NF ---" in obs else obs.replace(chr(10), "<br>")}</p></div>' if obs and obs.strip() else ''}
         </div>
-        
-        <!-- BOTÕES DE AÇÃO -->
         <div class="btn-group">
             <a href="/pdf_os/{id}" class="btn btn-orange">📄 Gerar PDF</a>
             <a href="/servicos" class="btn">← Voltar para Lista</a>
             {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if session.get('nivel') in ['administrador', 'vendedor'] else ''}
         </div>
-        
-        <div class="os-footer">
-            LIRAPRINT - Sistema de Gestão | © 2025 | Guarulhos - SP
-        </div>
+        <div class="os-footer">LIRAPRINT - Sistema de Gestão | © 2025 | Guarulhos - SP</div>
     </div>
     </body>
     </html>
