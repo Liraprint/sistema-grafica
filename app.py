@@ -4954,7 +4954,6 @@ def pdf_orcamento(id):
         flash(" Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_orcamentos'))
 
-
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
 def processar_aceite_orcamento(id):
     """Processa o formulário de aceite e converte orçamento em OS com TODOS os dados"""
