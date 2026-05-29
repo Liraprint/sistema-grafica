@@ -1972,36 +1972,55 @@ def excluir_servico(id):
         return redirect(url_for('login'))
     
     try:
-        # Verifica se é orçamento ou OS
+        # Primeiro descobre o tipo e se existe
         url_check = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
         resp = requests.get(url_check, headers=headers)
         
-        if not resp.json():
+        if not resp.json() or len(resp.json()) == 0:
             flash("❌ Serviço não encontrado!")
             return redirect(url_for('listar_servicos'))
         
         tipo = resp.json()[0].get('tipo', '')
         
-        # Exclui registros filhos primeiro para evitar erro de foreign key
+        # Exclui filhos primeiro (para evitar erro de foreign key)
         if tipo == 'Orçamento':
-            requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
+            # Exclui itens do orçamento
+            try:
+                resp_del = requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
+                print(f"Exclusão itens orçamento: {resp_del.status_code}")
+            except Exception as e:
+                print(f"Erro ao excluir itens: {e}")
         else:
-            requests.delete(f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}", headers=headers)
+            # Exclui materiais usados
+            try:
+                resp_del = requests.delete(f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}", headers=headers)
+                print(f"Exclusão materiais: {resp_del.status_code}")
+            except Exception as e:
+                print(f"Erro ao excluir materiais: {e}")
         
-        # Agora exclui o serviço
+        # Agora exclui o serviço principal
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.delete(url, headers=headers)
         
-        if response.status_code == 204:
-            flash("️ Excluído com sucesso!")
+        print(f"Exclusão serviço: {response.status_code}")
+        
+        if response.status_code in [204, 200]:
+            flash("🗑️ Serviço excluído com sucesso!")
         else:
             flash(f"❌ Erro ao excluir. (Status: {response.status_code})")
+            print(f"Resposta erro: {response.text}")
             
     except Exception as e:
         print(f"Erro ao excluir: {e}")
+        import traceback
+        traceback.print_exc()
         flash("❌ Erro interno ao excluir.")
     
-    return redirect(url_for('listar_orcamentos') if tipo == 'Orçamento' else url_for('listar_servicos'))
+    # Redireciona conforme o tipo
+    if tipo == 'Orçamento':
+        return redirect(url_for('listar_orcamentos'))
+    else:
+        return redirect(url_for('listar_servicos'))
 
 
 @app.route('/os/<int:id>')
@@ -2016,15 +2035,16 @@ def imprimir_os(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
+        print(f"Erro ao carregar OS: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Dados seguros (evita erro 500 se algum campo estiver vazio)
+    # Dados seguros - TRATAMENTO CORRETO DE NONE
     empresa = servico.get('empresas') or {}
-    empresa_nome = empresa.get('nome_empresa', '—')
-    responsavel = empresa.get('responsavel', '—')
-    whatsapp = empresa.get('whatsapp', '—')
-    email = empresa.get('email', '—')
+    empresa_nome = empresa.get('nome_empresa') or '—'
+    responsavel = empresa.get('responsavel') or '—'
+    whatsapp = empresa.get('whatsapp') or '—'
+    email = empresa.get('email') or '—'
     
     # Cálculo de custos seguro
     try:
@@ -2034,20 +2054,71 @@ def imprimir_os(id):
         
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
-    quantidade = float(servico.get('quantidade', 1) or 1)
+    
+    # Tratamento correto de quantidade - EVITAR None
+    try:
+        quantidade = float(servico.get('quantidade') or 1)
+    except:
+        quantidade = 1
+        
     valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    # Extrai dados de entrega das observações (se houver)
-    obs = servico.get('observacoes', '') or ''
+    # Extrair dados de entrega das observações - FORMATO CORRETO
+    obs = servico.get('observacoes') or ''
     dados_entrega = {}
+    
     if '--- DADOS DE ENTREGA/NF ---' in obs:
         partes = obs.split('--- DADOS DE ENTREGA/NF ---')[1].strip().split('\n')
         for p in partes:
+            p = p.strip()
             if ':' in p:
-                chave, valor = p.split(':', 1)
-                dados_entrega[chave.strip()] = valor.strip()
+                # Suporta ambos os formatos
+                if 'Nota Fiscal para CNPJ' in p:
+                    chave = 'CNPJ para NF'
+                    valor = p.split(':', 1)[1].strip()
+                elif 'CNPJ para NF' in p:
+                    chave = 'CNPJ para NF'
+                    valor = p.split(':', 1)[1].strip()
+                elif 'Endereço de entrega' in p or 'Entregar em' in p:
+                    chave = 'Endereço de entrega'
+                    valor = p.split(':', 1)[1].strip()
+                elif 'Aos cuidados de' in p:
+                    chave = 'Aos cuidados de'
+                    valor = p.split(':', 1)[1].strip()
+                elif 'Observações' in p or 'Obs. entrega' in p:
+                    chave = 'Observações'
+                    valor = p.split(':', 1)[1].strip()
+                else:
+                    partes_linha = p.split(':', 1)
+                    if len(partes_linha) == 2:
+                        chave = partes_linha[0].strip()
+                        valor = partes_linha[1].strip()
+                    else:
+                        continue
+                dados_entrega[chave] = valor
+                
+    # Dados diretos das colunas (se existirem)
+    if servico.get('cnpj_nota_fiscal'):
+        dados_entrega['CNPJ para NF'] = servico.get('cnpj_nota_fiscal')
+    if servico.get('endereco_entrega_os'):
+        dados_entrega['Endereço de entrega'] = servico.get('endereco_entrega_os')
+    if servico.get('aos_cuidados_de'):
+        dados_entrega['Aos cuidados de'] = servico.get('aos_cuidados_de')
+    if servico.get('observacoes_entrega'):
+        dados_entrega['Observações'] = servico.get('observacoes_entrega')
                 
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
+    
+    # Formatação segura de datas
+    def format_data_safe(data):
+        if not data or data == 'None':
+            return '—'
+        try:
+            if 'T' in str(data):
+                return str(data).split('T')[0]
+            return str(data)[:10]
+        except:
+            return '—'
     
     html = f'''
     <!DOCTYPE html>
@@ -2055,7 +2126,7 @@ def imprimir_os(id):
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS {servico['codigo_servico']} - LIRAPRINT</title>
+    <title>OS {servico.get('codigo_servico', 'N/A')} - LIRAPRINT</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -2242,8 +2313,8 @@ def imprimir_os(id):
             <img src="{logo_url}" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
             <div class="info">
                 <h1>ORDEM DE SERVIÇO</h1>
-                <div class="codigo">#{servico['codigo_servico']}</div>
-                <span class="status">{'✅ ' if servico['status'] == 'Entregue' else '⏳ '}{servico['status']}</span>
+                <div class="codigo">#{servico.get('codigo_servico', 'N/A')}</div>
+                <span class="status">{'✅ ' if servico.get('status') == 'Entregue' else '⏳ '}{servico.get('status', 'Pendente')}</span>
             </div>
         </div>
         
@@ -2263,13 +2334,13 @@ def imprimir_os(id):
             <div class="section">
                 <div class="section-title">Detalhes do Serviço</div>
                 <div class="info-grid">
-                    <div class="info-item"><label>Título</label><span>{servico['titulo']}</span></div>
-                    <div class="info-item"><label>Quantidade</label><span class="destaque">{servico.get('quantidade', '—')}</span></div>
-                    <div class="info-item"><label>Dimensão</label><span>{servico.get('dimensao', '—')}</span></div>
-                    <div class="info-item"><label>Cores</label><span>{servico.get('numero_cores', '—')}</span></div>
-                    <div class="info-item"><label>Abertura</label><span>{format_data(servico.get('data_abertura'))}</span></div>
-                    <div class="info-item"><label>Previsão</label><span>{format_data(servico.get('previsao_entrega'))}</span></div>
-                    <div class="info-item"><label>Aplicação</label><span>{servico.get('aplicacao', '—')}</span></div>
+                    <div class="info-item"><label>Título</label><span>{servico.get('titulo') or '—'}</span></div>
+                    <div class="info-item"><label>Quantidade</label><span class="destaque">{servico.get('quantidade') or '—'}</span></div>
+                    <div class="info-item"><label>Dimensão</label><span>{servico.get('dimensao') or '—'}</span></div>
+                    <div class="info-item"><label>Cores</label><span>{servico.get('numero_cores') or '—'}</span></div>
+                    <div class="info-item"><label>Abertura</label><span>{format_data_safe(servico.get('data_abertura'))}</span></div>
+                    <div class="info-item"><label>Previsão</label><span>{format_data_safe(servico.get('previsao_entrega'))}</span></div>
+                    <div class="info-item"><label>Aplicação</label><span>{servico.get('aplicacao') or '—'}</span></div>
                 </div>
             </div>
             
@@ -2279,9 +2350,9 @@ def imprimir_os(id):
                 <div class="section-title">📦 Dados de Entrega / Nota Fiscal</div>
                 <div class="entrega-box">
                     {f'<p><strong>CNPJ para NF:</strong> {dados_entrega.get("CNPJ para NF", "")}</p>' if dados_entrega.get("CNPJ para NF") else ''}
-                    {f'<p><strong>Endereço de entrega:</strong> {dados_entrega.get("Entregar em", "")}</p>' if dados_entrega.get("Entregar em") else ''}
+                    {f'<p><strong>Endereço de entrega:</strong> {dados_entrega.get("Endereço de entrega", "")}</p>' if dados_entrega.get("Endereço de entrega") else ''}
                     {f'<p><strong>Aos cuidados de:</strong> {dados_entrega.get("Aos cuidados de", "")}</p>' if dados_entrega.get("Aos cuidados de") else ''}
-                    {f'<p><strong>Observações:</strong> {dados_entrega.get("Obs. entrega", "")}</p>' if dados_entrega.get("Obs. entrega") else ''}
+                    {f'<p><strong>Observações:</strong> {dados_entrega.get("Observações", "")}</p>' if dados_entrega.get("Observações") else ''}
                 </div>
             </div>
             ''' if dados_entrega else ''}
@@ -2303,6 +2374,7 @@ def imprimir_os(id):
                     ''' for m in servico.get('materiais_usados', []) if m and m.get('materiais'))}
                     </tbody>
                 </table>
+                {f'<p style="text-align: center; color: #888; padding: 20px;">Nenhum material registrado</p>' if not servico.get('materiais_usados') else ''}
             </div>
             
             <!-- VALORES -->
@@ -2315,15 +2387,15 @@ def imprimir_os(id):
                 </p>
             </div>
             
-            <!-- OBSERVAÇÕES GERAIS -->
-            {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{servico.get("observacoes", "—").replace(chr(10), "<br>")}</p></div>' if servico.get('observacoes') and '--- DADOS DE ENTREGA/NF ---' not in servico.get('observacoes', '') else ''}
+            <!-- OBSERVAÇÕES GERAIS (sem os dados de entrega) -->
+            {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{obs.split("--- DADOS DE ENTREGA/NF ---")[0].strip().replace(chr(10), "<br>") if "--- DADOS DE ENTREGA/NF ---" in obs else obs.replace(chr(10), "<br>")}</p></div>' if obs and obs.strip() else ''}
         </div>
         
         <!-- BOTÕES DE AÇÃO -->
         <div class="btn-group">
             <a href="/pdf_os/{id}" class="btn btn-orange">📄 Gerar PDF</a>
             <a href="/servicos" class="btn">← Voltar para Lista</a>
-            {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}
+            {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if session.get('nivel') in ['administrador', 'vendedor'] else ''}
         </div>
         
         <div class="os-footer">
