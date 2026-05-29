@@ -345,6 +345,28 @@ def buscar_configuracoes():
             "cep_remetente": "07076-070"
         }
 
+# ========================
+# 🔢 GERADOR SEQUENCIAL UNIFICADO (OR & OS)
+# ========================
+def gerar_proximo_codigo(prefixo):
+    """Gera o próximo código (ex: OR-005, OS-005) baseado no último criado."""
+    try:
+        # Busca o último registro criado (ordenado pelo ID automático do Supabase)
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico&order=id.desc&limit=1"
+        resp = requests.get(url, headers=headers)
+        dados = resp.json() if resp.status_code == 200 else []
+        
+        if dados:
+            cod = dados[0].get('codigo_servico', '000')
+            numero = int(cod.split('-')[1]) + 1
+        else:
+            numero = 1
+            
+        return f"{prefixo}-{numero:03d}"
+    except Exception as e:
+        print(f"⚠️ Erro ao gerar código: {e}")
+        return f"{prefixo}-001"  # Fallback seguro
+
 def salvar_configuracoes(config):
     try:
         url = f"{SUPABASE_URL}/rest/v1/configuracoes"
@@ -1327,32 +1349,8 @@ def adicionar_servico():
         except:
             valor_cobrado = 0.0
         
-        # 🔢 GERAR CÓDIGO ÚNICO E SEQUENCIAL (À PROVA DE DUPLICATAS)
-        try:
-            # Busca TODAS as OS ordenadas por ID decrescente (mais recente primeiro)
-            url_seq = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico&order=id.desc&limit=1"
-            response = requests.get(url_seq, headers=headers)
-            
-            if response.status_code == 200 and response.json():
-                ultimo_servico = response.json()[0]
-                ultimo_codigo = ultimo_servico.get('codigo_servico', 'OS-000')
-                
-                # Extrai o número do último código
-                try:
-                    numero = int(ultimo_codigo.split('-')[1]) + 1
-                except:
-                    # Se não conseguir extrair, usa o ID + 1
-                    numero = ultimo_servico.get('id', 0) + 1
-            else:
-                numero = 1
-            
-            # Determina o prefixo baseado no tipo
-            prefixo = 'OR' if tipo == 'Orçamento' else 'OS'
-            codigo_servico = f"{prefixo}-{numero:03d}"
-            
-        except Exception as e:
-            print(f"Erro ao gerar código: {e}")
-            codigo_servico = f"OS-{datetime.now().strftime('%Y%m%d%H%M%S')}"  # Fallback com timestamp
+        # Gera código sequencial único (ex: OS-012)
+        codigo_servico = gerar_proximo_codigo('OS')
         
         try:
             # Cria o serviço
@@ -3542,18 +3540,12 @@ def adicionar_orcamento():
             flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        # Gera código OR-XXX
-        try:
-            ult = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=codigo_servico&order=codigo_servico.desc&limit=1", headers=headers).json()
-            n = int(ult[0]['codigo_servico'].split('-')[1]) + 1 if ult and len(ult) > 0 else 1
-            cod = f"OR-{n:03d}"
-        except Exception as e:
-            print(f"Erro ao gerar código: {e}")
-            cod = f"OR-001"
+        # Gera código sequencial único (ex: OR-005)
+        codigo_servico = gerar_proximo_codigo('OR')
         
         try:
             json_data = {
-                "codigo_servico": cod,
+                "codigo_servico": codigo_servico,
                 "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
                 "tipo": "Orçamento",
@@ -3573,7 +3565,7 @@ def adicionar_orcamento():
                 try:
                     oid = resp.json().get('id')
                 except:
-                    busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{cod}&order=id.desc&limit=1", headers=headers)
+                    busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1", headers=headers)
                     if busca.status_code == 200 and busca.json():
                         oid = busca.json()[0].get('id')
                     else:
@@ -3586,8 +3578,8 @@ def adicionar_orcamento():
                 
                 # Processa os itens COM MATERIAL E DESCRIÇÃO SEPARADOS
                 vt = 0.0
-                descricoes = request.form.getlist('item_descricao[]')  # ✅ NOVO
-                materiais = request.form.getlist('item_material[]')      # ✅ NOVO
+                descricoes = request.form.getlist('item_descricao[]')
+                materiais = request.form.getlist('item_material[]')
                 quantidades = request.form.getlist('item_quantidade[]')
                 valores_unit = request.form.getlist('item_valor_unit[]')
                 dimensoes = request.form.getlist('item_dimensao[]')
@@ -3617,8 +3609,8 @@ def adicionar_orcamento():
                     
                     requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
                         "orcamento_id": oid,
-                        "titulo": desc,           # Descrição vai em titulo
-                        "material": mat,          # ✅ Material separado
+                        "titulo": desc,
+                        "material": mat,
                         "quantidade": q,
                         "dimensao": dim,
                         "numero_cores": cor,
@@ -5013,7 +5005,14 @@ def processar_aceite_orcamento(id):
                 'valor_total': item.get('valor_total', 0)
             })
         
-        # 5. Monta observações para a OS
+        # 5. Prepara a troca de OR para OS mantendo o mesmo número
+        codigo_atual = orcamento.get('codigo_servico', '')
+        if codigo_atual.startswith('OR-'):
+            novo_codigo = codigo_atual.replace('OR-', 'OS-')
+        else:
+            novo_codigo = f"OS-{codigo_atual.split('-')[1] if '-' in codigo_atual else '000'}"
+        
+        # 6. Monta observações para a OS
         obs_original = orcamento.get('observacoes', '') or ''
         obs_adicionais = []
         
@@ -5030,10 +5029,11 @@ def processar_aceite_orcamento(id):
         if obs_adicionais:
             nova_obs = obs_original + "\n--- DADOS DE ENTREGA/NF ---\n" + "\n".join(obs_adicionais)
         
-        # 6. Atualiza o serviço: muda tipo para Produção e adiciona TODOS os dados
+        # 7. Atualiza o serviço: muda tipo para Produção e adiciona TODOS os dados
         dados_atualizacao = {
             "tipo": "Produção",
             "status": "Pendente",
+            "codigo_servico": novo_codigo,  # ✅ Salva como OS-XXX
             "quantidade": quantidade_total if quantidade_total > 0 else None,
             "dimensao": dimensao if dimensao else None,
             "numero_cores": numero_cores if numero_cores else None,
@@ -5045,11 +5045,11 @@ def processar_aceite_orcamento(id):
         if orcamento.get('previsao_entrega'):
             dados_atualizacao['previsao_entrega'] = orcamento.get('previsao_entrega')
         
-        # 7. Salva no Supabase
+        # 8. Salva no Supabase
         response = requests.patch(url_orc, json=dados_atualizacao, headers=headers)
         
         if response.status_code == 204:
-            # 8. Cria os materiais_usados vinculados à OS
+            # 9. Cria os materiais_usados vinculados à OS
             for mat in materiais_para_os:
                 try:
                     if mat.get('material_id'):
@@ -5076,7 +5076,6 @@ def processar_aceite_orcamento(id):
         traceback.print_exc()
         flash("❌ Erro interno. Entre em contato com o suporte.")
         return redirect(url_for('listar_orcamentos'))
-
 
 # ========================
 # INICIAR O APP (FORA DE QUALQUER FUNÇÃO!)
