@@ -1994,27 +1994,47 @@ def confirmar_aceite_orcamento(id):
 
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
-    if session.get('nivel') != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('listar_orcamentos'))  # Ou listar_servicos, conforme origem
+    if 'usuario' not in session:
+        flash("❌ Acesso negado!")
+        return redirect(url_for('login'))
     
     try:
-        # Verifica o tipo antes de excluir
-        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
-        resp = requests.get(url, headers=headers).json()
-        eh_orcamento = resp and resp[0].get('tipo') == 'Orçamento'
+        # Verifica se é orçamento ou OS
+        url_check = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
+        resp = requests.get(url_check, headers=headers)
         
-        if eh_orcamento:
-            requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
+        if not resp.json():
+            flash("❌ Serviço não encontrado!")
+            return redirect(url_for('listar_servicos'))
         
-        requests.delete(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", headers=headers)
-        flash("🗑️ Excluído com sucesso!")
+        tipo = resp.json()[0].get('tipo', '')
         
-        # Redireciona conforme o tipo
-        return redirect(url_for('listar_orcamentos') if eh_orcamento else url_for('listar_servicos'))
-    except:
-        flash("❌ Erro ao excluir")
+        # Se for orçamento, exclui os itens primeiro
+        if tipo == 'Orçamento':
+            try:
+                requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
+            except:
+                pass
+        
+        # Exclui o serviço
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        response = requests.delete(url, headers=headers)
+        
+        if response.status_code == 204:
+            flash("🗑️ Serviço excluído com sucesso!")
+        else:
+            flash(f"❌ Erro ao excluir. Status: {response.status_code}")
+            
+    except Exception as e:
+        print(f"Erro ao excluir: {e}")
+        flash("❌ Erro interno ao excluir serviço.")
+    
+    # Redireciona conforme o tipo
+    if tipo == 'Orçamento':
         return redirect(url_for('listar_orcamentos'))
+    else:
+        return redirect(url_for('listar_servicos'))
+
 
 
 @app.route('/os/<int:id>')
@@ -3917,7 +3937,7 @@ def editar_orcamento(id):
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         
         if request.method == 'POST':
-            # Atualiza dados do orçamento COM OS NOVOS CAMPOS
+            # Atualiza dados do orçamento
             dados = {
                 "empresa_id": int(request.form['empresa_id']),
                 "data_abertura": request.form['data_abertura'],
@@ -3931,20 +3951,22 @@ def editar_orcamento(id):
             # Remove itens antigos
             requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
             
-            # Processa novos itens
+            # Processa novos itens COM MATERIAL SEPARADO
             vt = 0.0
-            titulos = request.form.getlist('item_titulo[]')
+            descricoes = request.form.getlist('item_descricao[]')
+            materiais = request.form.getlist('item_material[]')
             quantidades = request.form.getlist('item_quantidade[]')
             valores_unit = request.form.getlist('item_valor_unit[]')
             dimensoes = request.form.getlist('item_dimensao[]')
             cores = request.form.getlist('item_cores[]')
             
-            for i in range(len(titulos)):
-                t = titulos[i].strip()
-                if not t:
+            for i in range(len(descricoes)):
+                desc = descricoes[i].strip()
+                mat = materiais[i].strip() if i < len(materiais) else ''
+                
+                if not desc:
                     continue
                 
-                # Parsing ROBUSTO de quantidade e valor (aceita vírgula OU ponto)
                 try:
                     q_str = quantidades[i].strip().replace(',', '.') if i < len(quantidades) else '1'
                     vu_str = valores_unit[i].strip().replace(',', '.') if i < len(valores_unit) else '0'
@@ -3963,7 +3985,8 @@ def editar_orcamento(id):
                 requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", 
                     json={
                         "orcamento_id": id,
-                        "titulo": t,
+                        "titulo": desc,
+                        "material": mat,
                         "quantidade": q,
                         "dimensao": dim,
                         "numero_cores": cor,
@@ -3971,27 +3994,45 @@ def editar_orcamento(id):
                         "valor_total": total_item
                     }, headers=headers)
             
-            # Atualiza valor total
             requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json={"valor_cobrado": vt}, headers=headers)
             flash("✅ Orçamento atualizado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # GET - Renderiza formulário com dados existentes
         opts_empresas = "".join([f'<option value="{e["id"]}" {"selected" if e["id"]==orc["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas])
         
         itens_html = ""
         for item in orc.get('itens_orcamento', []):
-            # Formata valor para exibição: 25.0 → "25,00"
             vu_display = f"{item.get('valor_unitario', 0):.2f}".replace('.', ',')
             itens_html += f'''
             <div class="item-row">
-                <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
-                    <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" value="{item.get('titulo','')}" required></div>
-                    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" value="{item.get('quantidade',1)}" required></div>
-                    <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" value="{vu_display}" required></div>
-                    <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" value="{item.get('dimensao','')}"></div>
-                    <div><label>Cores</label><input type="number" name="item_cores[]" value="{item.get('numero_cores','')}"></div>
-                    <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
+                    <div>
+                        <label>Descrição *</label>
+                        <input type="text" name="item_descricao[]" value="{item.get('titulo','')}" placeholder="Ex: Máscara A960" required>
+                    </div>
+                    <div>
+                        <label>Material *</label>
+                        <input type="text" name="item_material[]" value="{item.get('material','')}" placeholder="Ex: PP+ PVC Texturizado" required>
+                    </div>
+                    <div>
+                        <label>Quantidade *</label>
+                        <input type="number" name="item_quantidade[]" value="{item.get('quantidade',1)}" step="any" required>
+                    </div>
+                    <div>
+                        <label>Valor Unit. (R$) *</label>
+                        <input type="text" name="item_valor_unit[]" class="valor-input" value="{vu_display}" required>
+                    </div>
+                    <div>
+                        <label>Dimensão</label>
+                        <input type="text" name="item_dimensao[]" value="{item.get('dimensao','')}">
+                    </div>
+                    <div>
+                        <label>Cores</label>
+                        <input type="number" name="item_cores[]" value="{item.get('numero_cores','')}" step="1">
+                    </div>
+                    <div>
+                        <button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button>
+                    </div>
                 </div>
             </div>'''
         
@@ -4035,7 +4076,6 @@ def editar_orcamento(id):
                         </div>
                     </div>
                     
-                    <!-- ✅ NOVOS CAMPOS DE PAGAMENTO E ENTREGA -->
                     <div class="grid">
                         <div class="form-group">
                             <label>Prazo de Entrega (dias úteis)</label>
@@ -4063,7 +4103,6 @@ def editar_orcamento(id):
             </div>
         </div>
         <script>
-        // Formatação de valor - funciona tanto para digitar quanto para valor pré-preenchido
         document.addEventListener('input', function(e) {{
             if (e.target.classList.contains('valor-input')) {{
                 let value = e.target.value.replace(/\\D/g, '');
@@ -4076,11 +4115,12 @@ def editar_orcamento(id):
             const div = document.createElement('div');
             div.className = 'item-row';
             div.innerHTML = `
-                <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px;">
-                    <div><label>Material/Descrição *</label><input type="text" name="item_titulo[]" placeholder="Ex: Banner Lona" required></div>
+                <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
+                    <div><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
+                    <div><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required></div>
                     <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
                     <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
-                    <div><label>Dimensão (opcional)</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
                     <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
                     <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
                 </div>
@@ -4835,7 +4875,6 @@ def pdf_orcamento(id):
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
-            # Busca telefone do usuário logado
             url_user = f'{SUPABASE_URL}/rest/v1/usuarios?select=telefone&"nome de usuário"=eq.{usuario_logado}'
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
@@ -4848,12 +4887,11 @@ def pdf_orcamento(id):
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         
-        # Pega condições do banco (ou usa padrão)
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
-        # 5. Geração das Linhas da Tabela (Corrigido para Material separado)
+        # 5. Geração das Linhas da Tabela
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -4861,13 +4899,8 @@ def pdf_orcamento(id):
         if itens:
             for item in itens:
                 qtd = item.get('quantidade', '1')
-                
-                # Descrição vem do campo 'titulo' (conforme conversamos)
-                desc = item.get('titulo', '—') 
-                
-                # Material vem do novo campo 'material'
-                material = item.get('material', '—') 
-                
+                desc = item.get('titulo', '—')
+                material = item.get('material', '—')
                 cor = item.get('numero_cores', '—')
                 vu = float(item.get('valor_unitario', 0) or 0)
                 vt = float(item.get('valor_total', 0) or 0)
@@ -4885,7 +4918,7 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png" 
+        logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
 
         # 6. HTML Final
         html = f'''<!DOCTYPE html>
@@ -4897,84 +4930,78 @@ def pdf_orcamento(id):
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 11px; /* Ajustado para caber melhor */
+        font-size: 13px;
         color: #1a1a1a; 
-        line-height: 1.4;
+        line-height: 1.5;
         -webkit-print-color-adjust: exact;
     }}
     
-    /* CABEÇALHO */
     .header {{ text-align: center; margin-bottom: 25px; }}
-    .logo {{ max-width: 180px; margin-bottom: 10px; }}
+    .logo {{ max-width: 200px; margin-bottom: 15px; }}
     .titulo {{ 
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
         color: #2c3e50;
-        border-bottom: 2px solid #2c3e50;
+        border-bottom: 3px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 5px;
-        margin-bottom: 15px;
+        padding-bottom: 8px;
+        margin-bottom: 20px;
     }}
-    .data-line {{ text-align: right; font-size: 12px; color: #555; margin-bottom: 20px; }}
+    .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 20px; }}
     
-    /* DADOS DO CLIENTE */
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 15px 20px; 
+        padding: 18px 20px; 
         border-radius: 6px; 
         margin-bottom: 30px; 
         border-left: 4px solid #2c3e50;
     }}
-    .client-info p {{ margin: 3px 0; font-size: 12px; }}
+    .client-info p {{ margin: 5px 0; font-size: 13px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
     
-    /* TABELA */
-    .table-title {{ font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; }}
+    .table-title {{ font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }}
+    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
-    /* TOTAIS */
     .total-block {{ 
         text-align: right; 
         margin-top: 15px; 
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 900; 
         color: #2c3e50; 
         border-top: 2px solid #2c3e50;
-        padding-top: 10px;
+        padding-top: 12px;
         margin-right: 5px;
     }}
     
-    /* TERMOS */
     .terms {{ 
         margin-top: 30px; 
-        font-size: 11px; 
+        font-size: 12px; 
         color: #444; 
-        padding: 10px 0;
+        padding: 12px 0;
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    /* RODAPÉ E ASSINATURA */
     .footer-area {{ 
         margin-top: 40px; 
         text-align: center; 
     }}
     .signature {{ margin-bottom: 20px; }}
-    .signature p {{ margin: 3px 0; }}
-    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
-    .signature .role {{ font-size: 11px; color: #555; font-weight: 600; }}
+    .signature p {{ margin: 5px 0; }}
+    .signature .name {{ font-size: 15px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
+    .signature .role {{ font-size: 12px; color: #555; font-weight: 600; }}
     
-    .empresa-info {{ font-size: 10px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
+    .empresa-info {{ font-size: 11px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
     
     .ref-num {{ 
         text-align: right; 
-        font-size: 10px; 
+        font-size: 11px; 
         font-weight: 800; 
         color: #7f8c8d;
         margin-top: 15px;
@@ -5040,17 +5067,18 @@ def pdf_orcamento(id):
 </body>
 </html>'''
         
-        # Gera PDF
+        # Gera PDF com configurações para carregar imagens externas
         pdf = pdfkit.from_string(html, False, options={
-         "quiet": "", 
-         "encoding": "UTF-8", 
-         "page-size": "A4",
-         "margin-top": "5mm",
-         "margin-bottom": "10mm", 
-         "margin-left": "15mm",
-         "margin-right": "15mm",
-         "enable-local-file-access": None,
-         "allow": "https://i.postimg.cc"  # ✅ Permite carregar seu logo do postimg
+            "quiet": "", 
+            "encoding": "UTF-8", 
+            "page-size": "A4",
+            "margin-top": "10mm",
+            "margin-bottom": "10mm",
+            "margin-left": "15mm",
+            "margin-right": "15mm",
+            "enable-local-file-access": None,
+            "javascript-delay": "1000",
+            "no-stop-slow-scripts": None
         })
         
         return send_file(
@@ -5066,6 +5094,7 @@ def pdf_orcamento(id):
         traceback.print_exc()
         flash("❌ Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_orcamentos'))
+
 
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
 def processar_aceite_orcamento(id):
