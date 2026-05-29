@@ -1972,7 +1972,7 @@ def excluir_servico(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Primeiro descobre o tipo do serviço
+        # 1. Descobre o tipo do serviço
         url_check = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
         resp = requests.get(url_check, headers=headers)
         
@@ -1981,36 +1981,45 @@ def excluir_servico(id):
             return redirect(url_for('listar_servicos'))
         
         tipo = resp.json()[0].get('tipo', '')
+        print(f"🔍 Tipo do serviço {id}: {tipo}")
         
-        # 2. Exclui os registros filhos PRIMEIRO
+        # 2. Exclui os registros filhos PRIMEIRO (ordem importa!)
         if tipo == 'Orçamento':
             # Exclui itens do orçamento (tabela: itens_orcamento)
             try:
                 url_del_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
-                resp_del = requests.delete(url_del_itens, headers=headers)
-                print(f"✅ Exclusão itens orçamento (status {resp_del.status_code})")
+                resp_del_itens = requests.delete(url_del_itens, headers=headers)
+                print(f"✅ Itens do orçamento excluídos (status: {resp_del_itens.status_code})")
             except Exception as e:
                 print(f"⚠️ Erro ao excluir itens: {e}")
+                flash("⚠️ Erro ao excluir itens do orçamento.")
+                return redirect(url_for('listar_orcamentos'))
         else:
             # Exclui materiais usados (tabela: materiais_usados)
             try:
                 url_del_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
-                resp_del = requests.delete(url_del_mats, headers=headers)
-                print(f"✅ Exclusão materiais (status {resp_del.status_code})")
+                resp_del_mats = requests.delete(url_del_mats, headers=headers)
+                print(f"✅ Materiais usados excluídos (status: {resp_del_mats.status_code})")
             except Exception as e:
                 print(f"⚠️ Erro ao excluir materiais: {e}")
+                # Continua mesmo assim, pois materiais_usados pode não existir
         
         # 3. Agora sim, exclui o serviço principal
-        url_del_servico = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
-        response = requests.delete(url_del_servico, headers=headers)
-        
-        print(f"✅ Exclusão serviço principal (status {response.status_code})")
-        
-        if response.status_code in [204, 200]:
-            flash("🗑️ Serviço excluído com sucesso!")
-        else:
-            flash(f"❌ Erro ao excluir. Status: {response.status_code}")
-            print(f"❌ Resposta: {response.text}")
+        try:
+            url_del_servico = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+            resp_del_servico = requests.delete(url_del_servico, headers=headers)
+            
+            print(f"✅ Serviço principal excluído (status: {resp_del_servico.status_code})")
+            
+            if resp_del_servico.status_code in [204, 200]:
+                flash("🗑️ Serviço excluído com sucesso!")
+            else:
+                flash(f"❌ Erro ao excluir serviço. Status: {resp_del_servico.status_code}")
+                print(f"❌ Resposta: {resp_del_servico.text}")
+                
+        except Exception as e:
+            print(f"❌ Erro ao excluir serviço principal: {e}")
+            flash("❌ Erro ao excluir serviço principal.")
             
     except Exception as e:
         print(f"❌ Erro interno: {e}")
@@ -2019,7 +2028,10 @@ def excluir_servico(id):
         flash("❌ Erro ao excluir serviço.")
     
     # 4. Redireciona conforme o tipo
-    return redirect(url_for('listar_orcamentos') if tipo == 'Orçamento' else url_for('listar_servicos'))
+    if tipo == 'Orçamento':
+        return redirect(url_for('listar_orcamentos'))
+    else:
+        return redirect(url_for('listar_servicos'))
 
 
 @app.route('/os/<int:id>')
@@ -5147,12 +5159,12 @@ def pdf_orcamento(id):
 
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
 def processar_aceite_orcamento(id):
-    """Processa o formulário de aceite e converte orçamento em OS com dados de entrega"""
+    """Processa o formulário de aceite e converte orçamento em OS com TODOS os dados"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
     try:
-        # Busca dados atuais do orçamento
+        # 1. Busca dados atuais do orçamento
         url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         resp = requests.get(url_orc, headers=headers)
         orcamento = resp.json()[0] if resp.json() else None
@@ -5161,7 +5173,7 @@ def processar_aceite_orcamento(id):
             flash("❌ Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # Coleta dados do formulário
+        # 2. Coleta dados do formulário
         usar_cnpj_cadastrado = request.form.get('usar_cnpj_cadastrado') == 'sim'
         cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else None
         
@@ -5171,8 +5183,43 @@ def processar_aceite_orcamento(id):
         aos_cuidados = request.form.get('aos_cuidados_de', '').strip()
         obs_entrega = request.form.get('observacoes_entrega', '').strip()
         
-        # Monta observações para a OS
+        # 3. Busca os ITENS DO ORÇAMENTO para pegar quantidade, dimensão, cores, etc.
+        url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
+        resp_itens = requests.get(url_itens, headers=headers)
+        itens_orcamento = resp_itens.json() if resp_itens.status_code == 200 else []
+        
+        # 4. Extrai dados do PRIMEIRO item (ou soma se tiver vários)
+        quantidade_total = 0
+        dimensao = ''
+        numero_cores = ''
+        aplicacao = ''
+        materiais_para_os = []
+        
+        for item in itens_orcamento:
+            # Soma quantidades
+            qtd_item = item.get('quantidade', 0) or 0
+            quantidade_total += float(qtd_item) if qtd_item else 0
+            
+            # Pega dimensão do primeiro item
+            if not dimensao and item.get('dimensao'):
+                dimensao = item.get('dimensao')
+            
+            # Pega cores do primeiro item
+            if not numero_cores and item.get('numero_cores'):
+                numero_cores = item.get('numero_cores')
+            
+            # Prepara materiais para vincular à OS
+            materiais_para_os.append({
+                'material_id': item.get('material_id'),
+                'quantidade_usada': item.get('quantidade', 0),
+                'valor_unitario': item.get('valor_unitario', 0),
+                'valor_total': item.get('valor_total', 0)
+            })
+        
+        # 5. Monta observações para a OS
+        obs_original = orcamento.get('observacoes', '') or ''
         obs_adicionais = []
+        
         if cnpj_nota:
             obs_adicionais.append(f"Nota Fiscal para CNPJ: {cnpj_nota}")
         if endereco_entrega:
@@ -5182,30 +5229,54 @@ def processar_aceite_orcamento(id):
         if obs_entrega:
             obs_adicionais.append(f"Obs. entrega: {obs_entrega}")
         
-        # Atualiza o serviço: muda tipo para Produção e adiciona observações
-        obs_original = orcamento.get('observacoes', '') or ''
         nova_obs = obs_original
         if obs_adicionais:
-            nova_obs = obs_original + "\n\n--- DADOS DE ENTREGA/NF ---\n" + "\n".join(obs_adicionais)
+            nova_obs = obs_original + "\n--- DADOS DE ENTREGA/NF ---\n" + "\n".join(obs_adicionais)
         
+        # 6. Atualiza o serviço: muda tipo para Produção e adiciona TODOS os dados
         dados_atualizacao = {
             "tipo": "Produção",
             "status": "Pendente",
+            "quantidade": quantidade_total if quantidade_total > 0 else None,
+            "dimensao": dimensao if dimensao else None,
+            "numero_cores": numero_cores if numero_cores else None,
+            "aplicacao": aplicacao if aplicacao else None,
             "observacoes": nova_obs
         }
         
-        # Salva no Supabase
+        # Se tiver previsão de entrega no orçamento, mantém
+        if orcamento.get('previsao_entrega'):
+            dados_atualizacao['previsao_entrega'] = orcamento.get('previsao_entrega')
+        
+        # 7. Salva no Supabase
         response = requests.patch(url_orc, json=dados_atualizacao, headers=headers)
         
         if response.status_code == 204:
-            flash("✅ Orçamento aceito! OS gerada com dados de entrega.")
-            return redirect(url_for('imprimir_os', id=id))  # Redireciona direto para a OS
+            # 8. Cria os materiais_usados vinculados à OS
+            for mat in materiais_para_os:
+                try:
+                    if mat.get('material_id'):
+                        dados_mat = {
+                            "servico_id": id,
+                            "material_id": mat['material_id'],
+                            "quantidade_usada": mat['quantidade_usada'],
+                            "valor_unitario": mat['valor_unitario'],
+                            "valor_total": mat['valor_total']
+                        }
+                        requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
+                except Exception as e:
+                    print(f"Erro ao criar material usado: {e}")
+            
+            flash("✅ Orçamento aceito! OS gerada com TODOS os dados (quantidade, dimensão, cores, etc.)")
+            return redirect(url_for('imprimir_os', id=id))
         else:
             flash("❌ Erro ao salvar dados. Tente novamente.")
             return redirect(url_for('listar_orcamentos'))
             
     except Exception as e:
         print(f"Erro ao processar aceite: {e}")
+        import traceback
+        traceback.print_exc()
         flash("❌ Erro interno. Entre em contato com o suporte.")
         return redirect(url_for('listar_orcamentos'))
 
