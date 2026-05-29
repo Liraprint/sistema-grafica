@@ -1972,7 +1972,7 @@ def excluir_servico(id):
         return redirect(url_for('login'))
     
     try:
-        # Primeiro descobre o tipo e se existe
+        # 1. Primeiro descobre o tipo do serviço
         url_check = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=tipo"
         resp = requests.get(url_check, headers=headers)
         
@@ -1982,45 +1982,44 @@ def excluir_servico(id):
         
         tipo = resp.json()[0].get('tipo', '')
         
-        # Exclui filhos primeiro (para evitar erro de foreign key)
+        # 2. Exclui os registros filhos PRIMEIRO
         if tipo == 'Orçamento':
-            # Exclui itens do orçamento
+            # Exclui itens do orçamento (tabela: itens_orcamento)
             try:
-                resp_del = requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
-                print(f"Exclusão itens orçamento: {resp_del.status_code}")
+                url_del_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
+                resp_del = requests.delete(url_del_itens, headers=headers)
+                print(f"✅ Exclusão itens orçamento (status {resp_del.status_code})")
             except Exception as e:
-                print(f"Erro ao excluir itens: {e}")
+                print(f"⚠️ Erro ao excluir itens: {e}")
         else:
-            # Exclui materiais usados
+            # Exclui materiais usados (tabela: materiais_usados)
             try:
-                resp_del = requests.delete(f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}", headers=headers)
-                print(f"Exclusão materiais: {resp_del.status_code}")
+                url_del_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}"
+                resp_del = requests.delete(url_del_mats, headers=headers)
+                print(f"✅ Exclusão materiais (status {resp_del.status_code})")
             except Exception as e:
-                print(f"Erro ao excluir materiais: {e}")
+                print(f"⚠️ Erro ao excluir materiais: {e}")
         
-        # Agora exclui o serviço principal
-        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
-        response = requests.delete(url, headers=headers)
+        # 3. Agora sim, exclui o serviço principal
+        url_del_servico = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        response = requests.delete(url_del_servico, headers=headers)
         
-        print(f"Exclusão serviço: {response.status_code}")
+        print(f"✅ Exclusão serviço principal (status {response.status_code})")
         
         if response.status_code in [204, 200]:
             flash("🗑️ Serviço excluído com sucesso!")
         else:
-            flash(f"❌ Erro ao excluir. (Status: {response.status_code})")
-            print(f"Resposta erro: {response.text}")
+            flash(f"❌ Erro ao excluir. Status: {response.status_code}")
+            print(f"❌ Resposta: {response.text}")
             
     except Exception as e:
-        print(f"Erro ao excluir: {e}")
+        print(f"❌ Erro interno: {e}")
         import traceback
         traceback.print_exc()
-        flash("❌ Erro interno ao excluir.")
+        flash("❌ Erro ao excluir serviço.")
     
-    # Redireciona conforme o tipo
-    if tipo == 'Orçamento':
-        return redirect(url_for('listar_orcamentos'))
-    else:
-        return redirect(url_for('listar_servicos'))
+    # 4. Redireciona conforme o tipo
+    return redirect(url_for('listar_orcamentos') if tipo == 'Orçamento' else url_for('listar_servicos'))
 
 
 @app.route('/os/<int:id>')
