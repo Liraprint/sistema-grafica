@@ -4948,12 +4948,12 @@ def pdf_orcamento(id):
 
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
 def processar_aceite_orcamento(id):
-    """Processa o formulário de aceite e converte orçamento em OS com TODOS os dados"""
+    """Processa o aceite e converte orçamento em OS com TODOS os itens e dados"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados atuais do orçamento
+        # 1. Busca dados do orçamento
         url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         resp = requests.get(url_orc, headers=headers)
         orcamento = resp.json()[0] if resp.json() else None
@@ -4962,78 +4962,122 @@ def processar_aceite_orcamento(id):
             flash("❌ Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # 2. Coleta dados do formulário
+        # 2. Busca dados da empresa cadastrada
+        empresa_id = orcamento.get('empresa_id')
+        url_emp = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{empresa_id}"
+        resp_emp = requests.get(url_emp, headers=headers)
+        empresa = resp_emp.json()[0] if resp_emp.json() else {}
+        
+        # 3. Coleta dados do formulário
         usar_cnpj_cadastrado = request.form.get('usar_cnpj_cadastrado') == 'sim'
-        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else None
+        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else empresa.get('cnpj', '')
         
         usar_endereco_cadastrado = request.form.get('usar_endereco_cadastrado') == 'sim'
-        endereco_entrega = request.form.get('endereco_entrega_os', '').strip() if not usar_endereco_cadastrado else None
         
-        aos_cuidados = request.form.get('aos_cuidados_de', '').strip()
+        # Define endereço de entrega
+        if usar_endereco_cadastrado:
+            # Usa endereço de entrega cadastrado (ou endereço principal se não tiver)
+            if empresa.get('entrega_endereco'):
+                endereco_entrega = f"{empresa.get('entrega_endereco', '')}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
+            else:
+                endereco_entrega = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
+        else:
+            endereco_entrega = request.form.get('endereco_entrega_os', '').strip()
+        
+        aos_cuidados = request.form.get('aos_cuidados_de', '').strip() or empresa.get('responsavel', '')
         obs_entrega = request.form.get('observacoes_entrega', '').strip()
         
-        # 3. Busca os ITENS DO ORÇAMENTO para pegar quantidade, dimensão, cores, etc.
-        url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}"
+        # 4. Busca TODOS os itens do orçamento
+        url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}&order=id.asc"
         resp_itens = requests.get(url_itens, headers=headers)
         itens_orcamento = resp_itens.json() if resp_itens.status_code == 200 else []
         
-        # 4. Extrai dados do PRIMEIRO item (ou soma se tiver vários)
-        quantidade_total = 0
-        dimensao = ''
-        numero_cores = ''
-        aplicacao = ''
-        materiais_para_os = []
+        if not itens_orcamento:
+            flash("⚠️ Orçamento sem itens! Adicione itens antes de aceitar.")
+            return redirect(url_for('listar_orcamentos'))
         
-        for item in itens_orcamento:
-            # Soma quantidades
-            qtd_item = item.get('quantidade', 0) or 0
-            quantidade_total += float(qtd_item) if qtd_item else 0
-            
-            # Pega dimensão do primeiro item
-            if not dimensao and item.get('dimensao'):
-                dimensao = item.get('dimensao')
-            
-            # Pega cores do primeiro item
-            if not numero_cores and item.get('numero_cores'):
-                numero_cores = item.get('numero_cores')
+        # 5. Calcula quantidade total e prepara lista de itens para OS
+        quantidade_total = 0
+        materiais_para_os = []
+        lista_descricoes = []  # Para mostrar na OS
+        
+        for idx, item in enumerate(itens_orcamento, 1):
+            qtd_item = float(item.get('quantidade', 0) or 0)
+            quantidade_total += qtd_item
             
             # Prepara materiais para vincular à OS
             materiais_para_os.append({
                 'material_id': item.get('material_id'),
-                'quantidade_usada': item.get('quantidade', 0),
-                'valor_unitario': item.get('valor_unitario', 0),
-                'valor_total': item.get('valor_total', 0)
+                'quantidade_usada': qtd_item,
+                'valor_unitario': float(item.get('valor_unitario', 0) or 0),
+                'valor_total': float(item.get('valor_total', 0) or 0),
+                'descricao': item.get('titulo', ''),
+                'dimensao': item.get('dimensao', ''),
+                'cores': item.get('numero_cores', '')
             })
+            
+            # Cria lista de descrições para observações
+            desc = item.get('titulo', f'Item {idx}')
+            dim = item.get('dimensao', '')
+            cor = item.get('numero_cores', '')
+            qtd = item.get('quantidade', 0)
+            
+            item_info = f"{idx}. {desc}"
+            if dim:
+                item_info += f" ({dim})"
+            if cor:
+                item_info += f" - {cor} cor(s)"
+            if qtd:
+                item_info += f" - Qtd: {int(qtd) if float(qtd).is_integer() else qtd} un"
+            
+            lista_descricoes.append(item_info)
         
-        # 5. Prepara a troca de OR para OS mantendo o mesmo número
+        # Pega dimensão e cores do primeiro item para campos principais
+        primeiro_item = itens_orcamento[0] if itens_orcamento else {}
+        dimensao = primeiro_item.get('dimensao', '')
+        numero_cores = primeiro_item.get('numero_cores', '')
+        aplicacao = primeiro_item.get('aplicacao', '')
+        
+        # 6. Prepara troca de OR para OS mantendo o mesmo número
         codigo_atual = orcamento.get('codigo_servico', '')
         if codigo_atual.startswith('OR-'):
             novo_codigo = codigo_atual.replace('OR-', 'OS-')
         else:
             novo_codigo = f"OS-{codigo_atual.split('-')[1] if '-' in codigo_atual else '000'}"
         
-        # 6. Monta observações para a OS
+        # 7. Monta observações COMPLETAS
         obs_original = orcamento.get('observacoes', '') or ''
+        
+        # Remove dados de entrega antigos se existirem
+        if '--- DADOS DE ENTREGA/NF ---' in obs_original:
+            obs_original = obs_original.split('--- DADOS DE ENTREGA/NF ---')[0].strip()
+        
         obs_adicionais = []
         
+        # Adiciona lista de itens
+        if lista_descricoes:
+            obs_adicionais.append("ITENS DO PEDIDO:")
+            obs_adicionais.extend(lista_descricoes)
+            obs_adicionais.append("")  # Linha em branco
+        
+        # Adiciona dados de entrega/NF
+        obs_adicionais.append("--- DADOS DE ENTREGA/NF ---")
         if cnpj_nota:
-            obs_adicionais.append(f"Nota Fiscal para CNPJ: {cnpj_nota}")
+            obs_adicionais.append(f"CNPJ para NF: {cnpj_nota}")
         if endereco_entrega:
-            obs_adicionais.append(f"Entregar em: {endereco_entrega}")
+            obs_adicionais.append(f"Endereço de entrega: {endereco_entrega}")
         if aos_cuidados:
             obs_adicionais.append(f"Aos cuidados de: {aos_cuidados}")
         if obs_entrega:
             obs_adicionais.append(f"Obs. entrega: {obs_entrega}")
         
-        nova_obs = obs_original
-        if obs_adicionais:
-            nova_obs = obs_original + "\n--- DADOS DE ENTREGA/NF ---\n" + "\n".join(obs_adicionais)
+        nova_obs = obs_original + "\n" + "\n".join(obs_adicionais)
         
-        # 7. Atualiza o serviço: muda tipo para Produção e adiciona TODOS os dados
+        # 8. Atualiza o serviço
         dados_atualizacao = {
             "tipo": "Produção",
             "status": "Pendente",
-            "codigo_servico": novo_codigo,  # ✅ Salva como OS-XXX
+            "codigo_servico": novo_codigo,
             "quantidade": quantidade_total if quantidade_total > 0 else None,
             "dimensao": dimensao if dimensao else None,
             "numero_cores": numero_cores if numero_cores else None,
@@ -5041,15 +5085,14 @@ def processar_aceite_orcamento(id):
             "observacoes": nova_obs
         }
         
-        # Se tiver previsão de entrega no orçamento, mantém
         if orcamento.get('previsao_entrega'):
             dados_atualizacao['previsao_entrega'] = orcamento.get('previsao_entrega')
         
-        # 8. Salva no Supabase
+        # 9. Salva no Supabase
         response = requests.patch(url_orc, json=dados_atualizacao, headers=headers)
         
         if response.status_code == 204:
-            # 9. Cria os materiais_usados vinculados à OS
+            # 10. Cria os materiais_usados vinculados à OS
             for mat in materiais_para_os:
                 try:
                     if mat.get('material_id'):
@@ -5064,7 +5107,7 @@ def processar_aceite_orcamento(id):
                 except Exception as e:
                     print(f"Erro ao criar material usado: {e}")
             
-            flash("✅ Orçamento aceito! OS gerada com TODOS os dados (quantidade, dimensão, cores, etc.)")
+            flash(f"✅ Orçamento aceito! OS {novo_codigo} gerada com {len(itens_orcamento)} item(s)!")
             return redirect(url_for('imprimir_os', id=id))
         else:
             flash("❌ Erro ao salvar dados. Tente novamente.")
