@@ -4712,7 +4712,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados do orçamento e itens
+        # 1. Busca dados
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -4729,7 +4729,7 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 3. Dados do Vendedor (Telefone)
+        # 3. Dados do Vendedor
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -4737,19 +4737,16 @@ def pdf_orcamento(id):
             resp_user = requests.get(url_user, headers=headers)
             if resp_user.status_code == 200 and resp_user.json():
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
-        except Exception as e:
-            print(f"Erro ao buscar telefone: {e}")
-            tel_vendedor = ""
+        except: pass
         
-        # 4. Formatação de Data e Prazo
+        # 4. Data e Prazo
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
-        
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
-        # 5. Geração das Linhas da Tabela
+        # 5. Itens
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -4776,9 +4773,10 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
+        # URL da Imagem
         logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
 
-        # 6. HTML Final
+        # 6. HTML Final (COM FONTES MAIORES E LAYOUT AJUSTADO)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -4788,16 +4786,16 @@ def pdf_orcamento(id):
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 13px;
+        font-size: 15px; /* AUMENTADO */
         color: #1a1a1a; 
         line-height: 1.5;
         -webkit-print-color-adjust: exact;
     }}
     
     .header {{ text-align: center; margin-bottom: 25px; }}
-    .logo {{ max-width: 200px; margin-bottom: 15px; }}
+    .logo {{ max-width: 180px; margin-bottom: 10px; }}
     .titulo {{ 
-        font-size: 20px;
+        font-size: 22px; /* AUMENTADO */
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
@@ -4807,22 +4805,22 @@ def pdf_orcamento(id):
         padding-bottom: 8px;
         margin-bottom: 20px;
     }}
-    .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 20px; }}
+    .data-line {{ text-align: right; font-size: 14px; color: #555; margin-bottom: 20px; }}
     
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 18px 20px; 
+        padding: 15px 20px; 
         border-radius: 6px; 
         margin-bottom: 30px; 
         border-left: 4px solid #2c3e50;
     }}
-    .client-info p {{ margin: 5px 0; font-size: 13px; }}
+    .client-info p {{ margin: 5px 0; font-size: 14px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
     
-    .table-title {{ font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
+    .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }}
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }} /* AUMENTADO */
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
@@ -4839,27 +4837,29 @@ def pdf_orcamento(id):
     
     .terms {{ 
         margin-top: 30px; 
-        font-size: 12px; 
+        font-size: 13px; 
         color: #444; 
         padding: 12px 0;
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
+    /* RODAPÉ E ASSINATURA AJUSTADOS */
     .footer-area {{ 
-        margin-top: 40px; 
+        margin-top: 50px; 
         text-align: center; 
+        page-break-inside: avoid;
     }}
     .signature {{ margin-bottom: 20px; }}
     .signature p {{ margin: 5px 0; }}
-    .signature .name {{ font-size: 15px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
-    .signature .role {{ font-size: 12px; color: #555; font-weight: 600; }}
+    .signature .name {{ font-size: 16px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
+    .signature .role {{ font-size: 13px; color: #555; font-weight: 600; }}
     
-    .empresa-info {{ font-size: 11px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
+    .empresa-info {{ font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
     
     .ref-num {{ 
         text-align: right; 
-        font-size: 11px; 
+        font-size: 12px; 
         font-weight: 800; 
         color: #7f8c8d;
         margin-top: 15px;
@@ -4909,7 +4909,7 @@ def pdf_orcamento(id):
 <div class="footer-area">
     <div class="signature">
         <p>Atenciosamente,</p>
-        <br>
+        <br><br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
         {f'<p class="role">Tel: {tel_vendedor}</p>' if tel_vendedor else ''}
@@ -4925,7 +4925,7 @@ def pdf_orcamento(id):
 </body>
 </html>'''
         
-        # Gera PDF com configurações para carregar imagens externas
+        # Gera PDF com opções para tentar carregar a imagem
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
@@ -4935,9 +4935,9 @@ def pdf_orcamento(id):
             "margin-left": "15mm",
             "margin-right": "15mm",
             "enable-local-file-access": None,
-            "javascript-delay": "1000",
-            "no-stop-slow-scripts": None,
-            "images": None
+            "javascript-delay": "2000", # Espera mais tempo para carregar imagem
+            "images": None,
+            "disable-external-links": None # Tenta permitir links externos
         })
         
         return send_file(
@@ -4951,7 +4951,7 @@ def pdf_orcamento(id):
         print("ERRO PDF:", str(e))
         import traceback
         traceback.print_exc()
-        flash("❌ Erro ao gerar PDF: " + str(e))
+        flash(" Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_orcamentos'))
 
 
