@@ -1043,6 +1043,7 @@ def servicos_empresa(id):
     </body>
     </html>
     '''
+
 @app.route('/servicos')
 def listar_servicos():
     if 'usuario' not in session:
@@ -1852,18 +1853,144 @@ def gerar_etiqueta(id):
     '''
 
 @app.route('/complementar_orcamento/<int:id>')
-def complementar_orcamento(id):
+def confirmar_aceite_orcamento(id):
+    """Mostra formulário de confirmação antes de converter orçamento em OS"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
-        # Converte orçamento em OS
-        requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", 
-            json={"tipo": "Produção", "status": "Pendente"}, headers=headers)
-        flash("✅ Orçamento convertido em OS!")
-    except:
-        flash("❌ Erro ao converter")
-    return redirect(url_for('listar_orcamentos'))  # Volta para ORÇAMENTOS, não serviços
-
+        # Busca dados do orçamento e da empresa
+        url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
+        resp = requests.get(url_orc, headers=headers)
+        if not resp.json():
+            flash("❌ Orçamento não encontrado!")
+            return redirect(url_for('listar_orcamentos'))
+        
+        orcamento = resp.json()[0]
+        empresa = orcamento.get('empresas', {})
+        
+        # Dados padrão da empresa
+        cnpj_cadastrado = empresa.get('cnpj', '')
+        endereco_cadastrado = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
+        entrega_cadastrada = empresa.get('entrega_endereco')
+        if entrega_cadastrada:
+            endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
+        else:
+            endereco_entrega_padrao = endereco_cadastrado
+            
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("❌ Erro ao carregar dados")
+        return redirect(url_for('listar_orcamentos'))
+    
+    # HTML do formulário de confirmação
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <title>Confirmar Aceite do Orçamento</title>
+    <style>
+    body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+    .container {{ max-width: 700px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+    .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+    .content {{ padding: 25px; }}
+    .form-group {{ margin-bottom: 20px; }}
+    label {{ display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; }}
+    input, textarea, select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
+    .radio-group {{ margin: 10px 0; }}
+    .radio-group label {{ display: inline-block; margin-right: 15px; font-weight: normal; }}
+    .info-box {{ background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #3498db; }}
+    .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
+    .btn-cancel {{ background: #95a5a6; }}
+    .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+    .hidden {{ display: none; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="header"><h2 style="margin:0;">✅ Confirmar Aceite do Orçamento</h2></div>
+        <div class="content">
+            <a href="/orcamentos" class="back-link">← Voltar</a>
+            <p><strong>Orçamento:</strong> {orcamento.get('codigo_servico')} - {orcamento.get('titulo')}</p>
+            <p><strong>Cliente:</strong> {empresa.get('nome_empresa')}</p>
+            
+            <form method="post" action="/processar_aceite_orcamento/{id}">
+                
+                <!-- CNPJ PARA NOTA FISCAL -->
+                <div class="form-group">
+                    <label>🧾 CNPJ para emissão da Nota Fiscal</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()"> Usar CNPJ cadastrado: <strong>{cnpj_cadastrado}</strong></label><br>
+                        <label><input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()"> Usar outro CNPJ</label>
+                    </div>
+                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="Digite o novo CNPJ" style="margin-top: 10px;">
+                </div>
+                
+                <!-- ENDEREÇO DE ENTREGA -->
+                <div class="form-group">
+                    <label>📍 Endereço de Entrega</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()"> Usar endereço cadastrado:<br><small style="color:#666;">{endereco_entrega_padrao}</small></label><br>
+                        <label><input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()"> Usar outro endereço de entrega</label>
+                    </div>
+                    <textarea name="endereco_entrega_os" id="campo_endereco_novo" class="hidden" rows="3" placeholder="Digite o novo endereço completo" style="margin-top: 10px;"></textarea>
+                </div>
+                
+                <!-- AOS CUIDADOS DE -->
+                <div class="form-group">
+                    <label>👤 Entrega aos cuidados de</label>
+                    <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{empresa.get('responsavel', '')}">
+                </div>
+                
+                <!-- OBSERVAÇÕES DE ENTREGA -->
+                <div class="form-group">
+                    <label>📝 Observações para entrega (opcional)</label>
+                    <textarea name="observacoes_entrega" rows="2" placeholder="Ex: Entregar na recepção, ligar antes, etc."></textarea>
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <button type="submit" class="btn">✅ Confirmar e Gerar OS</button>
+                    <a href="/orcamentos" class="btn btn-cancel">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+    function toggleCNPJ() {{
+        const radios = document.getElementsByName('usar_cnpj_cadastrado');
+        const campo = document.getElementById('campo_cnpj_novo');
+        for (let r of radios) {{
+            if (r.checked && r.value === 'nao') {{
+                campo.classList.remove('hidden');
+                campo.setAttribute('required', 'required');
+                return;
+            }}
+        }}
+        campo.classList.add('hidden');
+        campo.removeAttribute('required');
+        campo.value = '';
+    }}
+    
+    function toggleEndereco() {{
+        const radios = document.getElementsByName('usar_endereco_cadastrado');
+        const campo = document.getElementById('campo_endereco_novo');
+        for (let r of radios) {{
+            if (r.checked && r.value === 'nao') {{
+                campo.classList.remove('hidden');
+                campo.setAttribute('required', 'required');
+                return;
+            }}
+        }}
+        campo.classList.add('hidden');
+        campo.removeAttribute('required');
+        campo.value = '';
+    }}
+    </script>
+    </body>
+    </html>
+    '''
 
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
@@ -1933,76 +2060,284 @@ def imprimir_os(id):
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS {servico['codigo_servico']} - Detalhes</title>
+    <title>OS {servico['codigo_servico']} - LIRAPRINT</title>
     <style>
-    body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; }}
-    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }}
-    .header img {{ max-width: 200px; margin-bottom: 10px; }}
-    .header h1 {{ margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }}
-    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-    .info-item strong {{ display: block; font-size: 14px; color: #555; }}
-    .valor-destaque {{ color: #27ae60; font-weight: bold; font-size: 15px; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
-    th {{ background-color: #ecf0f1; color: #2c3e50; }}
-    .total-box {{ text-align: right; font-size: 16px; margin-top: 20px; }}
-    .status {{ font-weight: bold; color: {'#27ae60' if servico['status'] == 'Concluído' else '#e67e22' if servico['status'] == 'Em Produção' else '#95a5a6'}; }}
-    @media print {{ .no-print {{ display: none; }} body {{ background: white; }} }}
-    .footer {{ margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; }}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ 
+            font-family: 'Inter', Arial, sans-serif; 
+            background: #f8fafc; 
+            color: #1e293b; 
+            line-height: 1.6;
+            padding: 20px;
+        }}
+        .os-container {{ 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            overflow: hidden;
+        }}
+        .os-header {{ 
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); 
+            color: white; 
+            padding: 30px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }}
+        .os-header .logo {{ max-width: 150px; }}
+        .os-header .info {{ text-align: right; }}
+        .os-header h1 {{ font-size: 24px; font-weight: 700; margin-bottom: 5px; }}
+        .os-header .codigo {{ font-size: 18px; opacity: 0.9; font-weight: 500; }}
+        .os-header .status {{ 
+            display: inline-block; 
+            margin-top: 10px; 
+            padding: 5px 15px; 
+            border-radius: 20px; 
+            font-size: 13px; 
+            font-weight: 600;
+            background: rgba(255,255,255,0.2);
+        }}
+        .os-body {{ padding: 30px 40px; }}
+        .section {{ margin-bottom: 30px; }}
+        .section-title {{ 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: #1e3a5f; 
+            margin-bottom: 15px; 
+            padding-bottom: 8px; 
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .section-title::before {{
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }}
+        .info-grid {{ 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+        }}
+        .info-item {{ }}
+        .info-item label {{ 
+            display: block; 
+            font-size: 12px; 
+            color: #64748b; 
+            margin-bottom: 4px; 
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .info-item span {{ 
+            font-size: 15px; 
+            font-weight: 500; 
+            color: #1e293b;
+        }}
+        .info-item .destaque {{ 
+            color: #059669; 
+            font-weight: 700;
+            font-size: 16px;
+        }}
+        table {{ 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 15px 0;
+            font-size: 14px;
+        }}
+        th {{ 
+            background: #f1f5f9; 
+            color: #334155; 
+            font-weight: 600; 
+            padding: 12px 15px; 
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        td {{ 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #f1f5f9; 
+        }}
+        tr:last-child td {{ border-bottom: none; }}
+        tr:hover {{ background: #f8fafc; }}
+        .total-box {{ 
+            background: #f8fafc; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-top: 20px;
+            border-left: 4px solid #3b82f6;
+        }}
+        .total-box p {{ 
+            margin: 8px 0; 
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+        }}
+        .total-box .valor {{ 
+            font-weight: 700; 
+            color: #1e293b;
+        }}
+        .total-box .destaque {{ 
+            color: #059669; 
+            font-size: 18px;
+        }}
+        .os-footer {{ 
+            background: #f8fafc; 
+            padding: 20px 40px; 
+            text-align: center; 
+            font-size: 13px; 
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }}
+        .btn-group {{ 
+            text-align: center; 
+            margin: 30px 0; 
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }}
+        .btn {{ 
+            display: inline-block;
+            padding: 12px 25px; 
+            background: #3b82f6; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            margin: 0 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }}
+        .btn:hover {{ background: #2563eb; transform: translateY(-2px); }}
+        .btn-orange {{ background: #f97316; }}
+        .btn-orange:hover {{ background: #ea580c; }}
+        .btn-green {{ background: #059669; }}
+        .btn-green:hover {{ background: #047857; }}
+        .entrega-box {{ 
+            background: #eff6ff; 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            margin-top: 10px;
+            border-left: 4px solid #3b82f6;
+            font-size: 14px;
+        }}
+        .entrega-box strong {{ color: #1e40af; }}
+        @media print {{ 
+            body {{ background: white; padding: 0; }} 
+            .os-container {{ box-shadow: none; border-radius: 0; }}
+            .btn-group {{ display: none; }}
+        }}
     </style>
     </head>
     <body>
-    <div class="header">
-    <img src="{logo_url}" alt="Logo da Empresa">
-    <h1>ORDEM DE SERVIÇO</h1>
-    <p><strong>Código:</strong> {servico['codigo_servico']}</p>
-    </div>
-    <div class="info-grid">
-    <div class="info-item"><strong>Cliente:</strong> {empresa_nome}</div>
-    <div class="info-item"><strong>Status:</strong> <span class="status">{servico['status']}</span></div>
-    <div class="info-item"><strong>Título:</strong> {servico['titulo']}</div>
-    <div class="info-item"><strong>Data de Abertura:</strong> {format_data(servico.get('data_abertura'))}</div>
-    <div class="info-item"><strong>Previsão de Entrega:</strong> {format_data(servico.get('previsao_entrega'))}</div>
-    <div class="info-item"><strong>Quantidade:</strong> {servico.get('quantidade', '-')}</div>
-    <div class="info-item"><strong>Dimensão:</strong> {servico.get('dimensao', '-')}</div>
-    <div class="info-item"><strong>Nº de Cores:</strong> {servico.get('numero_cores', '-')}</div>
-    <div class="info-item"><strong>Aplicação:</strong> {servico.get('aplicacao', '-')}</div>
-    <div class="info-item"><strong>Observações:</strong> {servico.get('observacoes', '-')}</div>
-    <!-- ✅ NOVO: VALOR POR UNIDADE -->
-    <div class="info-item"><strong>Valor Cobrado Total:</strong> <span class="valor-destaque">R$ {valor_cobrado:.2f}</span></div>
-    <div class="info-item"><strong>Valor por Unidade:</strong> <span class="valor-destaque">R$ {valor_por_unidade:.2f}</span></div>
-    </div>
-    <h3>Materiais Utilizados</h3>
-    <table>
-    <thead><tr><th>Material</th><th>Unidade</th><th>Qtd Usada</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
-    <tbody>
-    {''.join(f'''
-    <tr>
-    <td>{m['materiais']['denominacao']}</td>
-    <td>{m['materiais']['unidade_medida']}</td>
-    <td>{m['quantidade_usada']}</td>
-    <td>R$ {m['valor_unitario']:.2f}</td>
-    <td>R$ {m['valor_total']:.2f}</td>
-    </tr>
-    ''' for m in servico.get('materiais_usados', []) if m.get('materiais'))}
-    </tbody>
-    </table>
-    <div class="total-box">
-    <p><strong>Custo com Materiais:</strong> R$ {custo_materiais:.2f}</p>
-    <p><strong>Valor Cobrado:</strong> R$ {valor_cobrado:.2f}</p>
-    <p><strong>Lucro Estimado:</strong> R$ {lucro:.2f}</p>
-    </div>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    
-    <!-- ✅ BOTÕES ATUALIZADOS (SEM IMPRIMIR) -->
-    <div style="text-align: center; margin-top: 40px;">
-    <a href="/pdf_os/{id}" class="no-print" style="padding: 12px 20px; background: #e67e22; color: white; text-decoration: none; border-radius: 8px; margin-right: 10px;">📄 Gerar PDF</a>
-    <a href="/servicos" class="no-print" style="color: #3498db;">← Voltar</a>
+    <div class="os-container">
+        <!-- CABEÇALHO -->
+        <div class="os-header">
+            <img src="{logo_url}" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
+            <div class="info">
+                <h1>ORDEM DE SERVIÇO</h1>
+                <div class="codigo">#{servico['codigo_servico']}</div>
+                <span class="status">{'✅ ' if servico['status'] == 'Entregue' else '⏳ '}{servico['status']}</span>
+            </div>
+        </div>
+        
+        <div class="os-body">
+            <!-- DADOS DO CLIENTE -->
+            <div class="section">
+                <div class="section-title">Cliente</div>
+                <div class="info-grid">
+                    <div class="info-item"><label>Empresa</label><span>{empresa_nome}</span></div>
+                    <div class="info-item"><label>Responsável</label><span>{servico.get('empresas', {}).get('responsavel', '—')}</span></div>
+                    <div class="info-item"><label>Telefone</label><span>{servico.get('empresas', {}).get('whatsapp', servico.get('empresas', {}).get('telefone', '—'))}</span></div>
+                    <div class="info-item"><label>E-mail</label><span>{servico.get('empresas', {}).get('email', '—')}</span></div>
+                </div>
+            </div>
+            
+            <!-- DADOS DA OS -->
+            <div class="section">
+                <div class="section-title">Detalhes do Serviço</div>
+                <div class="info-grid">
+                    <div class="info-item"><label>Título</label><span>{servico['titulo']}</span></div>
+                    <div class="info-item"><label>Quantidade</label><span class="destaque">{servico.get('quantidade', '—')}</span></div>
+                    <div class="info-item"><label>Dimensão</label><span>{servico.get('dimensao', '—')}</span></div>
+                    <div class="info-item"><label>Cores</label><span>{servico.get('numero_cores', '—')}</span></div>
+                    <div class="info-item"><label>Abertura</label><span>{format_data(servico.get('data_abertura'))}</span></div>
+                    <div class="info-item"><label>Previsão</label><span>{format_data(servico.get('previsao_entrega'))}</span></div>
+                </div>
+            </div>
+            
+            <!-- DADOS DE ENTREGA (NOVO) -->
+            {f'''
+            <div class="section">
+                <div class="section-title">📦 Dados de Entrega / Nota Fiscal</div>
+                <div class="entrega-box">
+                    {f'<p><strong>CNPJ para NF:</strong> {cnpj_nota}</p>' if 'CNPJ para NF:' in (servico.get('observacoes') or '') else ''}
+                    {f'<p><strong>Endereço de entrega:</strong> {endereco_entrega}</p>' if 'Entregar em:' in (servico.get('observacoes') or '') else ''}
+                    {f'<p><strong>Aos cuidados de:</strong> {aos_cuidados}</p>' if 'Aos cuidados de:' in (servico.get('observacoes') or '') else ''}
+                    {f'<p><strong>Observações:</strong> {obs_entrega}</p>' if 'Obs. entrega:' in (servico.get('observacoes') or '') else ''}
+                </div>
+            </div>
+            ''' if any(x in (servico.get('observacoes') or '') for x in ['CNPJ para NF:', 'Entregar em:', 'Aos cuidados de:', 'Obs. entrega:']) else ''}
+            
+            <!-- MATERIAIS -->
+            <div class="section">
+                <div class="section-title">Materiais Utilizados</div>
+                <table>
+                    <thead><tr><th>Material</th><th>Unidade</th><th>Qtd</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
+                    <tbody>
+                    {''.join(f'''
+                    <tr>
+                    <td>{m['materiais']['denominacao']}</td>
+                    <td>{m['materiais']['unidade_medida']}</td>
+                    <td>{m['quantidade_usada']}</td>
+                    <td>R$ {m['valor_unitario']:.2f}</td>
+                    <td>R$ {m['valor_total']:.2f}</td>
+                    </tr>
+                    ''' for m in servico.get('materiais_usados', []) if m.get('materiais'))}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- VALORES -->
+            <div class="total-box">
+                <p>Custo com Materiais: <span class="valor">R$ {custo_materiais:.2f}</span></p>
+                <p>Valor Cobrado Total: <span class="valor">R$ {valor_cobrado:.2f}</span></p>
+                <p>Valor por Unidade: <span class="valor">R$ {valor_por_unidade:.2f}</span></p>
+                <p style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 10px;">
+                    <strong>Lucro Estimado:</strong> <span class="destaque">R$ {lucro:.2f}</span>
+                </p>
+            </div>
+            
+            <!-- OBSERVAÇÕES GERAIS -->
+            {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{servico.get("observacoes", "—").replace(chr(10), "<br>")}</p></div>' if servico.get('observacoes') else ''}
+        </div>
+        
+        <!-- BOTÕES DE AÇÃO -->
+        <div class="btn-group">
+            <a href="/pdf_os/{id}" class="btn btn-orange">📄 Gerar PDF</a>
+            <a href="/servicos" class="btn">← Voltar para Lista</a>
+            {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if session['nivel'] in ['administrador', 'vendedor'] else ''}
+        </div>
+        
+        <div class="os-footer">
+            LIRAPRINT - Sistema de Gestão | © 2025 | Guarulhos - SP
+        </div>
     </div>
     </body>
     </html>
     '''
-    return html
+
 
 @app.route('/pdf_os/<int:id>')
 def pdf_os(id):
@@ -4707,13 +5042,15 @@ def pdf_orcamento(id):
         
         # Gera PDF
         pdf = pdfkit.from_string(html, False, options={
-            "quiet": "", 
-            "encoding": "UTF-8", 
-            "page-size": "A4",
-            "margin-top": "5mm",
-            "margin-bottom": "10mm",
-            "margin-left": "15mm",
-            "margin-right": "15mm"
+         "quiet": "", 
+         "encoding": "UTF-8", 
+         "page-size": "A4",
+         "margin-top": "5mm",
+         "margin-bottom": "10mm", 
+         "margin-left": "15mm",
+         "margin-right": "15mm",
+         "enable-local-file-access": None,
+         "allow": "https://i.postimg.cc"  # ✅ Permite carregar seu logo do postimg
         })
         
         return send_file(
@@ -4728,6 +5065,70 @@ def pdf_orcamento(id):
         import traceback
         traceback.print_exc()
         flash("❌ Erro ao gerar PDF: " + str(e))
+        return redirect(url_for('listar_orcamentos'))
+
+@app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
+def processar_aceite_orcamento(id):
+    """Processa o formulário de aceite e converte orçamento em OS com dados de entrega"""
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        # Busca dados atuais do orçamento
+        url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
+        resp = requests.get(url_orc, headers=headers)
+        orcamento = resp.json()[0] if resp.json() else None
+        
+        if not orcamento:
+            flash("❌ Orçamento não encontrado!")
+            return redirect(url_for('listar_orcamentos'))
+        
+        # Coleta dados do formulário
+        usar_cnpj_cadastrado = request.form.get('usar_cnpj_cadastrado') == 'sim'
+        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else None
+        
+        usar_endereco_cadastrado = request.form.get('usar_endereco_cadastrado') == 'sim'
+        endereco_entrega = request.form.get('endereco_entrega_os', '').strip() if not usar_endereco_cadastrado else None
+        
+        aos_cuidados = request.form.get('aos_cuidados_de', '').strip()
+        obs_entrega = request.form.get('observacoes_entrega', '').strip()
+        
+        # Monta observações para a OS
+        obs_adicionais = []
+        if cnpj_nota:
+            obs_adicionais.append(f"Nota Fiscal para CNPJ: {cnpj_nota}")
+        if endereco_entrega:
+            obs_adicionais.append(f"Entregar em: {endereco_entrega}")
+        if aos_cuidados:
+            obs_adicionais.append(f"Aos cuidados de: {aos_cuidados}")
+        if obs_entrega:
+            obs_adicionais.append(f"Obs. entrega: {obs_entrega}")
+        
+        # Atualiza o serviço: muda tipo para Produção e adiciona observações
+        obs_original = orcamento.get('observacoes', '') or ''
+        nova_obs = obs_original
+        if obs_adicionais:
+            nova_obs = obs_original + "\n\n--- DADOS DE ENTREGA/NF ---\n" + "\n".join(obs_adicionais)
+        
+        dados_atualizacao = {
+            "tipo": "Produção",
+            "status": "Pendente",
+            "observacoes": nova_obs
+        }
+        
+        # Salva no Supabase
+        response = requests.patch(url_orc, json=dados_atualizacao, headers=headers)
+        
+        if response.status_code == 204:
+            flash("✅ Orçamento aceito! OS gerada com dados de entrega.")
+            return redirect(url_for('imprimir_os', id=id))  # Redireciona direto para a OS
+        else:
+            flash("❌ Erro ao salvar dados. Tente novamente.")
+            return redirect(url_for('listar_orcamentos'))
+            
+    except Exception as e:
+        print(f"Erro ao processar aceite: {e}")
+        flash("❌ Erro interno. Entre em contato com o suporte.")
         return redirect(url_for('listar_orcamentos'))
 
 
