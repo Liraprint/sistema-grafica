@@ -1854,36 +1854,24 @@ def gerar_etiqueta(id):
 
 @app.route('/complementar_orcamento/<int:id>')
 def confirmar_aceite_orcamento(id):
-    """Mostra formulário de confirmação antes de converter orçamento em OS"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
     try:
-        # Busca dados do orçamento e da empresa
         url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
         resp = requests.get(url_orc, headers=headers)
         if not resp.json():
             flash("❌ Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
-        
         orcamento = resp.json()[0]
         empresa = orcamento.get('empresas', {})
-        
-        # Dados padrão da empresa
         cnpj_cadastrado = empresa.get('cnpj', '')
         endereco_cadastrado = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         entrega_cadastrada = empresa.get('entrega_endereco')
-        if entrega_cadastrada:
-            endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
-        else:
-            endereco_entrega_padrao = endereco_cadastrado
-            
+        endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}" if entrega_cadastrada else endereco_cadastrado
     except Exception as e:
-        print(f"Erro: {e}")
         flash("❌ Erro ao carregar dados")
         return redirect(url_for('listar_orcamentos'))
     
-    # HTML do formulário de confirmação
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1896,15 +1884,16 @@ def confirmar_aceite_orcamento(id):
     .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
     .content {{ padding: 25px; }}
     .form-group {{ margin-bottom: 20px; }}
-    label {{ display: block; margin-bottom: 8px; font-weight: bold; color: #2c3e50; }}
-    input, textarea, select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
-    .radio-group {{ margin: 10px 0; }}
-    .radio-group label {{ display: inline-block; margin-right: 15px; font-weight: normal; }}
-    .info-box {{ background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #3498db; }}
+    label.title-label {{ display: block; margin-bottom: 10px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
+    .radio-option {{ display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; padding: 10px; border-radius: 6px; transition: background 0.2s; }}
+    .radio-option:hover {{ background: #f0f4f8; }}
+    .radio-option input {{ width: 18px; height: 18px; margin: 0; cursor: pointer; }}
+    .radio-option span {{ font-size: 14px; }}
+    .hidden {{ display: none; }}
+    input[type="text"], textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }}
     .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
     .btn-cancel {{ background: #95a5a6; }}
     .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
-    .hidden {{ display: none; }}
     </style>
     </head>
     <body>
@@ -1916,36 +1905,39 @@ def confirmar_aceite_orcamento(id):
             <p><strong>Cliente:</strong> {empresa.get('nome_empresa')}</p>
             
             <form method="post" action="/processar_aceite_orcamento/{id}">
-                
-                <!-- CNPJ PARA NOTA FISCAL -->
                 <div class="form-group">
-                    <label>🧾 CNPJ para emissão da Nota Fiscal</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()"> Usar CNPJ cadastrado: <strong>{cnpj_cadastrado}</strong></label><br>
-                        <label><input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()"> Usar outro CNPJ</label>
-                    </div>
-                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="Digite o novo CNPJ" style="margin-top: 10px;">
+                    <label class="title-label">🧾 CNPJ para emissão da Nota Fiscal</label>
+                    <label class="radio-option">
+                        <input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()">
+                        <span>Usar CNPJ cadastrado: <strong>{cnpj_cadastrado}</strong></span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()">
+                        <span>Usar outro CNPJ</span>
+                    </label>
+                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="Digite o novo CNPJ">
                 </div>
                 
-                <!-- ENDEREÇO DE ENTREGA -->
                 <div class="form-group">
-                    <label>📍 Endereço de Entrega</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()"> Usar endereço cadastrado:<br><small style="color:#666;">{endereco_entrega_padrao}</small></label><br>
-                        <label><input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()"> Usar outro endereço de entrega</label>
-                    </div>
-                    <textarea name="endereco_entrega_os" id="campo_endereco_novo" class="hidden" rows="3" placeholder="Digite o novo endereço completo" style="margin-top: 10px;"></textarea>
+                    <label class="title-label">📍 Endereço de Entrega</label>
+                    <label class="radio-option">
+                        <input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()">
+                        <span>Usar endereço cadastrado:<br><small style="color:#666;">{endereco_entrega_padrao}</small></span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()">
+                        <span>Usar outro endereço de entrega</span>
+                    </label>
+                    <textarea name="endereco_entrega_os" id="campo_endereco_novo" class="hidden" rows="3" placeholder="Digite o novo endereço completo"></textarea>
                 </div>
                 
-                <!-- AOS CUIDADOS DE -->
                 <div class="form-group">
-                    <label>👤 Entrega aos cuidados de</label>
+                    <label class="title-label"> Entrega aos cuidados de</label>
                     <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{empresa.get('responsavel', '')}">
                 </div>
                 
-                <!-- OBSERVAÇÕES DE ENTREGA -->
                 <div class="form-group">
-                    <label>📝 Observações para entrega (opcional)</label>
+                    <label class="title-label"> Observações para entrega (opcional)</label>
                     <textarea name="observacoes_entrega" rows="2" placeholder="Ex: Entregar na recepção, ligar antes, etc."></textarea>
                 </div>
                 
@@ -1956,41 +1948,22 @@ def confirmar_aceite_orcamento(id):
             </form>
         </div>
     </div>
-    
     <script>
     function toggleCNPJ() {{
-        const radios = document.getElementsByName('usar_cnpj_cadastrado');
-        const campo = document.getElementById('campo_cnpj_novo');
-        for (let r of radios) {{
-            if (r.checked && r.value === 'nao') {{
-                campo.classList.remove('hidden');
-                campo.setAttribute('required', 'required');
-                return;
-            }}
-        }}
-        campo.classList.add('hidden');
-        campo.removeAttribute('required');
-        campo.value = '';
+        const r = document.querySelector('input[name="usar_cnpj_cadastrado"]:checked').value;
+        const c = document.getElementById('campo_cnpj_novo');
+        if(r==='nao'){{ c.classList.remove('hidden'); c.required=true; }} else {{ c.classList.add('hidden'); c.required=false; c.value=''; }}
     }}
-    
     function toggleEndereco() {{
-        const radios = document.getElementsByName('usar_endereco_cadastrado');
-        const campo = document.getElementById('campo_endereco_novo');
-        for (let r of radios) {{
-            if (r.checked && r.value === 'nao') {{
-                campo.classList.remove('hidden');
-                campo.setAttribute('required', 'required');
-                return;
-            }}
-        }}
-        campo.classList.add('hidden');
-        campo.removeAttribute('required');
-        campo.value = '';
+        const r = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
+        const c = document.getElementById('campo_endereco_novo');
+        if(r==='nao'){{ c.classList.remove('hidden'); c.required=true; }} else {{ c.classList.add('hidden'); c.required=false; c.value=''; }}
     }}
     </script>
     </body>
     </html>
     '''
+
 
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
@@ -2009,32 +1982,26 @@ def excluir_servico(id):
         
         tipo = resp.json()[0].get('tipo', '')
         
-        # Se for orçamento, exclui os itens primeiro
+        # Exclui registros filhos primeiro para evitar erro de foreign key
         if tipo == 'Orçamento':
-            try:
-                requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
-            except:
-                pass
+            requests.delete(f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}", headers=headers)
+        else:
+            requests.delete(f"{SUPABASE_URL}/rest/v1/materiais_usados?servico_id=eq.{id}", headers=headers)
         
-        # Exclui o serviço
+        # Agora exclui o serviço
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.delete(url, headers=headers)
         
         if response.status_code == 204:
-            flash("🗑️ Serviço excluído com sucesso!")
+            flash("️ Excluído com sucesso!")
         else:
-            flash(f"❌ Erro ao excluir. Status: {response.status_code}")
+            flash(f"❌ Erro ao excluir. (Status: {response.status_code})")
             
     except Exception as e:
         print(f"Erro ao excluir: {e}")
-        flash("❌ Erro interno ao excluir serviço.")
+        flash("❌ Erro interno ao excluir.")
     
-    # Redireciona conforme o tipo
-    if tipo == 'Orçamento':
-        return redirect(url_for('listar_orcamentos'))
-    else:
-        return redirect(url_for('listar_servicos'))
-
+    return redirect(url_for('listar_orcamentos') if tipo == 'Orçamento' else url_for('listar_servicos'))
 
 
 @app.route('/os/<int:id>')
@@ -2042,7 +2009,7 @@ def imprimir_os(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Serviço não encontrado.")
@@ -2052,26 +2019,34 @@ def imprimir_os(id):
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    def calcular_custo():
-        try:
-            url_mat = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=valor_total&servico_id=eq.{id}"
-            resp = requests.get(url_mat, headers=headers)
-            if resp.status_code == 200:
-                itens = resp.json()
-                return sum(float(i['valor_total']) for i in itens)
-            return 0.0
-        except:
-            return 0.0
+    # Dados seguros (evita erro 500 se algum campo estiver vazio)
+    empresa = servico.get('empresas') or {}
+    empresa_nome = empresa.get('nome_empresa', '—')
+    responsavel = empresa.get('responsavel', '—')
+    whatsapp = empresa.get('whatsapp', '—')
+    email = empresa.get('email', '—')
     
-    custo_materiais = calcular_custo()
+    # Cálculo de custos seguro
+    try:
+        custo_materiais = sum(float(m.get('valor_total', 0) or 0) for m in servico.get('materiais_usados', []) if m and m.get('materiais'))
+    except:
+        custo_materiais = 0.0
+        
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     lucro = valor_cobrado - custo_materiais
-    
-    # 🔢 CALCULAR VALOR POR UNIDADE
     quantidade = float(servico.get('quantidade', 1) or 1)
     valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    empresa_nome = servico['empresas']['nome_empresa'] if servico.get('empresas') else "Sem cliente"
+    # Extrai dados de entrega das observações (se houver)
+    obs = servico.get('observacoes', '') or ''
+    dados_entrega = {}
+    if '--- DADOS DE ENTREGA/NF ---' in obs:
+        partes = obs.split('--- DADOS DE ENTREGA/NF ---')[1].strip().split('\n')
+        for p in partes:
+            if ':' in p:
+                chave, valor = p.split(':', 1)
+                dados_entrega[chave.strip()] = valor.strip()
+                
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
     
     html = f'''
@@ -2278,9 +2253,9 @@ def imprimir_os(id):
                 <div class="section-title">Cliente</div>
                 <div class="info-grid">
                     <div class="info-item"><label>Empresa</label><span>{empresa_nome}</span></div>
-                    <div class="info-item"><label>Responsável</label><span>{servico.get('empresas', {}).get('responsavel', '—')}</span></div>
-                    <div class="info-item"><label>Telefone</label><span>{servico.get('empresas', {}).get('whatsapp', servico.get('empresas', {}).get('telefone', '—'))}</span></div>
-                    <div class="info-item"><label>E-mail</label><span>{servico.get('empresas', {}).get('email', '—')}</span></div>
+                    <div class="info-item"><label>Responsável</label><span>{responsavel}</span></div>
+                    <div class="info-item"><label>Telefone</label><span>{whatsapp}</span></div>
+                    <div class="info-item"><label>E-mail</label><span>{email}</span></div>
                 </div>
             </div>
             
@@ -2294,6 +2269,7 @@ def imprimir_os(id):
                     <div class="info-item"><label>Cores</label><span>{servico.get('numero_cores', '—')}</span></div>
                     <div class="info-item"><label>Abertura</label><span>{format_data(servico.get('data_abertura'))}</span></div>
                     <div class="info-item"><label>Previsão</label><span>{format_data(servico.get('previsao_entrega'))}</span></div>
+                    <div class="info-item"><label>Aplicação</label><span>{servico.get('aplicacao', '—')}</span></div>
                 </div>
             </div>
             
@@ -2302,13 +2278,13 @@ def imprimir_os(id):
             <div class="section">
                 <div class="section-title">📦 Dados de Entrega / Nota Fiscal</div>
                 <div class="entrega-box">
-                    {f'<p><strong>CNPJ para NF:</strong> {cnpj_nota}</p>' if 'CNPJ para NF:' in (servico.get('observacoes') or '') else ''}
-                    {f'<p><strong>Endereço de entrega:</strong> {endereco_entrega}</p>' if 'Entregar em:' in (servico.get('observacoes') or '') else ''}
-                    {f'<p><strong>Aos cuidados de:</strong> {aos_cuidados}</p>' if 'Aos cuidados de:' in (servico.get('observacoes') or '') else ''}
-                    {f'<p><strong>Observações:</strong> {obs_entrega}</p>' if 'Obs. entrega:' in (servico.get('observacoes') or '') else ''}
+                    {f'<p><strong>CNPJ para NF:</strong> {dados_entrega.get("CNPJ para NF", "")}</p>' if dados_entrega.get("CNPJ para NF") else ''}
+                    {f'<p><strong>Endereço de entrega:</strong> {dados_entrega.get("Entregar em", "")}</p>' if dados_entrega.get("Entregar em") else ''}
+                    {f'<p><strong>Aos cuidados de:</strong> {dados_entrega.get("Aos cuidados de", "")}</p>' if dados_entrega.get("Aos cuidados de") else ''}
+                    {f'<p><strong>Observações:</strong> {dados_entrega.get("Obs. entrega", "")}</p>' if dados_entrega.get("Obs. entrega") else ''}
                 </div>
             </div>
-            ''' if any(x in (servico.get('observacoes') or '') for x in ['CNPJ para NF:', 'Entregar em:', 'Aos cuidados de:', 'Obs. entrega:']) else ''}
+            ''' if dados_entrega else ''}
             
             <!-- MATERIAIS -->
             <div class="section">
@@ -2324,7 +2300,7 @@ def imprimir_os(id):
                     <td>R$ {m['valor_unitario']:.2f}</td>
                     <td>R$ {m['valor_total']:.2f}</td>
                     </tr>
-                    ''' for m in servico.get('materiais_usados', []) if m.get('materiais'))}
+                    ''' for m in servico.get('materiais_usados', []) if m and m.get('materiais'))}
                     </tbody>
                 </table>
             </div>
@@ -2340,7 +2316,7 @@ def imprimir_os(id):
             </div>
             
             <!-- OBSERVAÇÕES GERAIS -->
-            {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{servico.get("observacoes", "—").replace(chr(10), "<br>")}</p></div>' if servico.get('observacoes') else ''}
+            {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{servico.get("observacoes", "—").replace(chr(10), "<br>")}</p></div>' if servico.get('observacoes') and '--- DADOS DE ENTREGA/NF ---' not in servico.get('observacoes', '') else ''}
         </div>
         
         <!-- BOTÕES DE AÇÃO -->
@@ -2357,6 +2333,7 @@ def imprimir_os(id):
     </body>
     </html>
     '''
+    return html
 
 
 @app.route('/pdf_os/<int:id>')
@@ -5078,7 +5055,8 @@ def pdf_orcamento(id):
             "margin-right": "15mm",
             "enable-local-file-access": None,
             "javascript-delay": "1000",
-            "no-stop-slow-scripts": None
+            "no-stop-slow-scripts": None,
+            "images": None
         })
         
         return send_file(
