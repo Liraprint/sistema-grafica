@@ -1511,6 +1511,7 @@ def adicionar_servico():
 def editar_servico(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -1519,10 +1520,11 @@ def editar_servico(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
+        print(f"Erro ao carregar: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Tratamento de dados para exibição (remover "None" e ",0")
+    # Tratamento de dados
     qtd_raw = servico.get('quantidade')
     qtd_display = ''
     if qtd_raw is not None and qtd_raw != 'None':
@@ -1538,7 +1540,7 @@ def editar_servico(id):
     cor_raw = servico.get('numero_cores')
     cor_display = '' if (not cor_raw or cor_raw == 'None') else cor_raw
     
-    # Busca materiais usados
+    # Busca materiais
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
         response_mats = requests.get(url_mats, headers=headers)
@@ -1547,52 +1549,70 @@ def editar_servico(id):
         materiais_usados = []
         
     if request.method == 'POST':
-        titulo = request.form.get('titulo')
-        empresa_id = request.form.get('empresa_id')
-        tipo = request.form.get('tipo')
-        quantidade = request.form.get('quantidade')
-        dimensao = request.form.get('dimensao')
-        numero_cores = request.form.get('numero_cores')
-        aplicacao = request.form.get('aplicacao')  # <-- CAMPO APLICACAO
-        status = request.form.get('status')
-        data_abertura = request.form.get('data_abertura')
-        previsao_entrega = request.form.get('previsao_entrega')
-        valor_cobrado = request.form.get('valor_cobrado') or 0.0
-        observacoes = request.form.get('observacoes')
+        # COLETA TODOS OS DADOS DO FORM
+        titulo = request.form.get('titulo', '').strip()
+        empresa_id = request.form.get('empresa_id', '').strip()
+        tipo = request.form.get('tipo', '')
+        quantidade = request.form.get('quantidade', '')
+        dimensao = request.form.get('dimensao', '')
+        numero_cores = request.form.get('numero_cores', '')
+        aplicacao = request.form.get('aplicacao', '')  # <-- CAMPO APLICACAO
+        status = request.form.get('status', '')
+        data_abertura = request.form.get('data_abertura', '')
+        previsao_entrega = request.form.get('previsao_entrega', '')
+        valor_cobrado_str = request.form.get('valor_cobrado', '0').replace(',', '.')
+        observacoes = request.form.get('observacoes', '')
+        
+        print(f"=== DADOS RECEBIDOS ===")
+        print(f"Aplicação: '{aplicacao}'")
+        print(f"=======================")
         
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
             return redirect(request.url)
+        
         try:
-            valor_cobrado = float(valor_cobrado.replace(',', '.'))
+            valor_cobrado = float(valor_cobrado_str) if valor_cobrado_str else 0.0
         except:
             valor_cobrado = 0.0
-            
+        
+        # PREPARA DADOS PARA SALVAR
+        dados = {
+            "titulo": titulo,
+            "empresa_id": int(empresa_id),
+            "tipo": tipo,
+            "quantidade": quantidade if quantidade else None,
+            "dimensao": dimensao if dimensao else None,
+            "numero_cores": numero_cores if numero_cores else None,
+            "aplicacao": aplicacao if aplicacao else None,  # <-- SALVA APLICACAO
+            "status": status,
+            "data_abertura": data_abertura if data_abertura else None,
+            "previsao_entrega": previsao_entrega if previsao_entrega else None,
+            "valor_cobrado": valor_cobrado,
+            "observacoes": observacoes
+        }
+        
+        print(f"=== ENVIANDO PARA SUPABASE ===")
+        print(f"Dados: {dados}")
+        print(f"==============================")
+        
         try:
-            dados = {
-                "titulo": titulo,
-                "empresa_id": int(empresa_id),
-                "tipo": tipo,
-                "quantidade": quantidade,
-                "dimensao": dimensao,
-                "numero_cores": numero_cores,
-                "aplicacao": aplicacao,  # <-- SALVA APLICACAO NO BANCO
-                "status": status,
-                "data_abertura": data_abertura,
-                "previsao_entrega": previsao_entrega,
-                "valor_cobrado": valor_cobrado,
-                "observacoes": observacoes
-            }
+            # ATUALIZA NO SUPABASE
             response = requests.patch(url, json=dados, headers=headers)
+            print(f"Resposta Supabase: {response.status_code}")
+            print(f"Conteúdo: {response.text}")
+            
             if response.status_code == 204:
                 flash("✅ Serviço atualizado com sucesso!")
-                # Atualiza materiais se houver
+                
+                # Atualiza materiais
                 ids_materiais = request.form.getlist('material_usado_id[]')
                 for i in range(len(ids_materiais)):
                     try:
                         mat_id = ids_materiais[i]
-                        qtd = float(request.form[f'quantidade_usada_{mat_id}'])
-                        vlr = float(request.form[f'valor_unitario_{mat_id}'].replace(',', '.'))
+                        qtd = float(request.form.get(f'quantidade_usada_{mat_id}', 0))
+                        vlr_str = request.form.get(f'valor_unitario_{mat_id}', '0').replace(',', '.')
+                        vlr = float(vlr_str)
                         total = qtd * vlr
                         dados_mat = {
                             "quantidade_usada": qtd,
@@ -1600,15 +1620,23 @@ def editar_servico(id):
                             "valor_total": total
                         }
                         requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json=dados_mat, headers=headers)
-                    except:
+                    except Exception as e:
+                        print(f"Erro ao atualizar material {mat_id}: {e}")
                         continue
+                
                 return redirect(url_for('listar_servicos'))
             else:
-                flash("❌ Erro ao atualizar serviço.")
+                flash(f"❌ Erro ao atualizar. Status: {response.status_code}")
+                print(f"Erro: {response.text}")
+                
         except Exception as e:
-            flash("❌ Erro de conexão.")
-        return redirect(request.url)
+            print(f"Exceção ao salvar: {e}")
+            import traceback
+            traceback.print_exc()
+            flash("❌ Erro de conexão ao salvar.")
         
+        return redirect(request.url)
+    
     # GET - Renderiza formulário
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
@@ -1663,7 +1691,7 @@ def editar_servico(id):
                     <div class="form-group"><label>Previsão Entrega</label><input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}"></div>
                 </div>
                 
-                <!-- CAMPO APLICAÇÃO EDITÁVEL -->
+                <!-- CAMPO APLICAÇÃO -->
                 <div class="form-group">
                     <label>📋 Aplicação / Uso / Ambiente (Informações para Produção)</label>
                     <textarea name="aplicacao" rows="3" placeholder="Ex: Uso interno, ambiente externo, aplicar em vidro, etc.">{servico.get('aplicacao', '') or ''}</textarea>
@@ -2396,6 +2424,7 @@ def pdf_os(id):
         return redirect(url_for('login'))
     
     try:
+        # 1. Busca dados completos do serviço
         url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email,cnpj),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
@@ -2403,11 +2432,11 @@ def pdf_os(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro ao carregar OS: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Dados
+    # Dados da empresa
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
@@ -2415,6 +2444,7 @@ def pdf_os(id):
     email = empresa.get('email') or '—'
     cnpj_cliente = empresa.get('cnpj') or '—'
     
+    # Cálculos
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     try:
         quantidade = float(servico.get('quantidade') or 1)
@@ -2433,15 +2463,13 @@ def pdf_os(id):
         
         if 'ITENS DO PEDIDO:' in obs_geral:
             texto_itens = obs_geral.split('ITENS DO PEDIDO:')[1].strip()
-            linhas = texto_itens.split('\n')
-            for linha in linhas:
+            for linha in texto_itens.split('\n'):
                 linha = linha.strip()
                 if linha and linha[0].isdigit():
                     itens_pedido.append(linha)
             obs_geral = obs_geral.split('ITENS DO PEDIDO:')[0].strip()
-        
-        dados_parte = partes[1].strip().split('\n')
-        for linha in dados_parte:
+            
+        for linha in partes[1].strip().split('\n'):
             if ':' in linha:
                 if 'CNPJ para NF' in linha or 'Nota Fiscal para CNPJ' in linha:
                     dados_entrega['cnpj'] = linha.split(':', 1)[1].strip()
@@ -2454,16 +2482,14 @@ def pdf_os(id):
     
     # Formata data
     data_abertura = servico.get('data_abertura', '')
-    if data_abertura and len(data_abertura) >= 10:
-        data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}"
-    else:
-        data_fmt = datetime.now().strftime('%d/%m/%Y')
+    data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}" if data_abertura and len(data_abertura) >= 10 else datetime.now().strftime('%d/%m/%Y')
     
     # PEGA O CAMPO APLICACAO
     aplicacao = servico.get('aplicacao') or ''
     
     logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
+    # HTML COMPLETO
     html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -2472,91 +2498,47 @@ def pdf_os(id):
     @page {{ size: A4; margin: 12mm 18mm; }}
     body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.4; }}
     
-    /* Cabeçalho */
     .header {{ 
         text-align: center; 
         margin-bottom: 20px;
         border-bottom: 3px solid #2c3e50;
         padding-bottom: 15px;
     }}
-    .logo {{ 
-        max-width: 150px; 
-        margin-bottom: 10px;
-        height: auto;
-    }}
+    .logo {{ max-width: 150px; margin-bottom: 10px; height: auto; }}
     .titulo {{ 
-        font-size: 24pt;
-        font-weight: 900; 
-        text-transform: uppercase; 
-        letter-spacing: 5px; 
-        color: #2c3e50;
-        margin: 10px 0;
+        font-size: 24pt; font-weight: 900; text-transform: uppercase; 
+        letter-spacing: 5px; color: #2c3e50; margin: 10px 0;
     }}
     .codigo {{ 
-        font-size: 12pt;
-        color: #555; 
-        font-weight: 600;
-        background: #ecf0f1;
-        display: inline-block;
-        padding: 6px 15px;
-        border-radius: 4px;
+        font-size: 12pt; color: #555; font-weight: 600;
+        background: #ecf0f1; display: inline-block; padding: 6px 15px; border-radius: 4px;
     }}
     
-    /* Seções */
     .section {{ margin-bottom: 20px; }}
     .section-title {{ 
-        font-size: 11pt; 
-        font-weight: 800; 
-        text-transform: uppercase; 
-        margin-bottom: 10px; 
-        color: #2c3e50;
-        border-bottom: 2px solid #3498db;
-        padding-bottom: 4px;
+        font-size: 11pt; font-weight: 800; text-transform: uppercase; 
+        margin-bottom: 10px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px;
     }}
     
-    /* Grid de Cliente - COMPACTO */
     .cliente-grid {{ 
-        display: grid; 
-        grid-template-columns: 1fr 1fr;
-        gap: 8px 15px;
-        font-size: 9.5pt;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; font-size: 9.5pt;
     }}
     .cliente-item strong {{ 
-        color: #2c3e50; 
-        display: block; 
-        font-size: 8.5pt; 
-        text-transform: uppercase;
-        font-weight: 700;
-        margin-bottom: 2px;
+        color: #2c3e50; display: block; font-size: 8.5pt; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;
     }}
-    .cliente-item span {{ 
-        font-size: 10pt; 
-        color: #333;
-        word-break: break-word;
-    }}
+    .cliente-item span {{ font-size: 10pt; color: #333; word-break: break-word; }}
     
-    /* Tabela de Itens */
     table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }}
     th {{ 
-        background: #2c3e50; 
-        color: white; 
-        padding: 8px 6px; 
-        text-align: left; 
-        font-size: 9pt;
-        font-weight: 700;
-        text-transform: uppercase;
+        background: #2c3e50; color: white; padding: 8px 6px; text-align: left; 
+        font-size: 9pt; font-weight: 700; text-transform: uppercase;
     }}
     td {{ padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
     
-    /* Caixas */
     .box {{ 
-        background: #f8f9fa; 
-        border-left: 4px solid #3498db; 
-        padding: 12px; 
-        margin: 12px 0;
-        border-radius: 0 4px 4px 0;
-        font-size: 9.5pt;
+        background: #f8f9fa; border-left: 4px solid #3498db; padding: 12px; 
+        margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 9.5pt;
     }}
     .box-aplicacao {{ background: #fff3cd; border-left-color: #ffc107; }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
@@ -2564,40 +2546,23 @@ def pdf_os(id):
     .box p {{ margin: 5px 0; line-height: 1.5; }}
     .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
     
-    /* Valores */
     .valores {{ 
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 20px 0;
+        color: white; border-radius: 8px; padding: 15px; margin: 20px 0;
     }}
     .valores p {{ margin: 6px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
     .destaque {{ font-size: 14pt; font-weight: 900; }}
     
-    /* Rodapé */
     .footer {{ 
-        margin-top: 30px; 
-        text-align: center; 
-        border-top: 2px solid #ecf0f1;
-        padding-top: 20px;
+        margin-top: 30px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 20px;
     }}
     .assinatura {{ margin: 20px 0; }}
     .assinatura-line {{ 
-        border-top: 1.5px solid #2c3e50; 
-        width: 250px; 
-        margin: 0 auto 10px auto;
-        padding-top: 8px;
+        border-top: 1.5px solid #2c3e50; width: 250px; margin: 0 auto 10px auto; padding-top: 8px;
     }}
     .assinatura p {{ font-size: 11pt; font-weight: 800; color: #2c3e50; margin: 3px 0; }}
     .assinatura .cargo {{ font-size: 9.5pt; color: #666; font-weight: 600; }}
-    
-    .empresa-info {{ 
-        font-size: 8.5pt; 
-        color: #888; 
-        margin-top: 15px;
-        line-height: 1.6;
-    }}
+    .empresa-info {{ font-size: 8.5pt; color: #888; margin-top: 15px; line-height: 1.6; }}
     
     ul {{ margin: 8px 0; padding-left: 20px; }}
     li {{ margin: 4px 0; font-size: 9.5pt; }}
@@ -2605,66 +2570,41 @@ def pdf_os(id):
 </head>
 <body>
 
-<!-- CABEÇALHO COM LOGO -->
+<!-- CABEÇALHO -->
 <div class="header">
     <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
     <div class="titulo">ORDEM DE SERVIÇO</div>
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
 
-<!-- APLICAÇÃO / USO / AMBIENTE (NOVO CAMPO) -->
-{f'''
+<!-- APLICAÇÃO / USO / AMBIENTE (SEMPRE EXIBE) -->
 <div class="section">
-    <div class="section-title">📋 Aplicação / Uso / Ambiente</div>
+    <div class="section-title">📋 Aplicação / Uso / Ambiente (Informações para Produção)</div>
     <div class="box box-aplicacao">
-        {aplicacao.replace(chr(10), "<br>") if aplicacao else '—'}
+        {(aplicacao or '').replace(chr(10), "<br>") if aplicacao.strip() else 'Sem informações'}
     </div>
 </div>
-''' if aplicacao else ''}
 
-<!-- CLIENTE - LAYOUT COMPACTO -->
+<!-- CLIENTE -->
 <div class="section">
     <div class="section-title">📋 Cliente</div>
     <div class="cliente-grid">
-        <div class="cliente-item">
-            <strong>Empresa</strong>
-            <span>{empresa_nome}</span>
-        </div>
-        <div class="cliente-item">
-            <strong>Responsável</strong>
-            <span>{responsavel}</span>
-        </div>
-        <div class="cliente-item">
-            <strong>CNPJ</strong>
-            <span>{cnpj_cliente}</span>
-        </div>
-        <div class="cliente-item">
-            <strong>Telefone</strong>
-            <span>{whatsapp}</span>
-        </div>
-        <div class="cliente-item">
-            <strong>E-mail</strong>
-            <span>{email}</span>
-        </div>
-        <div class="cliente-item">
-            <strong>Data Abertura</strong>
-            <span>{data_fmt}</span>
-        </div>
+        <div class="cliente-item"><strong>Empresa</strong><span>{empresa_nome}</span></div>
+        <div class="cliente-item"><strong>Responsável</strong><span>{responsavel}</span></div>
+        <div class="cliente-item"><strong>CNPJ</strong><span>{cnpj_cliente}</span></div>
+        <div class="cliente-item"><strong>Telefone</strong><span>{whatsapp}</span></div>
+        <div class="cliente-item"><strong>E-mail</strong><span>{email}</span></div>
+        <div class="cliente-item"><strong>Data Abertura</strong><span>{data_fmt}</span></div>
     </div>
 </div>
 
 <!-- ITENS DO SERVIÇO -->
 <div class="section">
-    <div class="section-title">📦 Itens do Serviço</div>
+    <div class="section-title"> Itens do Serviço</div>
     <table>
-        <thead>
-            <tr>
-                <th width="100%">Descrição dos Itens</th>
-            </tr>
-        </thead>
+        <thead><tr><th width="100%">Descrição dos Itens</th></tr></thead>
         <tbody>
 '''
-    
     if itens_pedido:
         for item in itens_pedido:
             html += f'<tr><td>{item}</td></tr>'
@@ -2681,7 +2621,7 @@ def pdf_os(id):
     if dados_entrega:
         html += f'''
 <div class="section">
-    <div class="section-title">📍 Dados de Entrega / NF</div>
+    <div class="section-title"> Dados de Entrega / NF</div>
     <div class="box box-entrega">
         {f'<p><strong>CNPJ NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
         {f'<p><strong>Endereço:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
@@ -2690,19 +2630,18 @@ def pdf_os(id):
 </div>
 '''
 
-    # Observações
     if obs_geral and obs_geral.strip():
         html += f'''
 <div class="section">
-    <div class="section-title">📝 Observações</div>
+    <div class="section-title"> Observações</div>
     <div class="box box-obs">
         {obs_geral.replace(chr(10), "<br>")}
     </div>
 </div>
 '''
 
-    # VALORES
     html += f'''
+<!-- VALORES -->
 <div class="valores">
     <p><strong>Valor Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
     <p><strong>Valor/Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
