@@ -1854,19 +1854,33 @@ def gerar_etiqueta(id):
 def confirmar_aceite_orcamento(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
         url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
         resp = requests.get(url_orc, headers=headers)
         if not resp.json():
             flash("❌ Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
+        
         orcamento = resp.json()[0]
         empresa = orcamento.get('empresas', {})
+        
+        # Dados da empresa
         cnpj_cadastrado = empresa.get('cnpj', '')
+        cep_cadastrado = empresa.get('cep', '')
         endereco_cadastrado = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
+        
+        # Endereço de entrega (se tiver)
         entrega_cadastrada = empresa.get('entrega_endereco')
-        endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}" if entrega_cadastrada else endereco_cadastrado
+        if entrega_cadastrada:
+            endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
+            cep_entrega_padrao = empresa.get('entrega_cep', '')
+        else:
+            endereco_entrega_padrao = endereco_cadastrado
+            cep_entrega_padrao = cep_cadastrado
+            
     except Exception as e:
+        print(f"Erro: {e}")
         flash("❌ Erro ao carregar dados")
         return redirect(url_for('listar_orcamentos'))
     
@@ -1878,20 +1892,24 @@ def confirmar_aceite_orcamento(id):
     <title>Confirmar Aceite do Orçamento</title>
     <style>
     body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-    .container {{ max-width: 700px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+    .container {{ max-width: 750px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
     .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-    .content {{ padding: 25px; }}
-    .form-group {{ margin-bottom: 20px; }}
-    label.title-label {{ display: block; margin-bottom: 10px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
-    .radio-option {{ display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; padding: 10px; border-radius: 6px; transition: background 0.2s; }}
+    .content {{ padding: 30px; }}
+    .form-group {{ margin-bottom: 25px; }}
+    label.title-label {{ display: block; margin-bottom: 12px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
+    .radio-option {{ display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; cursor: pointer; padding: 12px; border-radius: 6px; transition: background 0.2s; }}
     .radio-option:hover {{ background: #f0f4f8; }}
-    .radio-option input {{ width: 18px; height: 18px; margin: 0; cursor: pointer; }}
-    .radio-option span {{ font-size: 14px; }}
+    .radio-option input {{ width: 18px; height: 18px; margin: 3px 0 0 0; cursor: pointer; }}
+    .radio-option span {{ font-size: 14px; flex: 1; }}
+    .radio-option small {{ display: block; color: #666; margin-top: 5px; font-size: 12px; }}
     .hidden {{ display: none; }}
-    input[type="text"], textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }}
+    input[type="text"], textarea, input[type="number"] {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; font-size: 14px; }}
+    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+    .cep-info {{ background: #e8f4f8; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #2980b9; }}
     .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
     .btn-cancel {{ background: #95a5a6; }}
     .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+    .info-box {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 13px; }}
     </style>
     </head>
     <body>
@@ -1903,8 +1921,14 @@ def confirmar_aceite_orcamento(id):
             <p><strong>Cliente:</strong> {empresa.get('nome_empresa')}</p>
             
             <form method="post" action="/processar_aceite_orcamento/{id}">
+                
+                <!-- CNPJ PARA NOTA FISCAL -->
                 <div class="form-group">
                     <label class="title-label">🧾 CNPJ para emissão da Nota Fiscal</label>
+                    <div class="cep-info">
+                        <strong>CNPJ Cadastrado:</strong> {cnpj_cadastrado or 'Não informado'}<br>
+                        <strong>CEP:</strong> {cep_cadastrado or 'Não informado'}
+                    </div>
                     <label class="radio-option">
                         <input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()">
                         <span>Usar CNPJ cadastrado: <strong>{cnpj_cadastrado}</strong></span>
@@ -1916,8 +1940,13 @@ def confirmar_aceite_orcamento(id):
                     <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="Digite o novo CNPJ">
                 </div>
                 
+                <!-- ENDEREÇO DE ENTREGA -->
                 <div class="form-group">
                     <label class="title-label">📍 Endereço de Entrega</label>
+                    <div class="cep-info">
+                        <strong>CEP Cadastrado:</strong> {cep_entrega_padrao or 'Não informado'}<br>
+                        <strong>Endereço:</strong> {endereco_entrega_padrao}
+                    </div>
                     <label class="radio-option">
                         <input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()">
                         <span>Usar endereço cadastrado:<br><small style="color:#666;">{endereco_entrega_padrao}</small></span>
@@ -1926,16 +1955,50 @@ def confirmar_aceite_orcamento(id):
                         <input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()">
                         <span>Usar outro endereço de entrega</span>
                     </label>
-                    <textarea name="endereco_entrega_os" id="campo_endereco_novo" class="hidden" rows="3" placeholder="Digite o novo endereço completo"></textarea>
+                    
+                    <!-- CAMPOS PARA NOVO ENDEREÇO COM CEP -->
+                    <div id="campo_endereco_novo" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <div class="grid-2">
+                            <div>
+                                <label style="font-size: 12px; font-weight: bold;">CEP *</label>
+                                <input type="text" id="novo_cep" name="novo_cep" placeholder="00000-000" maxlength="9" onblur="buscarCEP()">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: bold;">Número *</label>
+                                <input type="text" id="novo_numero" name="novo_numero" placeholder="123">
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 12px; font-weight: bold;">Endereço</label>
+                            <input type="text" id="novo_endereco" name="novo_endereco" placeholder="Rua/Avenida" readonly style="background: #e9ecef;">
+                        </div>
+                        <div class="grid-2" style="margin-top: 10px;">
+                            <div>
+                                <label style="font-size: 12px; font-weight: bold;">Bairro</label>
+                                <input type="text" id="novo_bairro" name="novo_bairro" readonly style="background: #e9ecef;">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: bold;">Cidade - UF</label>
+                                <input type="text" id="novo_cidade" name="novo_cidade" readonly style="background: #e9ecef;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 12px; font-weight: bold;">Complemento</label>
+                            <input type="text" id="novo_complemento" name="novo_complemento" placeholder="Apto, Sala, Bloco...">
+                        </div>
+                        <input type="hidden" name="endereco_entrega_os" id="endereco_completo">
+                    </div>
                 </div>
                 
+                <!-- AOS CUIDADOS DE -->
                 <div class="form-group">
-                    <label class="title-label"> Entrega aos cuidados de</label>
+                    <label class="title-label">👤 Entrega aos cuidados de</label>
                     <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{empresa.get('responsavel', '')}">
                 </div>
                 
+                <!-- OBSERVAÇÕES DE ENTREGA -->
                 <div class="form-group">
-                    <label class="title-label"> Observações para entrega (opcional)</label>
+                    <label class="title-label">📝 Observações para entrega (opcional)</label>
                     <textarea name="observacoes_entrega" rows="2" placeholder="Ex: Entregar na recepção, ligar antes, etc."></textarea>
                 </div>
                 
@@ -1946,17 +2009,88 @@ def confirmar_aceite_orcamento(id):
             </form>
         </div>
     </div>
+    
     <script>
     function toggleCNPJ() {{
-        const r = document.querySelector('input[name="usar_cnpj_cadastrado"]:checked').value;
-        const c = document.getElementById('campo_cnpj_novo');
-        if(r==='nao'){{ c.classList.remove('hidden'); c.required=true; }} else {{ c.classList.add('hidden'); c.required=false; c.value=''; }}
+        const radios = document.getElementsByName('usar_cnpj_cadastrado');
+        const campo = document.getElementById('campo_cnpj_novo');
+        for (let r of radios) {{
+            if (r.checked && r.value === 'nao') {{
+                campo.classList.remove('hidden');
+                campo.setAttribute('required', 'required');
+                return;
+            }}
+        }}
+        campo.classList.add('hidden');
+        campo.removeAttribute('required');
+        campo.value = '';
     }}
+    
     function toggleEndereco() {{
-        const r = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
-        const c = document.getElementById('campo_endereco_novo');
-        if(r==='nao'){{ c.classList.remove('hidden'); c.required=true; }} else {{ c.classList.add('hidden'); c.required=false; c.value=''; }}
+        const radios = document.getElementsByName('usar_endereco_cadastrado');
+        const campo = document.getElementById('campo_endereco_novo');
+        for (let r of radios) {{
+            if (r.checked && r.value === 'nao') {{
+                campo.classList.remove('hidden');
+                document.getElementById('novo_cep').setAttribute('required', 'required');
+                document.getElementById('novo_numero').setAttribute('required', 'required');
+                return;
+            }}
+        }}
+        campo.classList.add('hidden');
+        document.getElementById('novo_cep').removeAttribute('required');
+        document.getElementById('novo_numero').removeAttribute('required');
+        limparCamposEndereco();
     }}
+    
+    function buscarCEP() {{
+        const cep = document.getElementById('novo_cep').value.replace(/\\D/g, '');
+        if (cep.length !== 8) {{
+            alert('CEP inválido!');
+            return;
+        }}
+        
+        fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+            .then(response => response.json())
+            .then(data => {{
+                if (data.erro) {{
+                    alert('CEP não encontrado!');
+                    return;
+                }}
+                document.getElementById('novo_endereco').value = data.logradouro;
+                document.getElementById('novo_bairro').value = data.bairro;
+                document.getElementById('novo_cidade').value = data.localidade + ' - ' + data.uf;
+                document.getElementById('novo_numero').focus();
+            }})
+            .catch(error => {{
+                console.error('Erro:', error);
+                alert('Erro ao buscar CEP. Tente novamente.');
+            }});
+    }}
+    
+    function limparCamposEndereco() {{
+        document.getElementById('novo_cep').value = '';
+        document.getElementById('novo_endereco').value = '';
+        document.getElementById('novo_bairro').value = '';
+        document.getElementById('novo_cidade').value = '';
+        document.getElementById('novo_numero').value = '';
+        document.getElementById('novo_complemento').value = '';
+    }}
+    
+    // Atualizar campo hidden antes de enviar
+    document.querySelector('form').addEventListener('submit', function(e) {{
+        const usarCadastrado = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
+        if (usarCadastrado === 'nao') {{
+            const endereco = document.getElementById('novo_endereco').value;
+            const numero = document.getElementById('novo_numero').value;
+            const bairro = document.getElementById('novo_bairro').value;
+            const cidade = document.getElementById('novo_cidade').value;
+            const complemento = document.getElementById('novo_complemento').value;
+            
+            const enderecoCompleto = `${{endereco}}, ${{numero}} - ${{bairro}}, ${{cidade}}${{complemento ? ' (' + complemento + ')' : ''}}`;
+            document.getElementById('endereco_completo').value = enderecoCompleto;
+        }}
+    }});
     </script>
     </body>
     </html>
@@ -5056,11 +5190,15 @@ def pdf_orcamento(id):
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    .footer-area {{ 
-        margin-top: 50px; 
-        text-align: center; 
+    .footer-area {{}
+        margin-top: 50px;
+        text-align: center;
         page-break-inside: avoid;
-    }}
+        position: fixed;
+        bottom: 20mm;
+        left: 20mm;
+        right: 20mm;
+       }}
     .signature {{ margin-bottom: 20px; }}
     .signature p {{ margin: 5px 0; }}
     .signature .name {{ font-size: 16px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
@@ -5185,22 +5323,22 @@ def processar_aceite_orcamento(id):
         
         # 3. Coleta dados do formulário
         usar_cnpj_cadastrado = request.form.get('usar_cnpj_cadastrado') == 'sim'
-        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else empresa.get('cnpj', '')
+        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else None
         
         usar_endereco_cadastrado = request.form.get('usar_endereco_cadastrado') == 'sim'
         
-        # Define endereço de entrega
         if usar_endereco_cadastrado:
-            # Usa endereço de entrega cadastrado (ou endereço principal se não tiver)
+            # Usa endereço de entrega cadastrado
             if empresa.get('entrega_endereco'):
                 endereco_entrega = f"{empresa.get('entrega_endereco', '')}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
             else:
                 endereco_entrega = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         else:
+            # Usa o endereço completo do campo hidden
             endereco_entrega = request.form.get('endereco_entrega_os', '').strip()
         
-        aos_cuidados = request.form.get('aos_cuidados_de', '').strip() or empresa.get('responsavel', '')
-        obs_entrega = request.form.get('observacoes_entrega', '').strip()
+        aos_cuidados = request.form.get('aos_cuidados_de', '').strip()
+        obs_entrega = request.form.get('observacoes_entrega', '').strip() 
         
         # 4. Busca TODOS os itens do orçamento
         url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}&order=id.asc"
