@@ -5088,8 +5088,10 @@ def pdf_orcamento(id):
         
         usuario_logado = session.get('usuario', '')
         
+        # Data sem a cidade "Guarulhos"
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
+        
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
@@ -5122,7 +5124,7 @@ def pdf_orcamento(id):
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # HTML COM RODAPÉ FIXO NO FINAL DA PÁGINA
+        # HTML COM FLEXBOX PARA RODAPÉ CORRETO
         html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -5130,160 +5132,154 @@ def pdf_orcamento(id):
 <style>
     @page {{ 
         size: A4; 
-        margin-top: 15mm; 
-        margin-bottom: 60mm;
-        margin-left: 15mm;
-        margin-right: 15mm;
+        margin: 15mm; /* Margens seguras para não cortar nada */
     }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    
+    /* Layout de Página Inteira com Flexbox */
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 16px;
+        font-size: 15px;
         color: #1a1a1a; 
         line-height: 1.6;
+        display: flex;
+        flex-direction: column;
+        min-height: 250mm; /* Garante altura mínima de A4 */
     }}
     
-    .header {{ text-align: center; margin-bottom: 30px; }}
-    .logo {{ max-width: 220px; margin-bottom: 15px; }}
+    /* Cabeçalho e Conteúdo Principal */
+    .main-content {{ 
+        flex: 1; /* Ocupa todo o espaço disponível */
+    }}
+    
+    .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }}
+    .logo {{ max-width: 200px; margin-bottom: 10px; }}
     .titulo {{ 
         font-size: 28px;
         font-weight: 900; 
         text-transform: uppercase; 
         letter-spacing: 5px; 
         color: #2c3e50;
-        border-bottom: 4px solid #2c3e50;
-        display: inline-block;
-        padding-bottom: 12px;
-        margin-bottom: 25px;
+        margin-bottom: 10px;
     }}
-    .data-line {{ text-align: right; font-size: 15px; color: #555; margin-bottom: 25px; }}
+    .data-line {{ text-align: right; font-size: 15px; color: #555; margin-bottom: 20px; }}
     
     .client-info {{ 
         background: #f0f4f8; 
-        padding: 18px 22px; 
-        margin-bottom: 30px; 
-        border-left: 6px solid #2c3e50;
-        border-radius: 0 8px 8px 0;
+        padding: 15px 18px; 
+        margin-bottom: 25px; 
+        border-left: 5px solid #2c3e50;
+        border-radius: 0 6px 6px 0;
     }}
-    .client-info p {{ margin: 6px 0; font-size: 15px; }}
-    .client-info strong {{ color: #2c3e50; font-weight: 800; font-size: 14px; }}
+    .client-info p {{ margin: 5px 0; font-size: 14px; }}
+    .client-info strong {{ color: #2c3e50; font-weight: 800; font-size: 13px; }}
     
-    .table-title {{ font-size: 18px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; color: #2c3e50; letter-spacing: 1px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 25px; }}
-    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 14px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 800; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }}
+    .table-title {{ font-size: 17px; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; letter-spacing: 1px; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 13px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 800; text-transform: uppercase; font-size: 12px; }}
     tr:nth-child(even) {{ background: #f8fafc; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
     .total-block {{ 
         text-align: right; 
-        margin-top: 25px; 
-        font-size: 24px;
+        margin-top: 20px; 
+        font-size: 22px;
         font-weight: 900; 
         color: #2c3e50; 
-        border-top: 4px solid #2c3e50;
-        padding-top: 15px;
+        border-top: 3px solid #2c3e50;
+        padding-top: 12px;
     }}
     
     .terms {{ 
-        margin-top: 30px; 
+        margin-top: 25px; 
         font-size: 14px; 
         color: #444; 
-        padding: 15px 0;
+        padding: 12px 0;
         border-top: 2px solid #e2e8f0;
         line-height: 1.8;
+        margin-bottom: 20px; /* Espaço entre termos e rodapé se houver conteúdo */
     }}
     .terms strong {{ color: #1a202c; font-weight: 700; }}
     
-    /* RODAPÉ FIXO NO FINAL DA PÁGINA */
+    /* RODAPÉ SEMPRE NO FINAL (Graças ao Flexbox) */
     .footer {{ 
-        position: fixed;
-        bottom: 15mm;
-        left: 15mm;
-        right: 15mm;
+        margin-top: auto; /* Empurra para o final */
         text-align: center;
         background: white;
         padding-top: 15px;
         border-top: 2px solid #cbd5e0;
+        page-break-inside: avoid;
     }}
     .signature {{ margin: 15px 0; }}
-    .signature p {{ margin: 5px 0; line-height: 1.4; }}
-    .signature .greeting {{ font-size: 15px; color: #4a5568; }}
-    .signature .name {{ font-size: 18px; font-weight: 900; color: #2c3e50; margin: 10px 0; }}
+    .signature p {{ margin: 4px 0; line-height: 1.4; }}
+    .signature .name {{ font-size: 17px; font-weight: 900; color: #2c3e50; margin: 8px 0; }}
     .signature .role {{ font-size: 13px; color: #4a5568; font-weight: 600; }}
-    .signature .company {{ font-size: 12px; color: #718096; margin-top: 8px; }}
+    .signature .company {{ font-size: 11px; color: #718096; margin-top: 5px; }}
     
     .ref-num {{ 
-        position: absolute;
-        right: 0;
-        bottom: 0;
         font-size: 11px; 
         font-weight: 800; 
         color: #718096;
         letter-spacing: 1px;
-    }}
-    
-    /* Espaço reservado para garantir que o conteúdo não sobreponha o footer */
-    .content-spacer {{ 
-        height: 180px;
-        visibility: hidden;
+        margin-top: 10px;
     }}
 </style>
 </head>
 <body>
 
-<div class="header">
-    <img src="{logo_url}" class="logo" alt="LIRAPRINT">
-    <br>
-    <div class="titulo">Proposta Comercial</div>
-</div>
-<div class="data-line">Guarulhos, {data_fmt}</div>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div class="main-content">
+        <div class="header">
+            <img src="{logo_url}" class="logo" alt="LIRAPRINT">
+            <br>
+            <div class="titulo">Proposta Comercial</div>
+        </div>
+        
+        <div class="data-line">{data_fmt}</div>
 
-<div class="client-info">
-    <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
-    <p><strong>CNPJ:</strong> {cnpj}</p>
-    <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
-</div>
+        <div class="client-info">
+            <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
+            <p><strong>CNPJ:</strong> {cnpj}</p>
+            <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
+        </div>
 
-<div class="table-title">Itens Orçados</div>
-<table>
-    <thead>
-        <tr>
-            <th width="10%" class="text-center">QTD</th>
-            <th width="30%">DESCRIÇÃO</th>
-            <th width="30%">MATERIAL</th>
-            <th width="10%" class="text-center">COR</th>
-            <th width="10%" class="text-right">VALOR UNIT.</th>
-            <th width="10%" class="text-right">TOTAL</th>
-        </tr>
-    </thead>
-    <tbody>
-        {linhas_html}
-    </tbody>
-</table>
+        <div class="table-title">Itens Orçados</div>
+        <table>
+            <thead>
+                <tr>
+                    <th width="10%" class="text-center">QTD</th>
+                    <th width="30%">DESCRIÇÃO</th>
+                    <th width="30%">MATERIAL</th>
+                    <th width="10%" class="text-center">COR</th>
+                    <th width="10%" class="text-right">VALOR UNIT.</th>
+                    <th width="10%" class="text-right">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {linhas_html}
+            </tbody>
+        </table>
 
-<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+        <div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
 
-<div class="terms">
-    <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-    <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
-</div>
-
-<!-- Espaço para empurrar visualmente e reservar área para o footer -->
-<div class="content-spacer"></div>
-
-<!-- RODAPÉ FIXO SEMPRE NO FINAL DA PÁGINA -->
-<div class="footer">
-    <div class="signature">
-        <p class="greeting">Atenciosamente,</p>
-        <p class="name">{usuario_logado}</p>
-        <p class="role">LIRAPRINT - Depto de Vendas</p>
-        <p class="company">LIRAPRINT | Guarulhos - SP</p>
+        <div class="terms">
+            <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
+            <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
+        </div>
     </div>
-    
-    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
-</div>
+
+    <!-- RODAPÉ (Fica no final da folha A4) -->
+    <div class="footer">
+        <div class="signature">
+            <p style="font-size: 14px; color: #555;">Atenciosamente,</p>
+            <p class="name">{usuario_logado}</p>
+            <p class="role">LIRAPRINT - Depto de Vendas</p>
+            <p class="company">LIRAPRINT | Guarulhos - SP</p>
+        </div>
+        <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
+    </div>
 
 </body>
 </html>'''
@@ -5294,12 +5290,10 @@ def pdf_orcamento(id):
             "encoding": "UTF-8",
             "page-size": "A4",
             "margin-top": "15mm",
-            "margin-bottom": "60mm",
+            "margin-bottom": "15mm",
             "margin-left": "15mm",
             "margin-right": "15mm",
-            "enable-local-file-access": None,
-            "javascript-delay": "1000",
-            "no-stop-slow-scripts": None
+            "enable-local-file-access": None
         })
         
         return send_file(
