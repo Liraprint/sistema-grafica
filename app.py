@@ -2083,7 +2083,7 @@ def imprimir_os(id):
                 elif 'Observações' in p or 'Obs. entrega' in p:
                     dados_entrega['Observações'] = p.split(':', 1)[1].strip()
     
-    logo_url = "https://ibb.co/VYBxXtKC"
+    logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."
     
     def format_data_safe(data):
         if not data or data == 'None':
@@ -2144,7 +2144,7 @@ def imprimir_os(id):
     <body>
     <div class="os-container">
         <div class="os-header">
-            <img src="{logo_url}" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
+            <img src="{logo_base64}" class="logo" alt="Logo">
             <div class="info">
                 <h1>ORDEM DE SERVIÇO</h1>
                 <div class="codigo">#{servico.get('codigo_servico', 'N/A')}</div>
@@ -2221,7 +2221,6 @@ def pdf_os(id):
         return redirect(url_for('login'))
     
     try:
-        # Busca dados do serviço
         url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email,cnpj),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
@@ -2229,11 +2228,11 @@ def pdf_os(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
-        print(f"Erro ao carregar OS: {e}")
+        print(f"Erro: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Dados básicos
+    # Dados
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
@@ -2241,27 +2240,22 @@ def pdf_os(id):
     email = empresa.get('email') or '—'
     cnpj_cliente = empresa.get('cnpj') or '—'
     
-    # Cálculos
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
     try:
         quantidade = float(servico.get('quantidade') or 1)
     except:
         quantidade = 1
-        
-    valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    # Extrair dados das observações (AQUI ESTÁ A MÁGICA)
+    # Extrair itens e dados das observações
     obs_completa = servico.get('observacoes') or ''
     itens_pedido = []
     dados_entrega = {}
     obs_geral = ''
     
-    # Verifica se tem a marcação de dados de entrega
     if '--- DADOS DE ENTREGA/NF ---' in obs_completa:
         partes = obs_completa.split('--- DADOS DE ENTREGA/NF ---')
         obs_geral = partes[0].strip()
         
-        # Extrai a lista de itens do pedido que está nas observações
         if 'ITENS DO PEDIDO:' in obs_geral:
             texto_itens = obs_geral.split('ITENS DO PEDIDO:')[1].strip()
             linhas = texto_itens.split('\n')
@@ -2269,13 +2263,10 @@ def pdf_os(id):
                 linha = linha.strip()
                 if linha and linha[0].isdigit():
                     itens_pedido.append(linha)
-            # Remove os itens da obs geral para não repetir
             obs_geral = obs_geral.split('ITENS DO PEDIDO:')[0].strip()
         
-        # Extrai dados de entrega
         dados_parte = partes[1].strip().split('\n')
         for linha in dados_parte:
-            linha = linha.strip()
             if ':' in linha:
                 if 'CNPJ para NF' in linha or 'Nota Fiscal para CNPJ' in linha:
                     dados_entrega['cnpj'] = linha.split(':', 1)[1].strip()
@@ -2288,21 +2279,14 @@ def pdf_os(id):
     
     # Formata data
     data_abertura = servico.get('data_abertura', '')
-    if data_abertura:
-        if 'T' in data_abertura:
-            data_fmt = data_abertura.split('T')[0]
-            data_fmt = f"{data_fmt[8:10]}/{data_fmt[5:7]}/{data_fmt[:4]}"
-        else:
-            data_fmt = data_abertura[:10]
-            if len(data_fmt) >= 10:
-                data_fmt = f"{data_fmt[8:10]}/{data_fmt[5:7]}/{data_fmt[:4]}"
+    if data_abertura and len(data_abertura) >= 10:
+        data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}"
     else:
         data_fmt = datetime.now().strftime('%d/%m/%Y')
     
-    # URL do logo (Substitua pelo link direto do ImgBB se o postimg falhar)
-    logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
+    # LOGO EM BASE64 - COLE SEU CÓDIGO AQUI
+    logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."  # COLE SEU CÓDIGO BASE64 COMPLETO AQUI
     
-    # MONTAGEM DO HTML
     html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -2312,49 +2296,132 @@ def pdf_os(id):
     body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; color: #333; line-height: 1.5; }}
     
     /* Cabeçalho */
-    .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; }}
-    .logo {{ max-width: 180px; margin-bottom: 15px; }}
-    .titulo {{ font-size: 26pt; font-weight: 800; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 10px 0; }}
-    .codigo {{ font-size: 13pt; color: #555; font-weight: 600; }}
+    .header {{ 
+        text-align: center; 
+        margin-bottom: 30px;
+        border-bottom: 4px solid #2c3e50;
+        padding-bottom: 20px;
+    }}
+    .logo {{ 
+        max-width: 200px; 
+        margin-bottom: 15px;
+        height: auto;
+    }}
+    .titulo {{ 
+        font-size: 28pt;
+        font-weight: 900; 
+        text-transform: uppercase; 
+        letter-spacing: 6px; 
+        color: #2c3e50;
+        margin: 15px 0;
+    }}
+    .codigo {{ 
+        font-size: 13pt;
+        color: #555; 
+        font-weight: 600;
+        background: #ecf0f1;
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 5px;
+    }}
     
     /* Seções */
     .section {{ margin-bottom: 25px; }}
-    .section-title {{ font-size: 13pt; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }}
+    .section-title {{ 
+        font-size: 13pt; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        margin-bottom: 15px; 
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 6px;
+    }}
     
     /* Grid Info */
-    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
-    .info-item strong {{ color: #2c3e50; display: block; margin-bottom: 3px; font-size: 9pt; text-transform: uppercase; }}
-    .info-item span {{ font-size: 11pt; color: #333; }}
+    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
+    .info-item strong {{ 
+        color: #2c3e50; 
+        display: block; 
+        margin-bottom: 4px; 
+        font-size: 9.5pt; 
+        text-transform: uppercase;
+        font-weight: 700;
+    }}
+    .info-item span {{ font-size: 11.5pt; color: #333; font-weight: 500; }}
     
-    /* Tabela */
-    table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10.5pt; }}
-    th {{ background: #2c3e50; color: white; padding: 10px 8px; text-align: left; font-size: 9.5pt; }}
-    td {{ padding: 10px 8px; border-bottom: 1px solid #ddd; font-size: 10.5pt; }}
+    /* Tabela de Itens */
+    table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10.5pt; border: 1px solid #ddd; }}
+    th {{ 
+        background: #2c3e50; 
+        color: white; 
+        padding: 12px 10px; 
+        text-align: left; 
+        font-size: 10pt;
+        font-weight: 700;
+        text-transform: uppercase;
+    }}
+    td {{ padding: 12px 10px; border-bottom: 1px solid #ddd; font-size: 10.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
+    tr:hover {{ background: #e8f4f8; }}
     
     /* Caixas */
-    .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 0 5px 5px 0; }}
+    .box {{ 
+        background: #f8f9fa; 
+        border-left: 5px solid #3498db; 
+        padding: 15px; 
+        margin: 15px 0;
+        border-radius: 0 6px 6px 0;
+    }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
     .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
+    .box p {{ margin: 8px 0; font-size: 10.5pt; line-height: 1.6; }}
+    .box strong {{ color: #2c3e50; margin-right: 8px; font-weight: 700; }}
     
     /* Valores */
-    .valores {{ background: #f0f8ff; border: 2px solid #3498db; border-radius: 8px; padding: 15px; margin: 25px 0; }}
-    .valores p {{ margin: 8px 0; font-size: 11pt; display: flex; justify-content: space-between; }}
-    .destaque {{ color: #27ae60; font-weight: 800; font-size: 14pt; }}
+    .valores {{ 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 30px 0;
+    }}
+    .valores p {{ margin: 10px 0; font-size: 11.5pt; display: flex; justify-content: space-between; }}
+    .valores strong {{ font-weight: 700; }}
+    .destaque {{ font-size: 16pt; font-weight: 900; color: #fff; }}
     
     /* Rodapé */
-    .footer {{ margin-top: 50px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 25px; }}
-    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 300px; margin: 0 auto 12px auto; padding-top: 8px; }}
-    .empresa-info {{ font-size: 9pt; color: #888; margin-top: 25px; }}
+    .footer {{ 
+        margin-top: 50px; 
+        text-align: center; 
+        border-top: 3px solid #ecf0f1;
+        padding-top: 30px;
+    }}
+    .assinatura {{ margin: 30px 0; }}
+    .assinatura-line {{ 
+        border-top: 2px solid #2c3e50; 
+        width: 300px; 
+        margin: 0 auto 15px auto;
+        padding-top: 10px;
+    }}
+    .assinatura p {{ font-size: 13pt; font-weight: 800; color: #2c3e50; margin: 5px 0; }}
+    .assinatura .cargo {{ font-size: 10.5pt; color: #666; font-weight: 600; }}
+    
+    .empresa-info {{ 
+        font-size: 9.5pt; 
+        color: #888; 
+        margin-top: 25px;
+        line-height: 1.8;
+    }}
     
     ul {{ margin: 10px 0; padding-left: 25px; }}
-    li {{ margin: 6px 0; font-size: 10.5pt; }}
+    li {{ margin: 8px 0; font-size: 10.5pt; line-height: 1.6; }}
 </style>
 </head>
 <body>
 
+<!-- CABEÇALHO COM LOGO -->
 <div class="header">
-    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+    <img src="{logo_base64}" class="logo" alt="Logo">
     <div class="titulo">ORDEM DE SERVIÇO</div>
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
@@ -2372,45 +2439,23 @@ def pdf_os(id):
     </div>
 </div>
 
-<!-- DETALHES -->
-<div class="section">
-    <div class="section-title">🔧 Detalhes do Serviço</div>
-    <div class="info-grid">
-        <div class="info-item"><strong>Título</strong><span>{servico.get('titulo') or '—'}</span></div>
-        <div class="info-item"><strong>Status</strong><span>{servico.get('status') or 'Pendente'}</span></div>
-        <div class="info-item"><strong>Quantidade Total</strong><span style="color:#27ae60; font-weight:700; font-size:12pt;">{int(quantidade) if quantidade.is_integer() else quantidade} un</span></div>
-        <div class="info-item"><strong>Dimensão</strong><span>{servico.get('dimensao') or '—'}</span></div>
-        <div class="info-item"><strong>Nº Cores</strong><span>{servico.get('numero_cores') or '—'}</span></div>
-        <div class="info-item"><strong>Previsão Entrega</strong><span>{servico.get('previsao_entrega', '—')[:10] if servico.get('previsao_entrega') else '—'}</span></div>
-    </div>
-</div>
-
-<!-- ITENS DO SERVIÇO (AQUI MOSTRA A LISTA QUE ESTAVA NAS OBSERVAÇÕES) -->
+<!-- ITENS DO SERVIÇO -->
 <div class="section">
     <div class="section-title">📦 Itens do Serviço</div>
     <table>
         <thead>
             <tr>
-                <th width="100%">Descrição do Item</th>
+                <th width="100%">Descrição dos Itens</th>
             </tr>
         </thead>
         <tbody>
 '''
-    # Lógica para preencher a tabela com os itens extraídos
+    
     if itens_pedido:
         for item in itens_pedido:
             html += f'<tr><td>{item}</td></tr>'
     else:
-        # Tenta buscar na tabela materiais_usados se não achou nas observações
-        materiais = servico.get('materiais_usados', [])
-        if materiais:
-            for mat in materiais:
-                if mat and mat.get('materiais'):
-                    qtd = mat.get('quantidade_usada', 0)
-                    nome = mat['materiais']['denominacao']
-                    html += f'<tr><td><strong>{nome}</strong> - Qtd: {qtd}</td></tr>'
-        else:
-            html += '<tr><td style="text-align: center; padding: 20px; color: #888;">Nenhum item registrado</td></tr>'
+        html += '<tr><td style="text-align: center; padding: 30px; color: #888; font-style: italic;">Nenhum item registrado</td></tr>'
 
     html += '''
         </tbody>
@@ -2422,7 +2467,7 @@ def pdf_os(id):
     if dados_entrega:
         html += f'''
 <div class="section">
-    <div class="section-title"> Dados de Entrega / Nota Fiscal</div>
+    <div class="section-title">📍 Dados de Entrega / Nota Fiscal</div>
     <div class="box box-entrega">
         {f'<p><strong>CNPJ para NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
         {f'<p><strong>Endereço de Entrega:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
@@ -2442,33 +2487,42 @@ def pdf_os(id):
 </div>
 '''
 
-    # Valores
+    # VALORES
     html += f'''
 <div class="valores">
-    <p><strong>Valor Cobrado Total:</strong> <span style="font-weight:700;">R$ {valor_cobrado:.2f}</span></p>
-    <p><strong>Valor por Unidade:</strong> <span>R$ {valor_por_unidade:.2f}</span></p>
+    <p><strong>Valor Cobrado Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
+    <p><strong>Valor por Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
 </div>
 
+<!-- RODAPÉ -->
 <div class="footer">
     <div class="assinatura">
         <div class="assinatura-line"></div>
         <p>Leandro</p>
-        <p style="font-size: 10pt; color: #666;">LIRAPRINT - Departamento de Vendas</p>
+        <p class="cargo">LIRAPRINT - Departamento de Vendas</p>
+        <p style="font-size: 10pt; color: #888; margin-top: 5px;">Tel: (11) XXXXX-XXXX</p>
     </div>
-    <div class="empresa-info">LIRAPRINT | Guarulhos - SP</div>
+    
+    <div class="empresa-info">
+        <strong style="color: #2c3e50; font-size: 11pt;">LIRAPRINT</strong><br>
+        Guarulhos - SP<br>
+        Sistema de Gestão de Ordens de Serviço
+    </div>
 </div>
 
 </body>
 </html>'''
 
-    # Gerar PDF
     try:
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", "encoding": "UTF-8", "page-size": "A4",
-            "margin-top": "10mm", "margin-bottom": "10mm", "margin-left": "15mm", "margin-right": "15mm",
+            "margin-top": "10mm", "margin-bottom": "10mm", 
+            "margin-left": "15mm", "margin-right": "15mm",
             "enable-local-file-access": None
         })
-        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf", mimetype="application/pdf")
+        return send_file(BytesIO(pdf), as_attachment=True, 
+                        download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf", 
+                        mimetype="application/pdf")
     except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
@@ -4922,7 +4976,7 @@ def pdf_orcamento(id):
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         # URL da Imagem
-        logo_url = "https://ibb.co/VYBxXtKC"
+        logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."
 
         # 6. HTML Final (COM FONTES MAIORES E LAYOUT AJUSTADO)
         html = f'''<!DOCTYPE html>
@@ -5018,7 +5072,7 @@ def pdf_orcamento(id):
 <body>
 
 <div class="header">
-    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+    <img src="{logo_base64}" class="logo" alt="Logo">
     <br>
     <div class="titulo">Proposta Comercial</div>
 </div>
