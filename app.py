@@ -1529,7 +1529,8 @@ def editar_servico(id):
         try:
             q = float(qtd_raw)
             qtd_display = str(int(q)) if q.is_integer() else str(q).replace('.', ',')
-        except: qtd_display = str(qtd_raw)
+        except:
+            qtd_display = str(qtd_raw)
             
     dim_raw = servico.get('dimensao')
     dim_display = '' if (not dim_raw or dim_raw == 'None') else dim_raw
@@ -1542,7 +1543,8 @@ def editar_servico(id):
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
         response_mats = requests.get(url_mats, headers=headers)
         materiais_usados = response_mats.json() if response_mats.status_code == 200 else []
-    except: materiais_usados = []
+    except:
+        materiais_usados = []
         
     if request.method == 'POST':
         titulo = request.form.get('titulo')
@@ -1561,16 +1563,24 @@ def editar_servico(id):
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
             return redirect(request.url)
-        try: valor_cobrado = float(valor_cobrado.replace(',', '.'))
-        except: valor_cobrado = 0.0
+        try:
+            valor_cobrado = float(valor_cobrado.replace(',', '.'))
+        except:
+            valor_cobrado = 0.0
             
         try:
             dados = {
-                "titulo": titulo, "empresa_id": int(empresa_id), "tipo": tipo,
-                "quantidade": quantidade, "dimensao": dimensao, "numero_cores": numero_cores,
-                "aplicacao": aplicacao,  # <-- SALVA APLICACAO
-                "status": status, "data_abertura": data_abertura,
-                "previsao_entrega": previsao_entrega, "valor_cobrado": valor_cobrado,
+                "titulo": titulo,
+                "empresa_id": int(empresa_id),
+                "tipo": tipo,
+                "quantidade": quantidade,
+                "dimensao": dimensao,
+                "numero_cores": numero_cores,
+                "aplicacao": aplicacao,  # <-- SALVA APLICACAO NO BANCO
+                "status": status,
+                "data_abertura": data_abertura,
+                "previsao_entrega": previsao_entrega,
+                "valor_cobrado": valor_cobrado,
                 "observacoes": observacoes
             }
             response = requests.patch(url, json=dados, headers=headers)
@@ -1584,11 +1594,17 @@ def editar_servico(id):
                         qtd = float(request.form[f'quantidade_usada_{mat_id}'])
                         vlr = float(request.form[f'valor_unitario_{mat_id}'].replace(',', '.'))
                         total = qtd * vlr
-                        dados_mat = {"quantidade_usada": qtd, "valor_unitario": vlr, "valor_total": total}
+                        dados_mat = {
+                            "quantidade_usada": qtd,
+                            "valor_unitario": vlr,
+                            "valor_total": total
+                        }
                         requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json=dados_mat, headers=headers)
-                    except: continue
+                    except:
+                        continue
                 return redirect(url_for('listar_servicos'))
-            else: flash(" Erro ao atualizar serviço.")
+            else:
+                flash("❌ Erro ao atualizar serviço.")
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(request.url)
@@ -1597,7 +1613,8 @@ def editar_servico(id):
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         materiais = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?select=*", headers=headers).json() or []
-    except: empresas, materiais = [], []
+    except:
+        empresas, materiais = [], []
     
     opts_empresas = "".join([f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas])
     opts_materiais = "".join([f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais])
@@ -2386,10 +2403,11 @@ def pdf_os(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
+        print(f"Erro: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Dados básicos
+    # Dados
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
@@ -2398,8 +2416,10 @@ def pdf_os(id):
     cnpj_cliente = empresa.get('cnpj') or '—'
     
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
-    try: quantidade = float(servico.get('quantidade') or 1)
-    except: quantidade = 1
+    try:
+        quantidade = float(servico.get('quantidade') or 1)
+    except:
+        quantidade = 1
     
     # Extrair itens e dados das observações
     obs_completa = servico.get('observacoes') or ''
@@ -2410,116 +2430,294 @@ def pdf_os(id):
     if '--- DADOS DE ENTREGA/NF ---' in obs_completa:
         partes = obs_completa.split('--- DADOS DE ENTREGA/NF ---')
         obs_geral = partes[0].strip()
+        
         if 'ITENS DO PEDIDO:' in obs_geral:
             texto_itens = obs_geral.split('ITENS DO PEDIDO:')[1].strip()
-            for linha in texto_itens.split('\n'):
+            linhas = texto_itens.split('\n')
+            for linha in linhas:
                 linha = linha.strip()
-                if linha and linha[0].isdigit(): itens_pedido.append(linha)
+                if linha and linha[0].isdigit():
+                    itens_pedido.append(linha)
             obs_geral = obs_geral.split('ITENS DO PEDIDO:')[0].strip()
         
-        for linha in partes[1].strip().split('\n'):
+        dados_parte = partes[1].strip().split('\n')
+        for linha in dados_parte:
             if ':' in linha:
-                if 'CNPJ para NF' in linha or 'Nota Fiscal para CNPJ' in linha: dados_entrega['cnpj'] = linha.split(':', 1)[1].strip()
-                elif 'Endereço de entrega' in linha: dados_entrega['endereco'] = linha.split(':', 1)[1].strip()
-                elif 'Aos cuidados de' in linha: dados_entrega['cuidados'] = linha.split(':', 1)[1].strip()
-    else: obs_geral = obs_completa
+                if 'CNPJ para NF' in linha or 'Nota Fiscal para CNPJ' in linha:
+                    dados_entrega['cnpj'] = linha.split(':', 1)[1].strip()
+                elif 'Endereço de entrega' in linha:
+                    dados_entrega['endereco'] = linha.split(':', 1)[1].strip()
+                elif 'Aos cuidados de' in linha:
+                    dados_entrega['cuidados'] = linha.split(':', 1)[1].strip()
+    else:
+        obs_geral = obs_completa
     
     # Formata data
     data_abertura = servico.get('data_abertura', '')
-    data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}" if data_abertura and len(data_abertura) >= 10 else datetime.now().strftime('%d/%m/%Y')
+    if data_abertura and len(data_abertura) >= 10:
+        data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}"
+    else:
+        data_fmt = datetime.now().strftime('%d/%m/%Y')
     
-    # PEGA O CAMPO APLICAÇÃO
+    # PEGA O CAMPO APLICACAO
     aplicacao = servico.get('aplicacao') or ''
     
     logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
-
+    
     html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 15mm; }}
-    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.5; }}
-    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }}
-    .logo {{ max-width: 180px; margin-bottom: 10px; }}
-    .titulo {{ font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 4px; color: #2c3e50; margin-bottom: 10px; }}
-    .codigo {{ font-size: 12px; color: #555; background: #ecf0f1; display: inline-block; padding: 5px 12px; border-radius: 4px; }}
+    @page {{ size: A4; margin: 12mm 18mm; }}
+    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.4; }}
+    
+    /* Cabeçalho */
+    .header {{ 
+        text-align: center; 
+        margin-bottom: 20px;
+        border-bottom: 3px solid #2c3e50;
+        padding-bottom: 15px;
+    }}
+    .logo {{ 
+        max-width: 150px; 
+        margin-bottom: 10px;
+        height: auto;
+    }}
+    .titulo {{ 
+        font-size: 24pt;
+        font-weight: 900; 
+        text-transform: uppercase; 
+        letter-spacing: 5px; 
+        color: #2c3e50;
+        margin: 10px 0;
+    }}
+    .codigo {{ 
+        font-size: 12pt;
+        color: #555; 
+        font-weight: 600;
+        background: #ecf0f1;
+        display: inline-block;
+        padding: 6px 15px;
+        border-radius: 4px;
+    }}
+    
+    /* Seções */
     .section {{ margin-bottom: 20px; }}
-    .section-title {{ font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px; }}
-    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
-    .info-item strong {{ color: #2c3e50; display: block; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }}
-    .info-item span {{ font-size: 12px; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-    th, td {{ padding: 8px; border-bottom: 1px solid #ddd; text-align: left; font-size: 11px; }}
-    th {{ background: #2c3e50; color: white; }}
-    .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 12px; margin: 10px 0; border-radius: 0 4px 4px 0; }}
+    .section-title {{ 
+        font-size: 11pt; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        margin-bottom: 10px; 
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 4px;
+    }}
+    
+    /* Grid de Cliente - COMPACTO */
+    .cliente-grid {{ 
+        display: grid; 
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 15px;
+        font-size: 9.5pt;
+    }}
+    .cliente-item strong {{ 
+        color: #2c3e50; 
+        display: block; 
+        font-size: 8.5pt; 
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }}
+    .cliente-item span {{ 
+        font-size: 10pt; 
+        color: #333;
+        word-break: break-word;
+    }}
+    
+    /* Tabela de Itens */
+    table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }}
+    th {{ 
+        background: #2c3e50; 
+        color: white; 
+        padding: 8px 6px; 
+        text-align: left; 
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+    }}
+    td {{ padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9.5pt; }}
+    tr:nth-child(even) {{ background: #f8f9fa; }}
+    
+    /* Caixas */
+    .box {{ 
+        background: #f8f9fa; 
+        border-left: 4px solid #3498db; 
+        padding: 12px; 
+        margin: 12px 0;
+        border-radius: 0 4px 4px 0;
+        font-size: 9.5pt;
+    }}
     .box-aplicacao {{ background: #fff3cd; border-left-color: #ffc107; }}
-    .box strong {{ color: #2c3e50; margin-right: 6px; }}
-    .valores {{ background: #f0f8ff; border: 2px solid #3498db; border-radius: 6px; padding: 12px; margin: 15px 0; }}
-    .footer {{ margin-top: 30px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 15px; }}
-    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 250px; margin: 0 auto 10px auto; padding-top: 8px; }}
+    .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
+    .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
+    .box p {{ margin: 5px 0; line-height: 1.5; }}
+    .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
+    
+    /* Valores */
+    .valores {{ 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+    }}
+    .valores p {{ margin: 6px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
+    .destaque {{ font-size: 14pt; font-weight: 900; }}
+    
+    /* Rodapé */
+    .footer {{ 
+        margin-top: 30px; 
+        text-align: center; 
+        border-top: 2px solid #ecf0f1;
+        padding-top: 20px;
+    }}
+    .assinatura {{ margin: 20px 0; }}
+    .assinatura-line {{ 
+        border-top: 1.5px solid #2c3e50; 
+        width: 250px; 
+        margin: 0 auto 10px auto;
+        padding-top: 8px;
+    }}
+    .assinatura p {{ font-size: 11pt; font-weight: 800; color: #2c3e50; margin: 3px 0; }}
+    .assinatura .cargo {{ font-size: 9.5pt; color: #666; font-weight: 600; }}
+    
+    .empresa-info {{ 
+        font-size: 8.5pt; 
+        color: #888; 
+        margin-top: 15px;
+        line-height: 1.6;
+    }}
+    
+    ul {{ margin: 8px 0; padding-left: 20px; }}
+    li {{ margin: 4px 0; font-size: 9.5pt; }}
 </style>
 </head>
 <body>
 
+<!-- CABEÇALHO COM LOGO -->
 <div class="header">
-    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+    <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
     <div class="titulo">ORDEM DE SERVIÇO</div>
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
 
-<div class="section">
-    <div class="section-title">📋 Cliente</div>
-    <div class="info-grid">
-        <div class="info-item"><strong>Empresa</strong><span>{empresa_nome}</span></div>
-        <div class="info-item"><strong>Responsável</strong><span>{responsavel}</span></div>
-        <div class="info-item"><strong>CNPJ</strong><span>{cnpj_cliente}</span></div>
-        <div class="info-item"><strong>Telefone</strong><span>{whatsapp}</span></div>
-    </div>
-</div>
-
-<!-- CAMPO APLICAÇÃO PARA PRODUÇÃO -->
+<!-- APLICAÇÃO / USO / AMBIENTE (NOVO CAMPO) -->
 {f'''
 <div class="section">
     <div class="section-title">📋 Aplicação / Uso / Ambiente</div>
     <div class="box box-aplicacao">
-        <strong>Informações para Produção:</strong><br>
-        {aplicacao.replace(chr(10), "<br>")}
+        {aplicacao.replace(chr(10), "<br>") if aplicacao else '—'}
     </div>
 </div>
 ''' if aplicacao else ''}
 
+<!-- CLIENTE - LAYOUT COMPACTO -->
+<div class="section">
+    <div class="section-title">📋 Cliente</div>
+    <div class="cliente-grid">
+        <div class="cliente-item">
+            <strong>Empresa</strong>
+            <span>{empresa_nome}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Responsável</strong>
+            <span>{responsavel}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>CNPJ</strong>
+            <span>{cnpj_cliente}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Telefone</strong>
+            <span>{whatsapp}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>E-mail</strong>
+            <span>{email}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Data Abertura</strong>
+            <span>{data_fmt}</span>
+        </div>
+    </div>
+</div>
+
+<!-- ITENS DO SERVIÇO -->
 <div class="section">
     <div class="section-title">📦 Itens do Serviço</div>
     <table>
-        <thead><tr><th width="100%">Descrição dos Itens</th></tr></thead>
+        <thead>
+            <tr>
+                <th width="100%">Descrição dos Itens</th>
+            </tr>
+        </thead>
         <tbody>
-        {"".join(f'<tr><td>{item}</td></tr>' for item in itens_pedido) if itens_pedido else '<tr><td style="text-align:center;padding:15px;color:#888;">Nenhum item registrado</td></tr>'}
+'''
+    
+    if itens_pedido:
+        for item in itens_pedido:
+            html += f'<tr><td>{item}</td></tr>'
+    else:
+        html += '<tr><td style="text-align: center; padding: 20px; color: #888;">Nenhum item registrado</td></tr>'
+
+    html += '''
         </tbody>
     </table>
 </div>
 
-{f'''
+<!-- DADOS DE ENTREGA -->
+'''
+    if dados_entrega:
+        html += f'''
 <div class="section">
     <div class="section-title">📍 Dados de Entrega / NF</div>
-    <div class="box">
+    <div class="box box-entrega">
         {f'<p><strong>CNPJ NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
         {f'<p><strong>Endereço:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
         {f'<p><strong>A/C:</strong> {dados_entrega["cuidados"]}</p>' if dados_entrega.get('cuidados') else ''}
     </div>
 </div>
-''' if dados_entrega else ''}
+'''
 
+    # Observações
+    if obs_geral and obs_geral.strip():
+        html += f'''
+<div class="section">
+    <div class="section-title">📝 Observações</div>
+    <div class="box box-obs">
+        {obs_geral.replace(chr(10), "<br>")}
+    </div>
+</div>
+'''
+
+    # VALORES
+    html += f'''
 <div class="valores">
-    <p><strong>Valor Total:</strong> <span style="float:right;">R$ {valor_cobrado:.2f}</span></p>
-    <p><strong>Valor/Unidade:</strong> <span style="float:right;">R$ {valor_cobrado/quantidade:.2f}</span></p>
+    <p><strong>Valor Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
+    <p><strong>Valor/Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
 </div>
 
+<!-- RODAPÉ -->
 <div class="footer">
-    <div class="assinatura-line"></div>
-    <p style="font-weight:bold;color:#2c3e50;">{session.get('usuario', '—')}</p>
-    <p style="font-size:11px;color:#666;">LIRAPRINT - Depto de Vendas</p>
-    <p style="font-size:10px;color:#888;margin-top:5px;">Ref: {servico.get('codigo_servico', '—')}</p>
+    <div class="assinatura">
+        <div class="assinatura-line"></div>
+        <p>Leandro</p>
+        <p class="cargo">LIRAPRINT - Depto de Vendas</p>
+    </div>
+    <div class="empresa-info">
+        <strong>LIRAPRINT</strong> | Guarulhos - SP
+    </div>
 </div>
 
 </body>
@@ -2528,63 +2726,17 @@ def pdf_os(id):
     try:
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", "encoding": "UTF-8", "page-size": "A4",
-            "margin-top": "15mm", "margin-bottom": "15mm", 
+            "margin-top": "10mm", "margin-bottom": "10mm", 
             "margin-left": "15mm", "margin-right": "15mm",
             "enable-local-file-access": None
         })
-        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf")
+        return send_file(BytesIO(pdf), as_attachment=True, 
+                        download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf")
     except Exception as e:
+        print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_servicos'))
 
-@app.route('/configuracoes')
-def configuracoes():
-    if 'usuario' not in session or session['nivel'] != 'administrador':
-        flash("Acesso negado!")
-        return redirect(url_for('clientes'))
-    config = buscar_configuracoes()
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configurações do Sistema</title>
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
-    h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
-    .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
-    .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
-    .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
-    </style>
-    </head>
-    <body>\n
-    <div class="container">
-    <div class="header"><h1>⚙️ Configurações do Sistema</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    {MENU_FLUTUANTE}
-    <form method="post" action="/salvar_configuracoes" class="form-container">
-    <h3>Remetente (Etiquetas)</h3>
-    <div><label>Nome do Remetente</label><input type="text" name="nome_remetente" value="{config['nome_remetente']}" required></div>
-    <div><label>Endereço Completo</label><input type="text" name="endereco_remetente" value="{config['endereco_remetente']}" required></div>
-    <div><label>Bairro</label><input type="text" name="bairro_remetente" value="{config['bairro_remetente']}" required></div>
-    <div><label>Cidade</label><input type="text" name="cidade_remetente" value="{config['cidade_remetente']}" required></div>
-    <div><label>Estado</label><input type="text" name="estado_remetente" value="{config['estado_remetente']}" required maxlength="2"></div>
-    <div><label>CEP</label><input type="text" name="cep_remetente" value="{config['cep_remetente']}" required></div>
-    <button type="submit" class="btn">💾 Salvar Configurações</button>
-    </form>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
-    </div>
-    </body>
-    </html>
-    '''
 
 @app.route('/salvar_configuracoes', methods=['POST'])
 def salvar_configuracoes_view():
