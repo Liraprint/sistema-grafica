@@ -5129,19 +5129,26 @@ def pdf_orcamento(id):
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # HTML PRINCIPAL (sem footer)
+        # HTML COM RODAPÉ FIXO (COMPATÍVEL COM PDFKIT)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 10mm; }}
+    @page {{ 
+        size: A4; 
+        margin-top: 10mm; 
+        margin-bottom: 40mm; 
+        margin-left: 10mm; 
+        margin-right: 10mm;
+    }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
         font-size: 13px;
         color: #1a1a1a; 
         line-height: 1.5;
+        -webkit-print-color-adjust: exact;
     }}
     
     .header {{ text-align: center; margin-bottom: 20px; }}
@@ -5193,10 +5200,38 @@ def pdf_orcamento(id):
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
+    
+    /* RODAPÉ FIXO - SEMPRE NO FINAL */
+    #footer {{ 
+        position: fixed;
+        bottom: 10mm;
+        left: 10mm;
+        right: 10mm;
+        text-align: center;
+        background: white;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+    }}
+    .signature {{ margin: 10px 0; }}
+    .signature p {{ margin: 3px 0; }}
+    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; }}
+    .signature .role {{ font-size: 11px; color: #555; }}
+    
+    .empresa-info {{ font-size: 10px; color: #888; margin-top: 8px; }}
+    
+    .ref-num {{ 
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        font-size: 10px; 
+        font-weight: 800; 
+        color: #7f8c8d;
+    }}
 </style>
 </head>
 <body>
 
+<!-- CONTEÚDO PRINCIPAL -->
 <div class="header">
     <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
     <br>
@@ -5234,38 +5269,37 @@ def pdf_orcamento(id):
     <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
 </div>
 
+<!-- RODAPÉ FIXO -->
+<div id="footer">
+    <div class="signature">
+        <p>Atenciosamente,</p>
+        <br>
+        <p class="name">{usuario_logado}</p>
+        <p class="role">LIRAPRINT - Depto de Vendas</p>
+    </div>
+    
+    <div class="empresa-info">
+        LIRAPRINT | Guarulhos - SP
+    </div>
+    
+    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
+</div>
+
 </body>
 </html>'''
 
-        # FOOTER HTML (separado)
-        footer_html = f'''
-        <div style="text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-family: Arial, sans-serif; font-size: 12px;">
-            <div style="margin-bottom: 10px;">
-                <p style="margin: 3px 0;">Atenciosamente,</p>
-                <p style="font-size: 14px; font-weight: bold; color: #2c3e50; margin: 10px 0;">{usuario_logado}</p>
-                <p style="color: #555; font-size: 11px;">LIRAPRINT - Depto de Vendas</p>
-            </div>
-            <div style="color: #888; font-size: 10px; margin-top: 10px;">
-                LIRAPRINT | Guarulhos - SP
-            </div>
-            <div style="position: absolute; right: 0; bottom: 10mm; font-size: 10px; font-weight: bold; color: #7f8c8d;">
-                Ref: {orc.get('codigo_servico', '—')}
-            </div>
-        </div>
-        '''
-
-        # Gera PDF com footer nativo
+        # Gera PDF
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
             "margin-top": "10mm",
-            "margin-bottom": "30mm",  # Espaço para o footer
+            "margin-bottom": "40mm",  # Espaço reservado para o footer fixo
             "margin-left": "10mm",
             "margin-right": "10mm",
-            "footer-html": footer_html,
-            "footer-spacing": 5,
-            "enable-local-file-access": None
+            "enable-local-file-access": None,
+            "javascript-delay": "500",
+            "no-stop-slow-scripts": None
         })
         
         return send_file(
