@@ -5190,7 +5190,7 @@ def pdf_orcamento(id):
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    .footer-area {{}
+    .footer-area {{
         margin-top: 50px;
         text-align: center;
         page-break-inside: avoid;
