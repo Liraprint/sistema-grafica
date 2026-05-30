@@ -5071,6 +5071,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
+        # 1. Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -5079,6 +5080,7 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
+        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -5086,6 +5088,7 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
+        # 3. Dados do Vendedor
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -5095,12 +5098,15 @@ def pdf_orcamento(id):
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
         except: pass
         
+        # 4. Formatação de Data
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
+        
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
+        # 5. Geração das Linhas da Tabela
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -5125,163 +5131,148 @@ def pdf_orcamento(id):
                     <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
-            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
+            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 20px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # HTML COM RODAPÉ VERDADEIRO NO FINAL
+        # 6. HTML Final (COM RODAPÉ FIXO E MARGENS MÍNIMAS)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ 
-        size: A4; 
-        margin-top: 15mm; 
-        margin-bottom: 35mm;
-        margin-left: 20mm;
-        margin-right: 20mm;
-    }}
+    /* Remove margens da página para aproveitar o papel */
+    @page {{ size: A4; margin: 0; }}
+    
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 15px;
+        font-size: 13px; /* Fonte levemente menor para caber mais */
         color: #1a1a1a; 
-        line-height: 1.5;
-        -webkit-print-color-adjust: exact;
+        line-height: 1.4;
+        /* Padding: Top 5mm, Right 5mm, Bottom 60mm (espaço pro rodapé), Left 5mm */
+        padding: 5mm 5mm 60mm 5mm; 
     }}
     
-    .header {{ text-align: center; margin-bottom: 25px; }}
-    .logo {{ max-width: 180px; margin-bottom: 15px; }}
+    .header {{ text-align: center; margin-bottom: 20px; }}
+    .logo {{ max-width: 150px; margin-bottom: 10px; }}
     .titulo {{ 
         font-size: 22px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
         color: #2c3e50;
-        border-bottom: 3px solid #2c3e50;
+        border-bottom: 2px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 8px;
-        margin-bottom: 20px;
+        padding-bottom: 5px;
     }}
-    .data-line {{ text-align: right; font-size: 14px; color: #555; margin-bottom: 20px; }}
+    .data-line {{ text-align: right; font-size: 12px; color: #555; margin-bottom: 15px; }}
     
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 15px 20px; 
-        border-radius: 6px; 
-        margin-bottom: 30px; 
+        padding: 10px 15px; 
+        margin-bottom: 20px; 
         border-left: 4px solid #2c3e50;
     }}
-    .client-info p {{ margin: 5px 0; font-size: 14px; }}
+    .client-info p {{ margin: 3px 0; font-size: 13px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
     
-    .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }}
+    .table-title {{ font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: #2c3e50; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
+    th, td {{ padding: 8px 5px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
     .total-block {{ 
         text-align: right; 
-        margin-top: 15px; 
-        font-size: 18px;
+        margin-top: 10px; 
+        font-size: 16px;
         font-weight: 900; 
         color: #2c3e50; 
         border-top: 2px solid #2c3e50;
-        padding-top: 12px;
-        margin-right: 5px;
+        padding-top: 8px;
     }}
     
     .terms {{ 
-        margin-top: 30px; 
-        font-size: 13px; 
+        margin-top: 15px; 
+        font-size: 12px; 
         color: #444; 
-        padding: 12px 0;
+        padding: 8px 0;
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    /* RODAPÉ - FICA SEMPRE NO FINAL DA PÁGINA */
-    .footer {{ 
+    /* === RODAPÉ FIXO NO FINAL DA PÁGINA === */
+    .footer-area {{ 
         position: fixed;
         bottom: 0;
         left: 0;
-        right: 0;
         width: 100%;
+        background-color: white; /* Importante para não ficar transparente */
+        padding: 10mm 5mm 5mm 5mm; /* Padding superior maior para separar do conteúdo */
         text-align: center;
         border-top: 1px solid #ddd;
-        padding: 15px 20mm 10mm 20mm;
-        background: white;
-        margin-top: 50px;
     }}
-    .signature {{ margin: 15px 0; }}
-    .signature p {{ margin: 3px 0; }}
-    .signature .name {{ font-size: 16px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
-    .signature .role {{ font-size: 13px; color: #555; font-weight: 600; }}
+    .signature {{ margin: 10px 0; }}
+    .signature p {{ margin: 2px 0; }}
+    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; }}
+    .signature .role {{ font-size: 11px; color: #555; }}
     
-    .empresa-info {{ font-size: 12px; color: #888; margin-top: 10px; }}
+    .empresa-info {{ font-size: 10px; color: #888; margin-top: 5px; }}
     
     .ref-num {{ 
-        text-align: right; 
-        font-size: 12px; 
+        position: absolute; /* Para alinhar o Ref à direita do rodapé */
+        right: 5mm;
+        bottom: 10mm;
+        font-size: 10px; 
         font-weight: 800; 
         color: #7f8c8d;
-        margin-top: 10px;
-        letter-spacing: 1px;
-    }}
-    
-    /* Espaço para garantir que o conteúdo não sobreponha o footer */
-    .content {{ 
-        min-height: 240mm;
-        padding-bottom: 20px;
     }}
 </style>
 </head>
 <body>
 
-<div class="content">
-    <div class="header">
-        <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
-        <br>
-        <div class="titulo">Proposta Comercial</div>
-    </div>
-    <div class="data-line">Guarulhos, {data_fmt}</div>
+<div class="header">
+    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+    <br>
+    <div class="titulo">Proposta Comercial</div>
+</div>
+<div class="data-line">Guarulhos, {data_fmt}</div>
 
-    <div class="client-info">
-        <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
-        <p><strong>CNPJ:</strong> {cnpj}</p>
-        <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
-    </div>
-
-    <div class="table-title">Itens Orçados</div>
-    <table>
-        <thead>
-            <tr>
-                <th width="10%" class="text-center">QTD</th>
-                <th width="30%">DESCRIÇÃO</th>
-                <th width="30%">MATERIAL</th>
-                <th width="10%" class="text-center">COR</th>
-                <th width="10%" class="text-right">VALOR UNIT.</th>
-                <th width="10%" class="text-right">TOTAL</th>
-            </tr>
-        </thead>
-        <tbody>
-            {linhas_html}
-        </tbody>
-    </table>
-
-    <div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
-
-    <div class="terms">
-        <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-        <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
-    </div>
+<div class="client-info">
+    <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
+    <p><strong>CNPJ:</strong> {cnpj}</p>
+    <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
 </div>
 
-<!-- RODAPÉ FIXO NO FINAL DA PÁGINA -->
-<div class="footer">
+<div class="table-title">Itens Orçados</div>
+<table>
+    <thead>
+        <tr>
+            <th width="10%" class="text-center">QTD</th>
+            <th width="30%">DESCRIÇÃO</th>
+            <th width="30%">MATERIAL</th>
+            <th width="10%" class="text-center">COR</th>
+            <th width="10%" class="text-right">VALOR UNIT.</th>
+            <th width="10%" class="text-right">TOTAL</th>
+        </tr>
+    </thead>
+    <tbody>
+        {linhas_html}
+    </tbody>
+</table>
+
+<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+
+<div class="terms">
+    <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
+    <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
+</div>
+
+<!-- RODAPÉ FIXO (Sempre no final da folha) -->
+<div class="footer-area">
     <div class="signature">
         <p>Atenciosamente,</p>
         <br>
@@ -5299,16 +5290,17 @@ def pdf_orcamento(id):
 </body>
 </html>'''
         
+        # Gera PDF
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            "margin-top": "15mm",
-            "margin-bottom": "35mm",
-            "margin-left": "20mm",
-            "margin-right": "20mm",
-            "enable-local-file-access": None,
-            "javascript-delay": "1000"
+            # Margens zero no gerador, pois controlamos via CSS
+            "margin-top": "0",
+            "margin-bottom": "0",
+            "margin-left": "0",
+            "margin-right": "0",
+            "enable-local-file-access": None
         })
         
         return send_file(
