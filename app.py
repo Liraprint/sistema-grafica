@@ -5071,6 +5071,7 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
+        # 1. Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -5079,6 +5080,7 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
+        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -5086,6 +5088,7 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
+        # 3. Dados do Vendedor Logado
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -5095,12 +5098,14 @@ def pdf_orcamento(id):
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
         except: pass
         
+        # 4. Data e Prazo
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
+        # 5. Itens da Tabela
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -5125,36 +5130,30 @@ def pdf_orcamento(id):
                     <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
-            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 20px; color: #888;">Nenhum item adicionado</td></tr>'
+            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # HTML COM RODAPÉ FIXO (COMPATÍVEL COM PDFKIT)
-        html = f'''<!DOCTYPE html>
+        # ==========================================
+        # HTML PRINCIPAL (SEM RODAPÉ NO BODY)
+        # ==========================================
+        html_content = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ 
-        size: A4; 
-        margin-top: 10mm; 
-        margin-bottom: 40mm; 
-        margin-left: 10mm; 
-        margin-right: 10mm;
-    }}
+    @page {{ size: A4; margin: 10mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
         font-size: 13px;
         color: #1a1a1a; 
         line-height: 1.5;
-        -webkit-print-color-adjust: exact;
     }}
-    
     .header {{ text-align: center; margin-bottom: 20px; }}
     .logo {{ max-width: 150px; margin-bottom: 10px; }}
     .titulo {{ 
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
@@ -5165,7 +5164,6 @@ def pdf_orcamento(id):
         margin-bottom: 15px;
     }}
     .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 15px; }}
-    
     .client-info {{ 
         background: #f8f9fa; 
         padding: 12px 15px; 
@@ -5174,14 +5172,12 @@ def pdf_orcamento(id):
     }}
     .client-info p {{ margin: 4px 0; font-size: 13px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
-    
     .table-title {{ font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
     th, td {{ padding: 8px 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
     th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
-    
     .total-block {{ 
         text-align: right; 
         margin-top: 15px; 
@@ -5191,7 +5187,6 @@ def pdf_orcamento(id):
         border-top: 2px solid #2c3e50;
         padding-top: 10px;
     }}
-    
     .terms {{ 
         margin-top: 20px; 
         font-size: 12px; 
@@ -5200,38 +5195,10 @@ def pdf_orcamento(id):
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
-    
-    /* RODAPÉ FIXO - SEMPRE NO FINAL */
-    #footer {{ 
-        position: fixed;
-        bottom: 10mm;
-        left: 10mm;
-        right: 10mm;
-        text-align: center;
-        background: white;
-        padding-top: 10px;
-        border-top: 1px solid #ddd;
-    }}
-    .signature {{ margin: 10px 0; }}
-    .signature p {{ margin: 3px 0; }}
-    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; }}
-    .signature .role {{ font-size: 11px; color: #555; }}
-    
-    .empresa-info {{ font-size: 10px; color: #888; margin-top: 8px; }}
-    
-    .ref-num {{ 
-        position: absolute;
-        right: 0;
-        bottom: 0;
-        font-size: 10px; 
-        font-weight: 800; 
-        color: #7f8c8d;
-    }}
 </style>
 </head>
 <body>
 
-<!-- CONTEÚDO PRINCIPAL -->
 <div class="header">
     <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
     <br>
@@ -5269,37 +5236,37 @@ def pdf_orcamento(id):
     <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
 </div>
 
-<!-- RODAPÉ FIXO -->
-<div id="footer">
-    <div class="signature">
-        <p>Atenciosamente,</p>
-        <br>
-        <p class="name">{usuario_logado}</p>
-        <p class="role">LIRAPRINT - Depto de Vendas</p>
-    </div>
-    
-    <div class="empresa-info">
-        LIRAPRINT | Guarulhos - SP
-    </div>
-    
-    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
-</div>
-
 </body>
 </html>'''
 
-        # Gera PDF
-        pdf = pdfkit.from_string(html, False, options={
-            "quiet": "", 
-            "encoding": "UTF-8", 
+        # ==========================================
+        # RODAPÉ INJETADO NATIVAMENTE PELO PDFKIT
+        # ==========================================
+        footer_html = f'''
+        <div style="font-family: Arial, sans-serif; font-size: 11px; color: #333; border-top: 1px solid #ccc; padding-top: 8px; width: 100%; position: relative;">
+            <div style="text-align: center;">
+                <p style="margin: 3px 0;">Atenciosamente,</p>
+                <p style="margin: 5px 0; font-size: 13px; font-weight: bold; color: #2c3e50;">{usuario_logado}</p>
+                <p style="margin: 3px 0; color: #555;">LIRAPRINT - Depto de Vendas</p>
+                <p style="margin: 5px 0 2px 0; color: #888; font-size: 10px;">LIRAPRINT | Guarulhos - SP</p>
+            </div>
+            <p style="position: absolute; right: 0; bottom: 0; font-size: 10px; font-weight: bold; color: #7f8c8d; margin: 0;">Ref: {orc.get('codigo_servico', '—')}</p>
+        </div>
+        '''
+
+        # GERAÇÃO DO PDF
+        pdf = pdfkit.from_string(html_content, False, options={
+            "quiet": "",
+            "encoding": "UTF-8",
             "page-size": "A4",
             "margin-top": "10mm",
-            "margin-bottom": "40mm",  # Espaço reservado para o footer fixo
+            "margin-bottom": "45mm",       # Reserva espaço exato para o rodapé
             "margin-left": "10mm",
             "margin-right": "10mm",
+            "footer-html": footer_html,    # Rodapé fixo nativo do wkhtmltopdf
+            "footer-spacing": 8,           # Espaço entre o texto e o rodapé
             "enable-local-file-access": None,
-            "javascript-delay": "500",
-            "no-stop-slow-scripts": None
+            "print-media-type": None
         })
         
         return send_file(
