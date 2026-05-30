@@ -5129,12 +5129,19 @@ def pdf_orcamento(id):
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
+        # HTML COM RODAPÉ VERDADEIRO NO FINAL
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 15mm 20mm; }}
+    @page {{ 
+        size: A4; 
+        margin-top: 15mm; 
+        margin-bottom: 35mm;
+        margin-left: 20mm;
+        margin-right: 20mm;
+    }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
@@ -5188,6 +5195,7 @@ def pdf_orcamento(id):
     }}
     
     .terms {{ 
+        margin-top: 30px; 
         font-size: 13px; 
         color: #444; 
         padding: 12px 0;
@@ -5195,16 +5203,18 @@ def pdf_orcamento(id):
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    /* RODAPÉ FIXO NO FINAL DA PÁGINA */
-    .footer-area {{ 
+    /* RODAPÉ - FICA SEMPRE NO FINAL DA PÁGINA */
+    .footer {{ 
         position: fixed;
-        bottom: 15mm;
-        left: 20mm;
-        right: 20mm;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
         text-align: center;
         border-top: 1px solid #ddd;
-        padding-top: 15px;
+        padding: 15px 20mm 10mm 20mm;
         background: white;
+        margin-top: 50px;
     }}
     .signature {{ margin: 15px 0; }}
     .signature p {{ margin: 3px 0; }}
@@ -5222,54 +5232,56 @@ def pdf_orcamento(id):
         letter-spacing: 1px;
     }}
     
-    /* Espaço extra no final do conteúdo para não sobrepor o footer fixo */
-    .content-spacer {{ height: 120px; }}
+    /* Espaço para garantir que o conteúdo não sobreponha o footer */
+    .content {{ 
+        min-height: 240mm;
+        padding-bottom: 20px;
+    }}
 </style>
 </head>
 <body>
 
-<div class="header">
-    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
-    <br>
-    <div class="titulo">Proposta Comercial</div>
+<div class="content">
+    <div class="header">
+        <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
+        <br>
+        <div class="titulo">Proposta Comercial</div>
+    </div>
+    <div class="data-line">Guarulhos, {data_fmt}</div>
+
+    <div class="client-info">
+        <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
+        <p><strong>CNPJ:</strong> {cnpj}</p>
+        <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
+    </div>
+
+    <div class="table-title">Itens Orçados</div>
+    <table>
+        <thead>
+            <tr>
+                <th width="10%" class="text-center">QTD</th>
+                <th width="30%">DESCRIÇÃO</th>
+                <th width="30%">MATERIAL</th>
+                <th width="10%" class="text-center">COR</th>
+                <th width="10%" class="text-right">VALOR UNIT.</th>
+                <th width="10%" class="text-right">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {linhas_html}
+        </tbody>
+    </table>
+
+    <div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+
+    <div class="terms">
+        <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
+        <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
+    </div>
 </div>
-<div class="data-line">Guarulhos, {data_fmt}</div>
 
-<div class="client-info">
-    <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
-    <p><strong>CNPJ:</strong> {cnpj}</p>
-    <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
-</div>
-
-<div class="table-title">Itens Orçados</div>
-<table>
-    <thead>
-        <tr>
-            <th width="10%" class="text-center">QTD</th>
-            <th width="30%">DESCRIÇÃO</th>
-            <th width="30%">MATERIAL</th>
-            <th width="10%" class="text-center">COR</th>
-            <th width="10%" class="text-right">VALOR UNIT.</th>
-            <th width="10%" class="text-right">TOTAL</th>
-        </tr>
-    </thead>
-    <tbody>
-        {linhas_html}
-    </tbody>
-</table>
-
-<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
-
-<div class="terms">
-    <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-    <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
-</div>
-
-<!-- Espaço para não sobrepor o footer fixo -->
-<div class="content-spacer"></div>
-
-<!-- RODAPÉ FIXO -->
-<div class="footer-area">
+<!-- RODAPÉ FIXO NO FINAL DA PÁGINA -->
+<div class="footer">
     <div class="signature">
         <p>Atenciosamente,</p>
         <br>
@@ -5291,11 +5303,12 @@ def pdf_orcamento(id):
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            "margin-top": "10mm",
-            "margin-bottom": "10mm",
-            "margin-left": "15mm",
-            "margin-right": "15mm",
-            "enable-local-file-access": None
+            "margin-top": "15mm",
+            "margin-bottom": "35mm",
+            "margin-left": "20mm",
+            "margin-right": "20mm",
+            "enable-local-file-access": None,
+            "javascript-delay": "1000"
         })
         
         return send_file(
