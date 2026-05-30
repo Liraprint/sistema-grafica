@@ -2027,14 +2027,12 @@ def imprimir_os(id):
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # --- TRATAMENTO DOS DADOS ---
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
     whatsapp = empresa.get('whatsapp') or '—'
     email = empresa.get('email') or '—'
     
-    # Quantidade formatada
     qtd_raw = servico.get('quantidade')
     qtd_display = '—'
     if qtd_raw is not None and qtd_raw != 'None':
@@ -2047,15 +2045,12 @@ def imprimir_os(id):
         except:
             qtd_display = str(qtd_raw)
             
-    # Dimensão limpa
     dim_raw = servico.get('dimensao')
     dim_display = '—' if (not dim_raw or dim_raw == 'None') else dim_raw
     
-    # Cores limpas
     cor_raw = servico.get('numero_cores')
     cor_display = '—' if (not cor_raw or cor_raw == 'None') else cor_raw
     
-    # Cálculos
     try:
         custo_materiais = sum(float(m.get('valor_total', 0) or 0) for m in servico.get('materiais_usados', []) if m and m.get('materiais'))
     except:
@@ -2066,7 +2061,6 @@ def imprimir_os(id):
     quantidade = float(servico.get('quantidade', 1) or 1)
     valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    # Dados de entrega
     obs = servico.get('observacoes') or ''
     dados_entrega = {}
     if '--- DADOS DE ENTREGA/NF ---' in obs:
@@ -2083,7 +2077,8 @@ def imprimir_os(id):
                 elif 'Observações' in p or 'Obs. entrega' in p:
                     dados_entrega['Observações'] = p.split(':', 1)[1].strip()
     
-    logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."
+    # LOGO URL - SEU LINK AQUI!
+    logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
     def format_data_safe(data):
         if not data or data == 'None':
@@ -2144,7 +2139,7 @@ def imprimir_os(id):
     <body>
     <div class="os-container">
         <div class="os-header">
-            <img src="{logo_base64}" class="logo" alt="Logo">
+            <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
             <div class="info">
                 <h1>ORDEM DE SERVIÇO</h1>
                 <div class="codigo">#{servico.get('codigo_servico', 'N/A')}</div>
@@ -2284,158 +2279,184 @@ def pdf_os(id):
     else:
         data_fmt = datetime.now().strftime('%d/%m/%Y')
     
-    # LOGO EM BASE64 - COLE SEU CÓDIGO AQUI
-    logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."  # COLE SEU CÓDIGO BASE64 COMPLETO AQUI
+    # LOGO URL - SEU LINK AQUI!
+    logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
     html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 15mm 20mm; }}
-    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; color: #333; line-height: 1.5; }}
+    @page {{ size: A4; margin: 12mm 18mm; }}
+    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.4; }}
     
     /* Cabeçalho */
     .header {{ 
         text-align: center; 
-        margin-bottom: 30px;
-        border-bottom: 4px solid #2c3e50;
-        padding-bottom: 20px;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #2c3e50;
+        padding-bottom: 15px;
     }}
     .logo {{ 
-        max-width: 200px; 
-        margin-bottom: 15px;
+        max-width: 150px; 
+        margin-bottom: 10px;
         height: auto;
     }}
     .titulo {{ 
-        font-size: 28pt;
+        font-size: 24pt;
         font-weight: 900; 
         text-transform: uppercase; 
-        letter-spacing: 6px; 
+        letter-spacing: 5px; 
         color: #2c3e50;
-        margin: 15px 0;
+        margin: 10px 0;
     }}
     .codigo {{ 
-        font-size: 13pt;
+        font-size: 12pt;
         color: #555; 
         font-weight: 600;
         background: #ecf0f1;
         display: inline-block;
-        padding: 8px 20px;
-        border-radius: 5px;
+        padding: 6px 15px;
+        border-radius: 4px;
     }}
     
     /* Seções */
-    .section {{ margin-bottom: 25px; }}
+    .section {{ margin-bottom: 20px; }}
     .section-title {{ 
-        font-size: 13pt; 
+        font-size: 11pt; 
         font-weight: 800; 
         text-transform: uppercase; 
-        margin-bottom: 15px; 
+        margin-bottom: 10px; 
         color: #2c3e50;
         border-bottom: 2px solid #3498db;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
     }}
     
-    /* Grid Info */
-    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-    .info-item strong {{ 
+    /* Grid de Cliente - COMPACTO */
+    .cliente-grid {{ 
+        display: grid; 
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 15px;
+        font-size: 9.5pt;
+    }}
+    .cliente-item strong {{ 
         color: #2c3e50; 
         display: block; 
-        margin-bottom: 4px; 
-        font-size: 9.5pt; 
+        font-size: 8.5pt; 
         text-transform: uppercase;
         font-weight: 700;
+        margin-bottom: 2px;
     }}
-    .info-item span {{ font-size: 11.5pt; color: #333; font-weight: 500; }}
+    .cliente-item span {{ 
+        font-size: 10pt; 
+        color: #333;
+        word-break: break-word;
+    }}
     
     /* Tabela de Itens */
-    table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10.5pt; border: 1px solid #ddd; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }}
     th {{ 
         background: #2c3e50; 
         color: white; 
-        padding: 12px 10px; 
+        padding: 8px 6px; 
         text-align: left; 
-        font-size: 10pt;
+        font-size: 9pt;
         font-weight: 700;
         text-transform: uppercase;
     }}
-    td {{ padding: 12px 10px; border-bottom: 1px solid #ddd; font-size: 10.5pt; }}
+    td {{ padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
-    tr:hover {{ background: #e8f4f8; }}
     
     /* Caixas */
     .box {{ 
         background: #f8f9fa; 
-        border-left: 5px solid #3498db; 
-        padding: 15px; 
-        margin: 15px 0;
-        border-radius: 0 6px 6px 0;
+        border-left: 4px solid #3498db; 
+        padding: 12px; 
+        margin: 12px 0;
+        border-radius: 0 4px 4px 0;
+        font-size: 9.5pt;
     }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
     .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
-    .box p {{ margin: 8px 0; font-size: 10.5pt; line-height: 1.6; }}
-    .box strong {{ color: #2c3e50; margin-right: 8px; font-weight: 700; }}
+    .box p {{ margin: 5px 0; line-height: 1.5; }}
+    .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
     
     /* Valores */
     .valores {{ 
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-radius: 10px;
-        padding: 20px;
-        margin: 30px 0;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
     }}
-    .valores p {{ margin: 10px 0; font-size: 11.5pt; display: flex; justify-content: space-between; }}
-    .valores strong {{ font-weight: 700; }}
-    .destaque {{ font-size: 16pt; font-weight: 900; color: #fff; }}
+    .valores p {{ margin: 6px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
+    .destaque {{ font-size: 14pt; font-weight: 900; }}
     
     /* Rodapé */
     .footer {{ 
-        margin-top: 50px; 
+        margin-top: 30px; 
         text-align: center; 
-        border-top: 3px solid #ecf0f1;
-        padding-top: 30px;
+        border-top: 2px solid #ecf0f1;
+        padding-top: 20px;
     }}
-    .assinatura {{ margin: 30px 0; }}
+    .assinatura {{ margin: 20px 0; }}
     .assinatura-line {{ 
-        border-top: 2px solid #2c3e50; 
-        width: 300px; 
-        margin: 0 auto 15px auto;
-        padding-top: 10px;
+        border-top: 1.5px solid #2c3e50; 
+        width: 250px; 
+        margin: 0 auto 10px auto;
+        padding-top: 8px;
     }}
-    .assinatura p {{ font-size: 13pt; font-weight: 800; color: #2c3e50; margin: 5px 0; }}
-    .assinatura .cargo {{ font-size: 10.5pt; color: #666; font-weight: 600; }}
+    .assinatura p {{ font-size: 11pt; font-weight: 800; color: #2c3e50; margin: 3px 0; }}
+    .assinatura .cargo {{ font-size: 9.5pt; color: #666; font-weight: 600; }}
     
     .empresa-info {{ 
-        font-size: 9.5pt; 
+        font-size: 8.5pt; 
         color: #888; 
-        margin-top: 25px;
-        line-height: 1.8;
+        margin-top: 15px;
+        line-height: 1.6;
     }}
     
-    ul {{ margin: 10px 0; padding-left: 25px; }}
-    li {{ margin: 8px 0; font-size: 10.5pt; line-height: 1.6; }}
+    ul {{ margin: 8px 0; padding-left: 20px; }}
+    li {{ margin: 4px 0; font-size: 9.5pt; }}
 </style>
 </head>
 <body>
 
 <!-- CABEÇALHO COM LOGO -->
 <div class="header">
-    <img src="{logo_base64}" class="logo" alt="Logo">
+    <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
     <div class="titulo">ORDEM DE SERVIÇO</div>
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
 
-<!-- CLIENTE -->
+<!-- CLIENTE - LAYOUT COMPACTO -->
 <div class="section">
     <div class="section-title">📋 Cliente</div>
-    <div class="info-grid">
-        <div class="info-item"><strong>Empresa</strong><span>{empresa_nome}</span></div>
-        <div class="info-item"><strong>Responsável</strong><span>{responsavel}</span></div>
-        <div class="info-item"><strong>CNPJ</strong><span>{cnpj_cliente}</span></div>
-        <div class="info-item"><strong>Telefone</strong><span>{whatsapp}</span></div>
-        <div class="info-item"><strong>E-mail</strong><span>{email}</span></div>
-        <div class="info-item"><strong>Data Abertura</strong><span>{data_fmt}</span></div>
+    <div class="cliente-grid">
+        <div class="cliente-item">
+            <strong>Empresa</strong>
+            <span>{empresa_nome}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Responsável</strong>
+            <span>{responsavel}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>CNPJ</strong>
+            <span>{cnpj_cliente}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Telefone</strong>
+            <span>{whatsapp}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>E-mail</strong>
+            <span>{email}</span>
+        </div>
+        <div class="cliente-item">
+            <strong>Data Abertura</strong>
+            <span>{data_fmt}</span>
+        </div>
     </div>
 </div>
 
@@ -2455,7 +2476,7 @@ def pdf_os(id):
         for item in itens_pedido:
             html += f'<tr><td>{item}</td></tr>'
     else:
-        html += '<tr><td style="text-align: center; padding: 30px; color: #888; font-style: italic;">Nenhum item registrado</td></tr>'
+        html += '<tr><td style="text-align: center; padding: 20px; color: #888;">Nenhum item registrado</td></tr>'
 
     html += '''
         </tbody>
@@ -2467,11 +2488,11 @@ def pdf_os(id):
     if dados_entrega:
         html += f'''
 <div class="section">
-    <div class="section-title">📍 Dados de Entrega / Nota Fiscal</div>
+    <div class="section-title">📍 Dados de Entrega / NF</div>
     <div class="box box-entrega">
-        {f'<p><strong>CNPJ para NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
-        {f'<p><strong>Endereço de Entrega:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
-        {f'<p><strong>Aos cuidados de:</strong> {dados_entrega["cuidados"]}</p>' if dados_entrega.get('cuidados') else ''}
+        {f'<p><strong>CNPJ NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
+        {f'<p><strong>Endereço:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
+        {f'<p><strong>A/C:</strong> {dados_entrega["cuidados"]}</p>' if dados_entrega.get('cuidados') else ''}
     </div>
 </div>
 '''
@@ -2490,8 +2511,8 @@ def pdf_os(id):
     # VALORES
     html += f'''
 <div class="valores">
-    <p><strong>Valor Cobrado Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
-    <p><strong>Valor por Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
+    <p><strong>Valor Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
+    <p><strong>Valor/Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
 </div>
 
 <!-- RODAPÉ -->
@@ -2499,14 +2520,10 @@ def pdf_os(id):
     <div class="assinatura">
         <div class="assinatura-line"></div>
         <p>Leandro</p>
-        <p class="cargo">LIRAPRINT - Departamento de Vendas</p>
-        <p style="font-size: 10pt; color: #888; margin-top: 5px;">Tel: (11) XXXXX-XXXX</p>
+        <p class="cargo">LIRAPRINT - Depto de Vendas</p>
     </div>
-    
     <div class="empresa-info">
-        <strong style="color: #2c3e50; font-size: 11pt;">LIRAPRINT</strong><br>
-        Guarulhos - SP<br>
-        Sistema de Gestão de Ordens de Serviço
+        <strong>LIRAPRINT</strong> | Guarulhos - SP
     </div>
 </div>
 
@@ -2521,8 +2538,7 @@ def pdf_os(id):
             "enable-local-file-access": None
         })
         return send_file(BytesIO(pdf), as_attachment=True, 
-                        download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf", 
-                        mimetype="application/pdf")
+                        download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf")
     except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
@@ -4914,7 +4930,6 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -4923,7 +4938,6 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -4931,7 +4945,6 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 3. Dados do Vendedor
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -4941,14 +4954,12 @@ def pdf_orcamento(id):
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
         except: pass
         
-        # 4. Data e Prazo
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
-        # 5. Itens
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -4975,10 +4986,9 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        # URL da Imagem
-        logo_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPIAAAAtCAYAAACUADZeAAAABGdBTUEAALGOfPtRkwAAACBjSFJNAACHDwAAjA8AAP1SAACBQAAAfXkAAOmLAAA85QAAGcxzPIV3AAAKL2lDQ1BJQ0MgUHJvZmlsZQAASMedlndUVNcWh8+9d3qhzTDSGXqTLjCA9C4gHQRRGGYGGMoAwwxNbIioQEQREQFFkKCAAaOhSKyIYiEoqGAPSBBQYjCKqKhkRtZKfHl57+Xl98e939pn73P32XuftS4AJE8fLi8FlgIgmS/g84O8nZ3oEZGRRHwLgAHGAB2MAwDFiIiI8AgfHw8A..."
+        # LOGO URL - SEU LINK AQUI!
+        logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # 6. HTML Final (COM FONTES MAIORES E LAYOUT AJUSTADO)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
@@ -4988,16 +4998,16 @@ def pdf_orcamento(id):
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 15px; /* AUMENTADO */
+        font-size: 15px;
         color: #1a1a1a; 
         line-height: 1.5;
         -webkit-print-color-adjust: exact;
     }}
     
     .header {{ text-align: center; margin-bottom: 25px; }}
-    .logo {{ max-width: 180px; margin-bottom: 10px; }}
+    .logo {{ max-width: 180px; margin-bottom: 15px; }}
     .titulo {{ 
-        font-size: 22px; /* AUMENTADO */
+        font-size: 22px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
@@ -5021,7 +5031,7 @@ def pdf_orcamento(id):
     
     .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }} /* AUMENTADO */
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }}
     th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
@@ -5046,7 +5056,6 @@ def pdf_orcamento(id):
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    /* RODAPÉ E ASSINATURA AJUSTADOS */
     .footer-area {{ 
         margin-top: 50px; 
         text-align: center; 
@@ -5072,7 +5081,7 @@ def pdf_orcamento(id):
 <body>
 
 <div class="header">
-    <img src="{logo_base64}" class="logo" alt="Logo">
+    <img src="{logo_url}" class="logo" alt="Logo" onerror="this.style.display='none'">
     <br>
     <div class="titulo">Proposta Comercial</div>
 </div>
@@ -5127,7 +5136,6 @@ def pdf_orcamento(id):
 </body>
 </html>'''
         
-        # Gera PDF com opções para tentar carregar a imagem
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
@@ -5136,10 +5144,7 @@ def pdf_orcamento(id):
             "margin-bottom": "10mm",
             "margin-left": "15mm",
             "margin-right": "15mm",
-            "enable-local-file-access": None,
-            "javascript-delay": "2000", # Espera mais tempo para carregar imagem
-            "images": None,
-            "disable-external-links": None # Tenta permitir links externos
+            "enable-local-file-access": None
         })
         
         return send_file(
@@ -5153,7 +5158,7 @@ def pdf_orcamento(id):
         print("ERRO PDF:", str(e))
         import traceback
         traceback.print_exc()
-        flash(" Erro ao gerar PDF: " + str(e))
+        flash("❌ Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_orcamentos'))
 
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
