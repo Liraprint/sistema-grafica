@@ -5071,7 +5071,6 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -5080,7 +5079,6 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -5088,7 +5086,6 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 3. Dados do Vendedor Logado
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -5098,14 +5095,12 @@ def pdf_orcamento(id):
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
         except: pass
         
-        # 4. Data e Prazo
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
-        # 5. Itens da Tabela
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -5122,76 +5117,74 @@ def pdf_orcamento(id):
                 
                 linhas_html += f'''
                 <tr>
-                    <td class="text-center" style="font-weight:bold;">{qtd}</td>
-                    <td style="font-weight: 600;">{desc}</td>
-                    <td>{material}</td>
-                    <td class="text-center">{cor}</td>
-                    <td class="text-right">R$ {vu:,.2f}</td>
-                    <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
+                    <td class="text-center" style="font-weight:bold; font-size: 13px;">{qtd}</td>
+                    <td style="font-weight: 600; font-size: 13px;">{desc}</td>
+                    <td style="font-size: 13px;">{material}</td>
+                    <td class="text-center" style="font-size: 13px;">{cor}</td>
+                    <td class="text-right" style="font-size: 13px;">R$ {vu:,.2f}</td>
+                    <td class="text-right" style="font-weight: 700; font-size: 13px;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # ==========================================
-        # HTML PRINCIPAL (SEM RODAPÉ NO BODY)
-        # ==========================================
+        # HTML PRINCIPAL COM FONTE MAIOR
         html_content = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 10mm; }}
+    @page {{ size: A4; margin: 12mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 13px;
+        font-size: 15px;
         color: #1a1a1a; 
-        line-height: 1.5;
+        line-height: 1.6;
     }}
-    .header {{ text-align: center; margin-bottom: 20px; }}
-    .logo {{ max-width: 150px; margin-bottom: 10px; }}
+    .header {{ text-align: center; margin-bottom: 25px; }}
+    .logo {{ max-width: 200px; margin-bottom: 15px; }}
     .titulo {{ 
-        font-size: 22px;
+        font-size: 26px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
         color: #2c3e50;
         border-bottom: 3px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 8px;
-        margin-bottom: 15px;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
     }}
-    .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 15px; }}
+    .data-line {{ text-align: right; font-size: 14px; color: #555; margin-bottom: 20px; }}
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 12px 15px; 
-        margin-bottom: 20px; 
-        border-left: 4px solid #2c3e50;
+        padding: 15px 18px; 
+        margin-bottom: 25px; 
+        border-left: 5px solid #2c3e50;
     }}
-    .client-info p {{ margin: 4px 0; font-size: 13px; }}
+    .client-info p {{ margin: 5px 0; font-size: 14px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
-    .table-title {{ font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
-    th, td {{ padding: 8px 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; }}
+    .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     .total-block {{ 
         text-align: right; 
-        margin-top: 15px; 
-        font-size: 18px;
+        margin-top: 20px; 
+        font-size: 20px;
         font-weight: 900; 
         color: #2c3e50; 
-        border-top: 2px solid #2c3e50;
-        padding-top: 10px;
+        border-top: 3px solid #2c3e50;
+        padding-top: 12px;
     }}
     .terms {{ 
-        margin-top: 20px; 
-        font-size: 12px; 
+        margin-top: 25px; 
+        font-size: 13px; 
         color: #444; 
-        padding: 10px 0;
+        padding: 12px 0;
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
@@ -5239,34 +5232,35 @@ def pdf_orcamento(id):
 </body>
 </html>'''
 
-        # ==========================================
-        # RODAPÉ INJETADO NATIVAMENTE PELO PDFKIT
-        # ==========================================
+        # RODAPÉ COM ESTILO MELHORADO E VISÍVEL
         footer_html = f'''
-        <div style="font-family: Arial, sans-serif; font-size: 11px; color: #333; border-top: 1px solid #ccc; padding-top: 8px; width: 100%; position: relative;">
-            <div style="text-align: center;">
-                <p style="margin: 3px 0;">Atenciosamente,</p>
-                <p style="margin: 5px 0; font-size: 13px; font-weight: bold; color: #2c3e50;">{usuario_logado}</p>
-                <p style="margin: 3px 0; color: #555;">LIRAPRINT - Depto de Vendas</p>
-                <p style="margin: 5px 0 2px 0; color: #888; font-size: 10px;">LIRAPRINT | Guarulhos - SP</p>
+        <div style="width: 100%; font-family: Arial, sans-serif; font-size: 12px; color: #333; border-top: 2px solid #2c3e50; padding: 15px 0; background-color: white;">
+            <div style="text-align: center; margin-bottom: 10px;">
+                <p style="margin: 5px 0; font-size: 13px;">Atenciosamente,</p>
+                <p style="margin: 8px 0; font-size: 16px; font-weight: bold; color: #2c3e50;">{usuario_logado}</p>
+                <p style="margin: 5px 0; font-size: 12px; color: #555; font-weight: 600;">LIRAPRINT - Depto de Vendas</p>
+                <p style="margin: 8px 0 5px 0; color: #888; font-size: 11px;">LIRAPRINT | Guarulhos - SP</p>
             </div>
-            <p style="position: absolute; right: 0; bottom: 0; font-size: 10px; font-weight: bold; color: #7f8c8d; margin: 0;">Ref: {orc.get('codigo_servico', '—')}</p>
+            <p style="text-align: right; font-size: 11px; font-weight: bold; color: #7f8c8d; margin: 0;">Ref: {orc.get('codigo_servico', '—')}</p>
         </div>
         '''
 
-        # GERAÇÃO DO PDF
+        # GERAÇÃO DO PDF COM OPÇÕES OTIMIZADAS
         pdf = pdfkit.from_string(html_content, False, options={
             "quiet": "",
             "encoding": "UTF-8",
             "page-size": "A4",
-            "margin-top": "10mm",
-            "margin-bottom": "45mm",       # Reserva espaço exato para o rodapé
-            "margin-left": "10mm",
-            "margin-right": "10mm",
-            "footer-html": footer_html,    # Rodapé fixo nativo do wkhtmltopdf
-            "footer-spacing": 8,           # Espaço entre o texto e o rodapé
+            "margin-top": "12mm",
+            "margin-bottom": "50mm",
+            "margin-left": "12mm",
+            "margin-right": "12mm",
+            "footer-html": footer_html,
+            "footer-spacing": 10,
             "enable-local-file-access": None,
-            "print-media-type": None
+            "print-media-type": None,
+            "javascript-delay": "1000",
+            "no-stop-slow-scripts": None,
+            "disable-smart-width": None
         })
         
         return send_file(
