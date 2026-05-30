@@ -2219,17 +2219,21 @@ def imprimir_os(id):
 def pdf_os(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
-        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email,cnpj,endereco,bairro,cidade,estado),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
+        # Busca dados do serviço
+        url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email,cnpj),materiais_usados(*,materiais(denominacao))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
         if response.status_code != 200 or not response.json():
             flash("Serviço não encontrado.")
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
+        print(f"Erro ao carregar OS: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
+    # Dados básicos
     empresa = servico.get('empresas') or {}
     empresa_nome = empresa.get('nome_empresa') or '—'
     responsavel = empresa.get('responsavel') or '—'
@@ -2237,14 +2241,8 @@ def pdf_os(id):
     email = empresa.get('email') or '—'
     cnpj_cliente = empresa.get('cnpj') or '—'
     
-    try:
-        custo_materiais = sum(float(m.get('valor_total', 0) or 0) for m in servico.get('materiais_usados', []) if m and m.get('materiais'))
-    except:
-        custo_materiais = 0.0
-        
+    # Cálculos
     valor_cobrado = float(servico.get('valor_cobrado', 0) or 0)
-    lucro = valor_cobrado - custo_materiais
-    
     try:
         quantidade = float(servico.get('quantidade') or 1)
     except:
@@ -2252,36 +2250,43 @@ def pdf_os(id):
         
     valor_por_unidade = valor_cobrado / quantidade if quantidade > 0 else 0
     
-    obs = servico.get('observacoes') or ''
-    dados_entrega = {}
+    # Extrair dados das observações (AQUI ESTÁ A MÁGICA)
+    obs_completa = servico.get('observacoes') or ''
     itens_pedido = []
+    dados_entrega = {}
+    obs_geral = ''
     
-    if '--- DADOS DE ENTREGA/NF ---' in obs:
-        partes = obs.split('--- DADOS DE ENTREGA/NF ---')
-        obs_principal = partes[0].strip()
+    # Verifica se tem a marcação de dados de entrega
+    if '--- DADOS DE ENTREGA/NF ---' in obs_completa:
+        partes = obs_completa.split('--- DADOS DE ENTREGA/NF ---')
+        obs_geral = partes[0].strip()
         
-        if 'ITENS DO PEDIDO:' in obs_principal:
-            itens_parte = obs_principal.split('ITENS DO PEDIDO:')[1].strip()
-            linhas_itens = itens_parte.split('\n')
-            for linha in linhas_itens:
+        # Extrai a lista de itens do pedido que está nas observações
+        if 'ITENS DO PEDIDO:' in obs_geral:
+            texto_itens = obs_geral.split('ITENS DO PEDIDO:')[1].strip()
+            linhas = texto_itens.split('\n')
+            for linha in linhas:
                 linha = linha.strip()
                 if linha and linha[0].isdigit():
                     itens_pedido.append(linha)
-            obs_principal = obs_principal.split('ITENS DO PEDIDO:')[0].strip()
+            # Remove os itens da obs geral para não repetir
+            obs_geral = obs_geral.split('ITENS DO PEDIDO:')[0].strip()
         
+        # Extrai dados de entrega
         dados_parte = partes[1].strip().split('\n')
         for linha in dados_parte:
             linha = linha.strip()
             if ':' in linha:
-                if 'CNPJ para NF' in linha:
-                    dados_entrega['cnpj_nf'] = linha.split(':', 1)[1].strip()
+                if 'CNPJ para NF' in linha or 'Nota Fiscal para CNPJ' in linha:
+                    dados_entrega['cnpj'] = linha.split(':', 1)[1].strip()
                 elif 'Endereço de entrega' in linha:
                     dados_entrega['endereco'] = linha.split(':', 1)[1].strip()
                 elif 'Aos cuidados de' in linha:
                     dados_entrega['cuidados'] = linha.split(':', 1)[1].strip()
     else:
-        obs_principal = obs
+        obs_geral = obs_completa
     
+    # Formata data
     data_abertura = servico.get('data_abertura', '')
     if data_abertura:
         if 'T' in data_abertura:
@@ -2294,171 +2299,56 @@ def pdf_os(id):
     else:
         data_fmt = datetime.now().strftime('%d/%m/%Y')
     
+    # URL do logo (Substitua pelo link direto do ImgBB se o postimg falhar)
     logo_url = "https://i.postimg.cc/HLZYsKSY/logo.png"
     
+    # MONTAGEM DO HTML
     html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
     @page {{ size: A4; margin: 15mm 20mm; }}
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{ 
-        font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 12px;
-        color: #1a1a1a; 
-        line-height: 1.4;
-        -webkit-print-color-adjust: exact;
-    }}
-    .header {{ 
-        text-align: center; 
-        margin-bottom: 25px; 
-        border-bottom: 3px solid #2c3e50;
-        padding-bottom: 15px;
-    }}
-    .logo {{ max-width: 150px; margin-bottom: 10px; }}
-    .titulo {{ 
-        font-size: 24px;
-        font-weight: 800; 
-        text-transform: uppercase; 
-        letter-spacing: 3px; 
-        color: #2c3e50;
-        margin-top: 10px;
-    }}
-    .codigo {{ 
-        font-size: 14px;
-        color: #555; 
-        margin-top: 5px;
-        font-weight: 600;
-    }}
-    .info-section {{ 
-        margin-bottom: 20px;
-    }}
-    .info-grid {{ 
-        display: grid; 
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 15px;
-    }}
-    .info-item {{ 
-        font-size: 11px;
-    }}
-    .info-item strong {{ 
-        color: #2c3e50; 
-        display: block;
-        margin-bottom: 3px;
-        font-size: 10px;
-        text-transform: uppercase;
-    }}
-    .info-item span {{ 
-        font-size: 12px;
-        color: #333;
-    }}
-    .table-section {{ 
-        margin: 25px 0;
-    }}
-    .section-title {{ 
-        font-size: 14px;
-        font-weight: 700; 
-        text-transform: uppercase; 
-        margin-bottom: 10px; 
-        color: #2c3e50;
-        border-bottom: 2px solid #2c3e50;
-        padding-bottom: 5px;
-    }}
-    table {{ 
-        width: 100%; 
-        border-collapse: collapse; 
-        margin-bottom: 15px;
-        font-size: 11px;
-    }}
-    th {{ 
-        background: #2c3e50; 
-        color: white; 
-        font-weight: 700; 
-        padding: 8px 6px; 
-        text-align: left;
-        font-size: 10px;
-        text-transform: uppercase;
-    }}
-    td {{ 
-        padding: 8px 6px; 
-        border-bottom: 1px solid #ddd;
-        font-size: 11px;
-    }}
+    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; color: #333; line-height: 1.5; }}
+    
+    /* Cabeçalho */
+    .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; }}
+    .logo {{ max-width: 180px; margin-bottom: 15px; }}
+    .titulo {{ font-size: 26pt; font-weight: 800; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 10px 0; }}
+    .codigo {{ font-size: 13pt; color: #555; font-weight: 600; }}
+    
+    /* Seções */
+    .section {{ margin-bottom: 25px; }}
+    .section-title {{ font-size: 13pt; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }}
+    
+    /* Grid Info */
+    .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+    .info-item strong {{ color: #2c3e50; display: block; margin-bottom: 3px; font-size: 9pt; text-transform: uppercase; }}
+    .info-item span {{ font-size: 11pt; color: #333; }}
+    
+    /* Tabela */
+    table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10.5pt; }}
+    th {{ background: #2c3e50; color: white; padding: 10px 8px; text-align: left; font-size: 9.5pt; }}
+    td {{ padding: 10px 8px; border-bottom: 1px solid #ddd; font-size: 10.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
-    .text-center {{ text-align: center; }}
-    .text-right {{ text-align: right; }}
-    .entrega-box {{ 
-        background: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 12px;
-        margin: 15px 0;
-    }}
-    .entrega-box p {{ 
-        margin: 5px 0;
-        font-size: 11px;
-    }}
-    .entrega-box strong {{ 
-        color: #2c3e50;
-        margin-right: 5px;
-    }}
-    .valores-box {{ 
-        background: #f0f8ff;
-        border-left: 4px solid #3498db;
-        padding: 12px;
-        margin: 20px 0;
-    }}
-    .valores-box p {{ 
-        margin: 6px 0;
-        font-size: 12px;
-        display: flex;
-        justify-content: space-between;
-    }}
-    .valores-box .destaque {{ 
-        color: #27ae60;
-        font-weight: 700;
-        font-size: 14px;
-    }}
-    .obs-box {{ 
-        background: #fffef0;
-        border: 1px solid #f0e68c;
-        border-radius: 5px;
-        padding: 12px;
-        margin: 15px 0;
-        font-size: 11px;
-    }}
-    .footer {{ 
-        margin-top: 40px; 
-        text-align: center; 
-        border-top: 1px solid #ddd;
-        padding-top: 15px;
-    }}
-    .assinatura {{ 
-        margin: 30px 0;
-        text-align: center;
-    }}
-    .assinatura-line {{ 
-        border-top: 1px solid #333;
-        width: 250px;
-        margin: 0 auto 10px auto;
-        padding-top: 5px;
-    }}
-    .assinatura p {{ 
-        font-size: 12px;
-        font-weight: 600;
-        color: #2c3e50;
-    }}
-    .assinatura .cargo {{ 
-        font-size: 11px;
-        color: #666;
-    }}
-    .empresa-info {{ 
-        font-size: 10px; 
-        color: #888; 
-        margin-top: 20px;
-    }}
+    
+    /* Caixas */
+    .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 0 5px 5px 0; }}
+    .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
+    .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
+    
+    /* Valores */
+    .valores {{ background: #f0f8ff; border: 2px solid #3498db; border-radius: 8px; padding: 15px; margin: 25px 0; }}
+    .valores p {{ margin: 8px 0; font-size: 11pt; display: flex; justify-content: space-between; }}
+    .destaque {{ color: #27ae60; font-weight: 800; font-size: 14pt; }}
+    
+    /* Rodapé */
+    .footer {{ margin-top: 50px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 25px; }}
+    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 300px; margin: 0 auto 12px auto; padding-top: 8px; }}
+    .empresa-info {{ font-size: 9pt; color: #888; margin-top: 25px; }}
+    
+    ul {{ margin: 10px 0; padding-left: 25px; }}
+    li {{ margin: 6px 0; font-size: 10.5pt; }}
 </style>
 </head>
 <body>
@@ -2469,179 +2359,116 @@ def pdf_os(id):
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
 
-<div class="info-section">
-    <div class="section-title">Cliente</div>
+<!-- CLIENTE -->
+<div class="section">
+    <div class="section-title">📋 Cliente</div>
     <div class="info-grid">
-        <div class="info-item">
-            <strong>Empresa</strong>
-            <span>{empresa_nome}</span>
-        </div>
-        <div class="info-item">
-            <strong>Responsável</strong>
-            <span>{responsavel}</span>
-        </div>
-        <div class="info-item">
-            <strong>CNPJ</strong>
-            <span>{cnpj_cliente}</span>
-        </div>
-        <div class="info-item">
-            <strong>Telefone</strong>
-            <span>{whatsapp}</span>
-        </div>
-        <div class="info-item">
-            <strong>E-mail</strong>
-            <span>{email}</span>
-        </div>
-        <div class="info-item">
-            <strong>Data Abertura</strong>
-            <span>{data_fmt}</span>
-        </div>
+        <div class="info-item"><strong>Empresa</strong><span>{empresa_nome}</span></div>
+        <div class="info-item"><strong>Responsável</strong><span>{responsavel}</span></div>
+        <div class="info-item"><strong>CNPJ</strong><span>{cnpj_cliente}</span></div>
+        <div class="info-item"><strong>Telefone</strong><span>{whatsapp}</span></div>
+        <div class="info-item"><strong>E-mail</strong><span>{email}</span></div>
+        <div class="info-item"><strong>Data Abertura</strong><span>{data_fmt}</span></div>
     </div>
 </div>
 
-<div class="info-section">
-    <div class="section-title">Detalhes do Serviço</div>
+<!-- DETALHES -->
+<div class="section">
+    <div class="section-title">🔧 Detalhes do Serviço</div>
     <div class="info-grid">
-        <div class="info-item">
-            <strong>Título</strong>
-            <span>{servico.get('titulo') or '—'}</span>
-        </div>
-        <div class="info-item">
-            <strong>Status</strong>
-            <span>{servico.get('status') or 'Pendente'}</span>
-        </div>
-        <div class="info-item">
-            <strong>Quantidade Total</strong>
-            <span>{int(quantidade) if quantidade.is_integer() else quantidade} un</span>
-        </div>
-        <div class="info-item">
-            <strong>Dimensão</strong>
-            <span>{servico.get('dimensao') or '—'}</span>
-        </div>
-        <div class="info-item">
-            <strong>Nº Cores</strong>
-            <span>{servico.get('numero_cores') or '—'}</span>
-        </div>
-        <div class="info-item">
-            <strong>Previsão Entrega</strong>
-            <span>{servico.get('previsao_entrega', '—')[:10] if servico.get('previsao_entrega') else '—'}</span>
-        </div>
+        <div class="info-item"><strong>Título</strong><span>{servico.get('titulo') or '—'}</span></div>
+        <div class="info-item"><strong>Status</strong><span>{servico.get('status') or 'Pendente'}</span></div>
+        <div class="info-item"><strong>Quantidade Total</strong><span style="color:#27ae60; font-weight:700; font-size:12pt;">{int(quantidade) if quantidade.is_integer() else quantidade} un</span></div>
+        <div class="info-item"><strong>Dimensão</strong><span>{servico.get('dimensao') or '—'}</span></div>
+        <div class="info-item"><strong>Nº Cores</strong><span>{servico.get('numero_cores') or '—'}</span></div>
+        <div class="info-item"><strong>Previsão Entrega</strong><span>{servico.get('previsao_entrega', '—')[:10] if servico.get('previsao_entrega') else '—'}</span></div>
     </div>
 </div>
 
-<div class="table-section">
-    <div class="section-title">Itens do Serviço</div>
+<!-- ITENS DO SERVIÇO (AQUI MOSTRA A LISTA QUE ESTAVA NAS OBSERVAÇÕES) -->
+<div class="section">
+    <div class="section-title">📦 Itens do Serviço</div>
     <table>
         <thead>
             <tr>
-                <th width="40%">Descrição</th>
-                <th width="15%" class="text-center">Qtd</th>
-                <th width="20%">Dimensão</th>
-                <th width="15%" class="text-center">Cores</th>
-                <th width="10%" class="text-right">Valor Unit.</th>
+                <th width="100%">Descrição do Item</th>
             </tr>
         </thead>
         <tbody>
 '''
-
-    materiais = servico.get('materiais_usados', [])
-    if materiais:
-        for mat in materiais:
-            if mat and mat.get('materiais'):
-                qtd = mat.get('quantidade_usada', 0)
-                qtd_fmt = int(qtd) if float(qtd).is_integer() else qtd
-                html += f'''
-            <tr>
-                <td>{mat['materiais']['denominacao']}</td>
-                <td class="text-center">{qtd_fmt}</td>
-                <td>{mat.get('dimensao') or '—'}</td>
-                <td class="text-center">{mat.get('numero_cores') or '—'}</td>
-                <td class="text-right">R$ {mat['valor_unitario']:.2f}</td>
-            </tr>'''
+    # Lógica para preencher a tabela com os itens extraídos
+    if itens_pedido:
+        for item in itens_pedido:
+            html += f'<tr><td>{item}</td></tr>'
     else:
-        html += '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #888;">Nenhum material registrado</td></tr>'
+        # Tenta buscar na tabela materiais_usados se não achou nas observações
+        materiais = servico.get('materiais_usados', [])
+        if materiais:
+            for mat in materiais:
+                if mat and mat.get('materiais'):
+                    qtd = mat.get('quantidade_usada', 0)
+                    nome = mat['materiais']['denominacao']
+                    html += f'<tr><td><strong>{nome}</strong> - Qtd: {qtd}</td></tr>'
+        else:
+            html += '<tr><td style="text-align: center; padding: 20px; color: #888;">Nenhum item registrado</td></tr>'
 
     html += '''
         </tbody>
     </table>
 </div>
 
+<!-- DADOS DE ENTREGA -->
 '''
-
-    if dados_entrega or itens_pedido:
+    if dados_entrega:
         html += f'''
-<div class="entrega-box">
-    <div class="section-title" style="margin-bottom: 10px; font-size: 12px;">📦 Dados de Entrega / Nota Fiscal</div>
-'''
-        if itens_pedido:
-            html += '<p><strong>Itens do Pedido:</strong></p><ul style="margin: 5px 0; padding-left: 20px;">'
-            for item in itens_pedido:
-                html += f'<li style="margin: 3px 0; font-size: 11px;">{item}</li>'
-            html += '</ul>'
-        
-        if dados_entrega.get('cnpj_nf'):
-            html += f'<p><strong>CNPJ para NF:</strong> {dados_entrega["cnpj_nf"]}</p>'
-        if dados_entrega.get('endereco'):
-            html += f'<p><strong>Endereço de Entrega:</strong> {dados_entrega["endereco"]}</p>'
-        if dados_entrega.get('cuidados'):
-            html += f'<p><strong>Aos cuidados de:</strong> {dados_entrega["cuidados"]}</p>'
-        
-        html += '</div>'
-
-    if obs_principal and obs_principal.strip():
-        html += f'''
-<div class="obs-box">
-    <strong>📝 Observações:</strong><br>
-    {obs_principal.replace(chr(10), "<br>")}
+<div class="section">
+    <div class="section-title"> Dados de Entrega / Nota Fiscal</div>
+    <div class="box box-entrega">
+        {f'<p><strong>CNPJ para NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
+        {f'<p><strong>Endereço de Entrega:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
+        {f'<p><strong>Aos cuidados de:</strong> {dados_entrega["cuidados"]}</p>' if dados_entrega.get('cuidados') else ''}
+    </div>
 </div>
 '''
 
+    # Observações
+    if obs_geral and obs_geral.strip():
+        html += f'''
+<div class="section">
+    <div class="section-title">📝 Observações</div>
+    <div class="box box-obs">
+        {obs_geral.replace(chr(10), "<br>")}
+    </div>
+</div>
+'''
+
+    # Valores
     html += f'''
-<div class="valores-box">
-    <p><strong>Valor Cobrado Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
-    <p><strong>Custo com Materiais:</strong> <span>R$ {custo_materiais:.2f}</span></p>
+<div class="valores">
+    <p><strong>Valor Cobrado Total:</strong> <span style="font-weight:700;">R$ {valor_cobrado:.2f}</span></p>
     <p><strong>Valor por Unidade:</strong> <span>R$ {valor_por_unidade:.2f}</span></p>
-    <p style="border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 8px;">
-        <strong>Lucro Estimado:</strong> <span class="destaque">R$ {lucro:.2f}</span>
-    </p>
 </div>
 
 <div class="footer">
     <div class="assinatura">
         <div class="assinatura-line"></div>
         <p>Leandro</p>
-        <p class="cargo">LIRAPRINT - Departamento de Vendas</p>
+        <p style="font-size: 10pt; color: #666;">LIRAPRINT - Departamento de Vendas</p>
     </div>
-    
-    <div class="empresa-info">
-        LIRAPRINT | Guarulhos - SP<br>
-        Sistema de Gestão de Ordens de Serviço
-    </div>
+    <div class="empresa-info">LIRAPRINT | Guarulhos - SP</div>
 </div>
 
 </body>
 </html>'''
 
+    # Gerar PDF
     try:
         pdf = pdfkit.from_string(html, False, options={
-            "quiet": "",
-            "encoding": "UTF-8",
-            "page-size": "A4",
-            "margin-top": "10mm",
-            "margin-bottom": "10mm",
-            "margin-left": "15mm",
-            "margin-right": "15mm",
-            "enable-local-file-access": None,
-            "javascript-delay": "2000",
-            "images": None
+            "quiet": "", "encoding": "UTF-8", "page-size": "A4",
+            "margin-top": "10mm", "margin-bottom": "10mm", "margin-left": "15mm", "margin-right": "15mm",
+            "enable-local-file-access": None
         })
-        
-        return send_file(
-            BytesIO(pdf),
-            as_attachment=True,
-            download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf",
-            mimetype="application/pdf"
-        )
+        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf", mimetype="application/pdf")
     except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
