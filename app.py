@@ -1865,22 +1865,23 @@ def confirmar_aceite_orcamento(id):
         orcamento = resp.json()[0]
         empresa = orcamento.get('empresas', {})
         
-        # Dados da empresa
+        # Dados cadastrados
         cnpj_cadastrado = empresa.get('cnpj', '')
-        endereco_cadastrado = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
+        cep_cadastrado = empresa.get('cep', '')
+        endereco_principal = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         
-        # Endereço de entrega (se tiver)
-        entrega_cadastrada = empresa.get('entrega_endereco')
-        if entrega_cadastrada:
-            endereco_entrega_padrao = f"{entrega_cadastrada}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
-            cep_entrega_padrao = empresa.get('entrega_cep', '')
+        # Endereço de entrega (prioriza se existir, senão usa o principal)
+        entrega_end = empresa.get('entrega_endereco')
+        if entrega_end:
+            endereco_entrega_padrao = f"{entrega_end}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
+            cep_entrega_padrao = empresa.get('entrega_cep', '') or cep_cadastrado
         else:
-            endereco_entrega_padrao = endereco_cadastrado
-            cep_entrega_padrao = empresa.get('cep', '')
+            endereco_entrega_padrao = endereco_principal
+            cep_entrega_padrao = cep_cadastrado
             
     except Exception as e:
-        print(f"Erro: {e}")
-        flash("❌ Erro ao carregar dados")
+        print(f"Erro ao carregar dados: {e}")
+        flash("❌ Erro ao carregar dados do orçamento.")
         return redirect(url_for('listar_orcamentos'))
     
     return f'''
@@ -1890,24 +1891,25 @@ def confirmar_aceite_orcamento(id):
     <meta charset="UTF-8">
     <title>Confirmar Aceite do Orçamento</title>
     <style>
-    body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-    .container {{ max-width: 750px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-    .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-    .content {{ padding: 30px; }}
-    .form-group {{ margin-bottom: 25px; }}
-    label.title-label {{ display: block; margin-bottom: 12px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
-    .radio-option {{ display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; cursor: pointer; padding: 12px; border-radius: 6px; transition: background 0.2s; }}
-    .radio-option:hover {{ background: #f0f4f8; }}
-    .radio-option input {{ width: 18px; height: 18px; margin: 3px 0 0 0; cursor: pointer; }}
-    .radio-option span {{ font-size: 14px; flex: 1; }}
-    .radio-option small {{ display: block; color: #666; margin-top: 5px; font-size: 12px; }}
-    .hidden {{ display: none; }}
-    input[type="text"], textarea, input[type="number"] {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; font-size: 14px; }}
-    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-    .cep-info {{ background: #e8f4f8; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #2980b9; }}
-    .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
-    .btn-cancel {{ background: #95a5a6; }}
-    .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 750px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .form-group {{ margin-bottom: 25px; }}
+        label.title-label {{ display: block; margin-bottom: 12px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
+        .radio-option {{ display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; cursor: pointer; padding: 12px; border-radius: 6px; transition: background 0.2s; }}
+        .radio-option:hover {{ background: #f0f4f8; }}
+        .radio-option input {{ width: 18px; height: 18px; margin: 3px 0 0 0; cursor: pointer; }}
+        .radio-option span {{ font-size: 14px; flex: 1; }}
+        .hidden {{ display: none; }}
+        input[type="text"], textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; font-size: 14px; }}
+        .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+        .info-box {{ background: #e8f4f8; padding: 12px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #2980b9; border-left: 4px solid #3498db; }}
+        .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
+        .btn-cancel {{ background: #95a5a6; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        .field-group {{ margin-top: 10px; }}
+        .field-group label {{ font-size: 12px; font-weight: bold; margin-bottom: 4px; display: block; }}
     </style>
     </head>
     <body>
@@ -1918,12 +1920,12 @@ def confirmar_aceite_orcamento(id):
             <p><strong>Orçamento:</strong> {orcamento.get('codigo_servico')} - {orcamento.get('titulo')}</p>
             <p><strong>Cliente:</strong> {empresa.get('nome_empresa')}</p>
             
-            <form method="post" action="/processar_aceite_orcamento/{id}">
+            <form method="post" action="/processar_aceite_orcamento/{id}" id="formAceite">
                 
-                <!-- CNPJ PARA NOTA FISCAL -->
+                <!-- CNPJ -->
                 <div class="form-group">
                     <label class="title-label">🧾 CNPJ para emissão da Nota Fiscal</label>
-                    <div class="cep-info">
+                    <div class="info-box">
                         <strong>CNPJ Cadastrado:</strong> {cnpj_cadastrado or 'Não informado'}
                     </div>
                     <label class="radio-option">
@@ -1934,66 +1936,68 @@ def confirmar_aceite_orcamento(id):
                         <input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()">
                         <span>Usar outro CNPJ</span>
                     </label>
-                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCNPJ(this)">
+                    <div id="campo_cnpj_novo" class="hidden field-group">
+                        <input type="text" name="cnpj_nota_fiscal" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCNPJ(this)">
+                    </div>
                 </div>
                 
-                <!-- ENDEREÇO DE ENTREGA -->
+                <!-- Endereço de Entrega -->
                 <div class="form-group">
-                    <label class="title-label"> Endereço de Entrega</label>
-                    <div class="cep-info">
+                    <label class="title-label">📍 Endereço de Entrega</label>
+                    <div class="info-box">
                         <strong>CEP Cadastrado:</strong> {cep_entrega_padrao or 'Não informado'}<br>
                         <strong>Endereço:</strong> {endereco_entrega_padrao}
                     </div>
                     <label class="radio-option">
                         <input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()">
-                        <span>Usar endereço cadastrado:<br><small style="color:#666;">{endereco_entrega_padrao}</small></span>
+                        <span>Usar endereço cadastrado</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()">
                         <span>Usar outro endereço de entrega</span>
                     </label>
                     
-                    <!-- CAMPOS PARA NOVO ENDEREÇO COM CEP -->
+                    <!-- Campos para novo endereço -->
                     <div id="campo_endereco_novo" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
                         <div class="grid-2">
-                            <div>
-                                <label style="font-size: 12px; font-weight: bold;">CEP *</label>
+                            <div class="field-group">
+                                <label>CEP *</label>
                                 <input type="text" id="novo_cep" name="novo_cep" placeholder="00000-000" maxlength="9" onblur="buscarCEP()">
                             </div>
-                            <div>
-                                <label style="font-size: 12px; font-weight: bold;">Número *</label>
+                            <div class="field-group">
+                                <label>Número *</label>
                                 <input type="text" id="novo_numero" name="novo_numero" placeholder="123">
                             </div>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <label style="font-size: 12px; font-weight: bold;">Endereço</label>
+                        <div class="field-group">
+                            <label>Endereço</label>
                             <input type="text" id="novo_endereco" name="novo_endereco" placeholder="Rua/Avenida" readonly style="background: #e9ecef;">
                         </div>
-                        <div class="grid-2" style="margin-top: 10px;">
-                            <div>
-                                <label style="font-size: 12px; font-weight: bold;">Bairro</label>
+                        <div class="grid-2">
+                            <div class="field-group">
+                                <label>Bairro</label>
                                 <input type="text" id="novo_bairro" name="novo_bairro" readonly style="background: #e9ecef;">
                             </div>
-                            <div>
-                                <label style="font-size: 12px; font-weight: bold;">Cidade - UF</label>
+                            <div class="field-group">
+                                <label>Cidade - UF</label>
                                 <input type="text" id="novo_cidade" name="novo_cidade" readonly style="background: #e9ecef;">
                             </div>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <label style="font-size: 12px; font-weight: bold;">Complemento</label>
+                        <div class="field-group">
+                            <label>Complemento</label>
                             <input type="text" id="novo_complemento" name="novo_complemento" placeholder="Apto, Sala, Bloco...">
                         </div>
                         <input type="hidden" name="endereco_entrega_os" id="endereco_completo">
                     </div>
                 </div>
                 
-                <!-- AOS CUIDADOS DE -->
+                <!-- Aos cuidados de -->
                 <div class="form-group">
                     <label class="title-label">👤 Entrega aos cuidados de</label>
                     <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{empresa.get('responsavel', '')}">
                 </div>
                 
-                <!-- OBSERVAÇÕES DE ENTREGA -->
+                <!-- Observações -->
                 <div class="form-group">
                     <label class="title-label">📝 Observações para entrega (opcional)</label>
                     <textarea name="observacoes_entrega" rows="2" placeholder="Ex: Entregar na recepção, ligar antes, etc."></textarea>
@@ -2008,21 +2012,23 @@ def confirmar_aceite_orcamento(id):
     </div>
     
     <script>
+    // Toggle CNPJ
     function toggleCNPJ() {{
         const radios = document.getElementsByName('usar_cnpj_cadastrado');
         const campo = document.getElementById('campo_cnpj_novo');
         for (let r of radios) {{
             if (r.checked && r.value === 'nao') {{
                 campo.classList.remove('hidden');
-                campo.setAttribute('required', 'required');
+                campo.querySelector('input').setAttribute('required', 'required');
                 return;
             }}
         }}
         campo.classList.add('hidden');
-        campo.removeAttribute('required');
-        campo.value = '';
+        campo.querySelector('input').removeAttribute('required');
+        campo.querySelector('input').value = '';
     }}
     
+    // Toggle Endereço
     function toggleEndereco() {{
         const radios = document.getElementsByName('usar_endereco_cadastrado');
         const campo = document.getElementById('campo_endereco_novo');
@@ -2040,29 +2046,23 @@ def confirmar_aceite_orcamento(id):
         limparCamposEndereco();
     }}
     
+    // Buscar CEP
     function buscarCEP() {{
         const cep = document.getElementById('novo_cep').value.replace(/\\D/g, '');
         if (cep.length !== 8) {{
-            alert('CEP inválido!');
+            if(cep.length > 0) alert('CEP inválido! Digite 8 números.');
             return;
         }}
-        
-        fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+        fetch('https://viacep.com.br/ws/' + cep + '/json/')
             .then(response => response.json())
             .then(data => {{
-                if (data.erro) {{
-                    alert('CEP não encontrado!');
-                    return;
-                }}
+                if (data.erro) {{ alert('CEP não encontrado!'); return; }}
                 document.getElementById('novo_endereco').value = data.logradouro;
                 document.getElementById('novo_bairro').value = data.bairro;
                 document.getElementById('novo_cidade').value = data.localidade + ' - ' + data.uf;
                 document.getElementById('novo_numero').focus();
             }})
-            .catch(error => {{
-                console.error('Erro:', error);
-                alert('Erro ao buscar CEP. Tente novamente.');
-            }});
+            .catch(error => console.error('Erro:', error));
     }}
     
     function limparCamposEndereco() {{
@@ -2074,7 +2074,7 @@ def confirmar_aceite_orcamento(id):
         document.getElementById('novo_complemento').value = '';
     }}
     
-    // Máscara automática para CNPJ
+    // Máscara CNPJ
     function mascaraCNPJ(input) {{
         let value = input.value.replace(/\\D/g, "");
         value = value.replace(/^(\\d{{2}})(\\d)/, "$1.$2");
@@ -2084,8 +2084,8 @@ def confirmar_aceite_orcamento(id):
         input.value = value;
     }}
     
-    // Atualizar campo hidden antes de enviar
-    document.querySelector('form').addEventListener('submit', function(e) {{
+    // Preparar endereço antes do envio (COM CEP INCLUÍDO)
+    document.getElementById('formAceite').addEventListener('submit', function(e) {{
         const usarCadastrado = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
         if (usarCadastrado === 'nao') {{
             const cep = document.getElementById('novo_cep').value;
@@ -2095,8 +2095,8 @@ def confirmar_aceite_orcamento(id):
             const cidade = document.getElementById('novo_cidade').value;
             const complemento = document.getElementById('novo_complemento').value;
             
-            // ✅ ADICIONA O CEP NO INÍCIO DO ENDEREÇO
-            const enderecoCompleto = `CEP: ${cep} - ${endereco}, ${numero} - ${bairro}, ${cidade}${complemento ? ' (' + complemento + ')' : ''}`;
+            // Concatenação padrão para evitar conflito com f-string do Python
+            const enderecoCompleto = 'CEP: ' + cep + ' - ' + endereco + ', ' + numero + ' - ' + bairro + ', ' + cidade + (complemento ? ' (' + complemento + ')' : '');
             document.getElementById('endereco_completo').value = enderecoCompleto;
         }}
     }});
