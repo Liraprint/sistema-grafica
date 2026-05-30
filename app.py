@@ -5071,7 +5071,6 @@ def pdf_orcamento(id):
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados do orçamento
         url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,cnpj,telefone,email),itens_orcamento(*)"
         resp = requests.get(url, headers=headers)
         orc = resp.json()[0] if resp.json() else None
@@ -5080,7 +5079,6 @@ def pdf_orcamento(id):
             flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        # 2. Dados do Cliente
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
         responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
@@ -5088,7 +5086,6 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # 3. Dados do Vendedor
         usuario_logado = session.get('usuario', '')
         tel_vendedor = ""
         try:
@@ -5098,15 +5095,12 @@ def pdf_orcamento(id):
                 tel_vendedor = resp_user.json()[0].get('telefone', '')
         except: pass
         
-        # 4. Formatação de Data
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
-        
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
             
-        # 5. Geração das Linhas da Tabela
         linhas_html = ""
         total_geral = 0.0
         itens = orc.get('itens_orcamento', [])
@@ -5135,101 +5129,70 @@ def pdf_orcamento(id):
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # 6. HTML Final (COM RODAPÉ FIXO E MARGENS MÍNIMAS)
+        # HTML PRINCIPAL (sem footer)
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    /* Remove margens da página para aproveitar o papel */
-    @page {{ size: A4; margin: 0; }}
-    
+    @page {{ size: A4; margin: 10mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 13px; /* Fonte levemente menor para caber mais */
+        font-size: 13px;
         color: #1a1a1a; 
-        line-height: 1.4;
-        /* Padding: Top 5mm, Right 5mm, Bottom 60mm (espaço pro rodapé), Left 5mm */
-        padding: 5mm 5mm 60mm 5mm; 
+        line-height: 1.5;
     }}
     
     .header {{ text-align: center; margin-bottom: 20px; }}
     .logo {{ max-width: 150px; margin-bottom: 10px; }}
     .titulo {{ 
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 800; 
         text-transform: uppercase; 
         letter-spacing: 4px; 
         color: #2c3e50;
-        border-bottom: 2px solid #2c3e50;
+        border-bottom: 3px solid #2c3e50;
         display: inline-block;
-        padding-bottom: 5px;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
     }}
-    .data-line {{ text-align: right; font-size: 12px; color: #555; margin-bottom: 15px; }}
+    .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 15px; }}
     
     .client-info {{ 
         background: #f8f9fa; 
-        padding: 10px 15px; 
+        padding: 12px 15px; 
         margin-bottom: 20px; 
         border-left: 4px solid #2c3e50;
     }}
-    .client-info p {{ margin: 3px 0; font-size: 13px; }}
+    .client-info p {{ margin: 4px 0; font-size: 13px; }}
     .client-info strong {{ color: #2c3e50; font-weight: 700; }}
     
-    .table-title {{ font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: #2c3e50; }}
+    .table-title {{ font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
-    th, td {{ padding: 8px 5px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
+    th, td {{ padding: 8px 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; }}
     th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
     
     .total-block {{ 
         text-align: right; 
-        margin-top: 10px; 
-        font-size: 16px;
+        margin-top: 15px; 
+        font-size: 18px;
         font-weight: 900; 
         color: #2c3e50; 
         border-top: 2px solid #2c3e50;
-        padding-top: 8px;
+        padding-top: 10px;
     }}
     
     .terms {{ 
-        margin-top: 15px; 
+        margin-top: 20px; 
         font-size: 12px; 
         color: #444; 
-        padding: 8px 0;
+        padding: 10px 0;
         border-top: 1px solid #eee;
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
-    
-    /* === RODAPÉ FIXO NO FINAL DA PÁGINA === */
-    .footer-area {{ 
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: white; /* Importante para não ficar transparente */
-        padding: 10mm 5mm 5mm 5mm; /* Padding superior maior para separar do conteúdo */
-        text-align: center;
-        border-top: 1px solid #ddd;
-    }}
-    .signature {{ margin: 10px 0; }}
-    .signature p {{ margin: 2px 0; }}
-    .signature .name {{ font-size: 14px; font-weight: 800; color: #2c3e50; }}
-    .signature .role {{ font-size: 11px; color: #555; }}
-    
-    .empresa-info {{ font-size: 10px; color: #888; margin-top: 5px; }}
-    
-    .ref-num {{ 
-        position: absolute; /* Para alinhar o Ref à direita do rodapé */
-        right: 5mm;
-        bottom: 10mm;
-        font-size: 10px; 
-        font-weight: 800; 
-        color: #7f8c8d;
-    }}
 </style>
 </head>
 <body>
@@ -5271,35 +5234,37 @@ def pdf_orcamento(id):
     <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
 </div>
 
-<!-- RODAPÉ FIXO (Sempre no final da folha) -->
-<div class="footer-area">
-    <div class="signature">
-        <p>Atenciosamente,</p>
-        <br>
-        <p class="name">{usuario_logado}</p>
-        <p class="role">LIRAPRINT - Depto de Vendas</p>
-    </div>
-    
-    <div class="empresa-info">
-        LIRAPRINT &nbsp;|&nbsp; Guarulhos - SP
-    </div>
-    
-    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
-</div>
-
 </body>
 </html>'''
-        
-        # Gera PDF
+
+        # FOOTER HTML (separado)
+        footer_html = f'''
+        <div style="text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-family: Arial, sans-serif; font-size: 12px;">
+            <div style="margin-bottom: 10px;">
+                <p style="margin: 3px 0;">Atenciosamente,</p>
+                <p style="font-size: 14px; font-weight: bold; color: #2c3e50; margin: 10px 0;">{usuario_logado}</p>
+                <p style="color: #555; font-size: 11px;">LIRAPRINT - Depto de Vendas</p>
+            </div>
+            <div style="color: #888; font-size: 10px; margin-top: 10px;">
+                LIRAPRINT | Guarulhos - SP
+            </div>
+            <div style="position: absolute; right: 0; bottom: 10mm; font-size: 10px; font-weight: bold; color: #7f8c8d;">
+                Ref: {orc.get('codigo_servico', '—')}
+            </div>
+        </div>
+        '''
+
+        # Gera PDF com footer nativo
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", 
             "encoding": "UTF-8", 
             "page-size": "A4",
-            # Margens zero no gerador, pois controlamos via CSS
-            "margin-top": "0",
-            "margin-bottom": "0",
-            "margin-left": "0",
-            "margin-right": "0",
+            "margin-top": "10mm",
+            "margin-bottom": "30mm",  # Espaço para o footer
+            "margin-left": "10mm",
+            "margin-right": "10mm",
+            "footer-html": footer_html,
+            "footer-spacing": 5,
             "enable-local-file-access": None
         })
         
