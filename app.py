@@ -1867,7 +1867,6 @@ def confirmar_aceite_orcamento(id):
         
         # Dados da empresa
         cnpj_cadastrado = empresa.get('cnpj', '')
-        cep_cadastrado = empresa.get('cep', '')
         endereco_cadastrado = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         
         # Endereço de entrega (se tiver)
@@ -1877,7 +1876,7 @@ def confirmar_aceite_orcamento(id):
             cep_entrega_padrao = empresa.get('entrega_cep', '')
         else:
             endereco_entrega_padrao = endereco_cadastrado
-            cep_entrega_padrao = cep_cadastrado
+            cep_entrega_padrao = empresa.get('cep', '')
             
     except Exception as e:
         print(f"Erro: {e}")
@@ -1909,7 +1908,6 @@ def confirmar_aceite_orcamento(id):
     .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
     .btn-cancel {{ background: #95a5a6; }}
     .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
-    .info-box {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 13px; }}
     </style>
     </head>
     <body>
@@ -1926,8 +1924,7 @@ def confirmar_aceite_orcamento(id):
                 <div class="form-group">
                     <label class="title-label">🧾 CNPJ para emissão da Nota Fiscal</label>
                     <div class="cep-info">
-                        <strong>CNPJ Cadastrado:</strong> {cnpj_cadastrado or 'Não informado'}<br>
-                        <strong>CEP:</strong> {cep_cadastrado or 'Não informado'}
+                        <strong>CNPJ Cadastrado:</strong> {cnpj_cadastrado or 'Não informado'}
                     </div>
                     <label class="radio-option">
                         <input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()">
@@ -1937,12 +1934,12 @@ def confirmar_aceite_orcamento(id):
                         <input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()">
                         <span>Usar outro CNPJ</span>
                     </label>
-                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="Digite o novo CNPJ">
+                    <input type="text" name="cnpj_nota_fiscal" id="campo_cnpj_novo" class="hidden" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCNPJ(this)">
                 </div>
                 
                 <!-- ENDEREÇO DE ENTREGA -->
                 <div class="form-group">
-                    <label class="title-label">📍 Endereço de Entrega</label>
+                    <label class="title-label"> Endereço de Entrega</label>
                     <div class="cep-info">
                         <strong>CEP Cadastrado:</strong> {cep_entrega_padrao or 'Não informado'}<br>
                         <strong>Endereço:</strong> {endereco_entrega_padrao}
@@ -2075,6 +2072,16 @@ def confirmar_aceite_orcamento(id):
         document.getElementById('novo_cidade').value = '';
         document.getElementById('novo_numero').value = '';
         document.getElementById('novo_complemento').value = '';
+    }}
+    
+    // Máscara automática para CNPJ
+    function mascaraCNPJ(input) {{
+        let value = input.value.replace(/\\D/g, "");
+        value = value.replace(/^(\\d{{2}})(\\d)/, "$1.$2");
+        value = value.replace(/^(\\d{{2}})\\.(\\d{{3}})(\\d)/, "$1.$2.$3");
+        value = value.replace(/\\.(\\d{{3}})(\\d)/, ".$1/$2");
+        value = value.replace(/(\\d{{4}})(\\d)/, "$1-$2");
+        input.value = value;
     }}
     
     // Atualizar campo hidden antes de enviar
@@ -5120,7 +5127,6 @@ def pdf_orcamento(id):
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
-        # LOGO URL - SEU LINK AQUI!
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
         html = f'''<!DOCTYPE html>
@@ -5182,7 +5188,6 @@ def pdf_orcamento(id):
     }}
     
     .terms {{ 
-        margin-top: 30px; 
         font-size: 13px; 
         color: #444; 
         padding: 12px 0;
@@ -5190,30 +5195,35 @@ def pdf_orcamento(id):
     }}
     .terms strong {{ color: #000; font-weight: 700; }}
     
-    .footer-area {{
-        margin-top: 50px;
-        text-align: center;
-        page-break-inside: avoid;
+    /* RODAPÉ FIXO NO FINAL DA PÁGINA */
+    .footer-area {{ 
         position: fixed;
-        bottom: 20mm;
+        bottom: 15mm;
         left: 20mm;
         right: 20mm;
-       }}
-    .signature {{ margin-bottom: 20px; }}
-    .signature p {{ margin: 5px 0; }}
+        text-align: center;
+        border-top: 1px solid #ddd;
+        padding-top: 15px;
+        background: white;
+    }}
+    .signature {{ margin: 15px 0; }}
+    .signature p {{ margin: 3px 0; }}
     .signature .name {{ font-size: 16px; font-weight: 800; color: #2c3e50; margin-top: 15px; }}
     .signature .role {{ font-size: 13px; color: #555; font-weight: 600; }}
     
-    .empresa-info {{ font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
+    .empresa-info {{ font-size: 12px; color: #888; margin-top: 10px; }}
     
     .ref-num {{ 
         text-align: right; 
         font-size: 12px; 
         font-weight: 800; 
         color: #7f8c8d;
-        margin-top: 15px;
+        margin-top: 10px;
         letter-spacing: 1px;
     }}
+    
+    /* Espaço extra no final do conteúdo para não sobrepor o footer fixo */
+    .content-spacer {{ height: 120px; }}
 </style>
 </head>
 <body>
@@ -5255,21 +5265,24 @@ def pdf_orcamento(id):
     <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
 </div>
 
+<!-- Espaço para não sobrepor o footer fixo -->
+<div class="content-spacer"></div>
+
+<!-- RODAPÉ FIXO -->
 <div class="footer-area">
     <div class="signature">
         <p>Atenciosamente,</p>
-        <br><br>
+        <br>
         <p class="name">{usuario_logado}</p>
         <p class="role">LIRAPRINT - Depto de Vendas</p>
-        {f'<p class="role">Tel: {tel_vendedor}</p>' if tel_vendedor else ''}
     </div>
     
     <div class="empresa-info">
         LIRAPRINT &nbsp;|&nbsp; Guarulhos - SP
     </div>
+    
+    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
 </div>
-
-<div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
 
 </body>
 </html>'''
