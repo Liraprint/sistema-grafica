@@ -2431,7 +2431,7 @@ def pdf_os(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
-        print(f"Erro ao carregar OS: {e}")
+        print(f"Erro: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
@@ -2482,55 +2482,56 @@ def pdf_os(id):
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 12mm 18mm 15mm 18mm; }}
-    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.4; }}
+    @page {{ size: A4; margin: 10mm 15mm 12mm 15mm; }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 9.5pt; color: #1a1a1a; line-height: 1.35; }}
     
-    .header {{ text-align: center; margin-bottom: 18px; border-bottom: 3px solid #2c3e50; padding-bottom: 12px; }}
-    .logo {{ max-width: 140px; margin-bottom: 8px; height: auto; }}
-    .titulo {{ font-size: 22pt; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 8px 0; }}
-    .codigo {{ font-size: 11pt; color: #555; font-weight: 600; background: #ecf0f1; display: inline-block; padding: 5px 12px; border-radius: 4px; }}
+    .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #2c3e50; padding-bottom: 10px; }}
+    .logo {{ max-width: 130px; margin-bottom: 8px; }}
+    .titulo {{ font-size: 20pt; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; color: #2c3e50; }}
+    .codigo {{ font-size: 10.5pt; color: #555; background: #ecf0f1; display: inline-block; padding: 4px 10px; border-radius: 3px; margin-top: 5px; }}
     
-    .section {{ margin-bottom: 16px; }}
-    .section-title {{ font-size: 10.5pt; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 3px; }}
+    .section {{ margin-bottom: 12px; }}
+    .section-title {{ font-size: 9.5pt; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 2px; }}
     
-    /* GRID COMPACTO - 3 COLUNAS */
+    /* CLIENTE EM 3 COLUNAS COMPACTAS */
     .cliente-grid {{ 
         display: grid; 
         grid-template-columns: repeat(3, 1fr);
-        gap: 5px 10px;
-        font-size: 9pt;
+        gap: 4px 8px;
+        font-size: 8.5pt;
     }}
+    .cliente-item {{ margin-bottom: 2px; }}
     .cliente-item strong {{ 
-        color: #2c3e50; display: block; font-size: 7.5pt; text-transform: uppercase; font-weight: 700; margin-bottom: 1px;
+        color: #2c3e50; display: block; font-size: 7pt; text-transform: uppercase; font-weight: 700; margin-bottom: 1px;
     }}
-    .cliente-item span {{ font-size: 9.5pt; color: #333; word-break: break-word; }}
+    .cliente-item span {{ font-size: 9pt; color: #333; word-break: break-word; display: block; }}
     
-    table {{ width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }}
-    th {{ background: #2c3e50; color: white; padding: 7px 5px; text-align: left; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; }}
-    td {{ padding: 7px 5px; border-bottom: 1px solid #ddd; font-size: 9pt; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8.5pt; }}
+    th {{ background: #2c3e50; color: white; padding: 6px 4px; text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; }}
+    td {{ padding: 6px 4px; border-bottom: 1px solid #ddd; font-size: 8.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
     
-    .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 10px; margin: 10px 0; border-radius: 0 4px 4px 0; font-size: 9.5pt; }}
+    .box {{ background: #f8f9fa; border-left: 3px solid #3498db; padding: 8px; margin: 8px 0; border-radius: 0 3px 3px 0; font-size: 9pt; }}
     .box-aplicacao {{ background: #fff3cd; border-left-color: #ffc107; }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
     .box-obs {{ 
-        background: #fffef0; border-left: 4px solid #f39c12; padding: 12px; 
-        margin: 10px 0 18px 0; border-radius: 0 4px 4px 0; font-size: 9.5pt;
+        background: #fffef0; border-left: 3px solid #f39c12; padding: 10px; 
+        margin: 8px 0 12px 0; border-radius: 0 3px 3px 0; font-size: 9pt;
         page-break-inside: avoid; overflow: visible; white-space: pre-wrap; word-wrap: break-word;
     }}
-    .box p {{ margin: 4px 0; line-height: 1.4; }}
-    .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
+    .box p {{ margin: 3px 0; line-height: 1.3; }}
+    .box strong {{ color: #2c3e50; margin-right: 5px; font-weight: 700; }}
     
-    .valores {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; padding: 12px; margin: 16px 0; }}
-    .valores p {{ margin: 5px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
-    .destaque {{ font-size: 13pt; font-weight: 900; }}
+    .valores {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; padding: 10px; margin: 12px 0; }}
+    .valores p {{ margin: 4px 0; font-size: 9.5pt; display: flex; justify-content: space-between; }}
     
-    .footer {{ margin-top: 25px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 15px; }}
-    .assinatura {{ margin: 15px 0; }}
-    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 240px; margin: 0 auto 8px auto; padding-top: 6px; }}
-    .assinatura p {{ font-size: 10.5pt; font-weight: 800; color: #2c3e50; margin: 3px 0; }}
-    .assinatura .cargo {{ font-size: 9pt; color: #666; font-weight: 600; }}
-    .empresa-info {{ font-size: 8.5pt; color: #888; margin-top: 12px; line-height: 1.5; }}
+    .footer {{ margin-top: 20px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 12px; }}
+    .assinatura {{ margin: 12px 0; }}
+    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 220px; margin: 0 auto 6px auto; padding-top: 5px; }}
+    .assinatura p {{ font-size: 10pt; font-weight: 800; color: #2c3e50; margin: 2px 0; }}
+    .assinatura .cargo {{ font-size: 8.5pt; color: #666; }}
+    .empresa-info {{ font-size: 8pt; color: #888; margin-top: 8px; }}
 </style>
 </head>
 <body>
@@ -2543,13 +2544,13 @@ def pdf_os(id):
 
 <!-- APLICAÇÃO -->
 <div class="section">
-    <div class="section-title">📋 Aplicação / Uso / Ambiente (Informações para Produção)</div>
+    <div class="section-title">📋 Aplicação / Uso / Ambiente</div>
     <div class="box box-aplicacao">
         {(aplicacao or '').replace(chr(10), "<br>") if aplicacao.strip() else 'Sem informações'}
     </div>
 </div>
 
-<!-- CLIENTE COMPACTO -->
+<!-- CLIENTE COMPACTO 3 COLUNAS -->
 <div class="section">
     <div class="section-title">📋 Cliente</div>
     <div class="cliente-grid">
@@ -2558,22 +2559,22 @@ def pdf_os(id):
         <div class="cliente-item"><strong>CNPJ</strong><span>{cnpj_cliente}</span></div>
         <div class="cliente-item"><strong>Telefone</strong><span>{whatsapp}</span></div>
         <div class="cliente-item"><strong>E-mail</strong><span>{email}</span></div>
-        <div class="cliente-item"><strong>Data Abertura</strong><span>{data_fmt}</span></div>
+        <div class="cliente-item"><strong>Abertura</strong><span>{data_fmt}</span></div>
     </div>
 </div>
 
 <!-- ITENS -->
 <div class="section">
-    <div class="section-title"> Itens do Serviço</div>
+    <div class="section-title">📦 Itens do Serviço</div>
     <table>
-        <thead><tr><th width="100%">Descrição dos Itens</th></tr></thead>
+        <thead><tr><th width="100%">Descrição</th></tr></thead>
         <tbody>
 '''
     if itens_pedido:
         for item in itens_pedido:
             html += f'<tr><td>{item}</td></tr>'
     else:
-        html += '<tr><td style="text-align: center; padding: 15px; color: #888;">Nenhum item registrado</td></tr>'
+        html += '<tr><td style="text-align: center; padding: 12px; color: #888;">Nenhum item</td></tr>'
 
     html += '''
         </tbody>
@@ -2585,9 +2586,9 @@ def pdf_os(id):
     if dados_entrega:
         html += f'''
 <div class="section">
-    <div class="section-title"> Dados de Entrega / NF</div>
+    <div class="section-title">📍 Entrega / NF</div>
     <div class="box box-entrega">
-        {f'<p><strong>CNPJ NF:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
+        {f'<p><strong>CNPJ:</strong> {dados_entrega["cnpj"]}</p>' if dados_entrega.get('cnpj') else ''}
         {f'<p><strong>Endereço:</strong> {dados_entrega["endereco"]}</p>' if dados_entrega.get('endereco') else ''}
         {f'<p><strong>A/C:</strong> {dados_entrega["cuidados"]}</p>' if dados_entrega.get('cuidados') else ''}
     </div>
@@ -2597,7 +2598,7 @@ def pdf_os(id):
     if obs_geral and obs_geral.strip():
         html += f'''
 <div class="section">
-    <div class="section-title"> Observações</div>
+    <div class="section-title">📝 Observações</div>
     <div class="box box-obs">{obs_geral.replace(chr(10), "<br>")}</div>
 </div>
 '''
@@ -2605,8 +2606,8 @@ def pdf_os(id):
     html += f'''
 <!-- VALORES -->
 <div class="valores">
-    <p><strong>Valor Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
-    <p><strong>Valor/Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
+    <p><strong>Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
+    <p><strong>Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
 </div>
 
 <!-- RODAPÉ -->
@@ -2616,9 +2617,7 @@ def pdf_os(id):
         <p>Leandro</p>
         <p class="cargo">LIRAPRINT - Depto de Vendas</p>
     </div>
-    <div class="empresa-info">
-        <strong>LIRAPRINT</strong> | Guarulhos - SP
-    </div>
+    <div class="empresa-info">LIRAPRINT | Guarulhos - SP</div>
 </div>
 
 </body>
@@ -2627,8 +2626,8 @@ def pdf_os(id):
     try:
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", "encoding": "UTF-8", "page-size": "A4",
-            "margin-top": "12mm", "margin-bottom": "15mm", 
-            "margin-left": "18mm", "margin-right": "18mm",
+            "margin-top": "10mm", "margin-bottom": "12mm", 
+            "margin-left": "15mm", "margin-right": "15mm",
             "enable-local-file-access": None
         })
         return send_file(BytesIO(pdf), as_attachment=True, 
