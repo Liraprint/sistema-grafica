@@ -803,7 +803,9 @@ def listar_empresas():
 def detalhes_empresa(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
     try:
+        # Busca dados da empresa
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -817,12 +819,16 @@ def detalhes_empresa(id):
     except Exception as e:
         flash("Erro de conexão.")
         return redirect(url_for('listar_empresas'))
+    
+    # Busca TODOS os orçamentos desta empresa (aceitos ou não)
     try:
-        url_amostras = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&empresa_id=eq.{id}&tipo_envio=eq.Amostra&order=data_envio.desc"
-        response_amostras = requests.get(url_amostras, headers=headers)
-        amostras = response_amostras.json() if response_amostras.status_code == 200 else []
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"
+        resp_orcs = requests.get(url_orcs, headers=headers)
+        orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
     except Exception as e:
-        amostras = []
+        print(f"Erro ao carregar orçamentos: {e}")
+        orcamentos = []
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -833,54 +839,88 @@ def detalhes_empresa(id):
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
     .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .details {{ padding: 30px; }}
     .details p {{ margin: 10px 0; font-size: 16px; }}
     .details strong {{ color: #2c3e50; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; display: inline-block; }}
     .btn-blue {{ background: #3498db; }}
+    .btn-orange {{ background: #f39c12; }}
     .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .section {{ padding: 20px 30px; }}
-    .section h3 {{ margin: 20px 0 15px 0; color: #2c3e50; font-size: 20px; }}
+    .section h3 {{ margin: 0 0 15px 0; color: #2c3e50; font-size: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
     table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-    th, td {{ padding: 12px 15px; text-align: left; border: 1px solid #ddd; }}
+    th, td {{ padding: 12px 15px; text-align: left; border: 1px solid #ddd; font-size: 14px; }}
     th {{ background: #ecf0f1; font-weight: 600; }}
+    tr:hover {{ background: #f1f7fb; }}
+    .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
-    <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
-    <a href="/empresas" class="back-link">← Voltar à Lista</a>
-    <div class="details">
-    <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
-    <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
-    <p><strong>Telefone:</strong> {empresa['telefone']}</p>
-    <p><strong>WhatsApp:</strong> {empresa['whatsapp']}</p>
-    <p><strong>E-mail:</strong> {empresa['email']}</p>
-    <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
-    {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
-    </div>
-    <div style="display: flex; gap: 15px; margin: 20px 0;">
-    <a href="/servicos_empresa/{id}" class="btn">📋 Serviços desta empresa</a>
-    <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
-    <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
-    </div>
-    <div class="section">
-    <h3>📦 Amostras Enviadas</h3>
-    <table>
-    <thead><tr><th>Data Envio</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Ações</th></tr></thead>
-    <tbody>
-    {''.join(f"""<tr><td>{format_data(a.get('data_envio'))}</td><td>{a['descricao']}</td><td>{a['codigo_rastreio']}</td><td><span style="color: {'#27ae60' if a['status'] == 'Entregue' else '#e67e22'}; font-weight: bold;">{a['status']}</span></td><td><a href="https://www.linkcorreios.com.br/{a['codigo_rastreio']}" target="_blank" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px;">🔍 Rastrear</a></td></tr>""" for a in amostras)}
-    </tbody>
-    </table>
-    {f'<p style="text-align: center; color: #95a5a6;">Nenhuma amostra enviada ainda.</p>' if not amostras else ''}
-    </div>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
+        <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+        
+        <a href="/empresas" class="back-link">← Voltar à Lista</a>
+        
+        <!-- DADOS CADASTRAIS -->
+        <div class="details">
+            <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
+            <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
+            <p><strong>Telefone:</strong> {empresa['telefone']}</p>
+            <p><strong>WhatsApp:</strong> {empresa['whatsapp']}</p>
+            <p><strong>E-mail:</strong> {empresa['email']}</p>
+            <p><strong>Endereço:</strong> {empresa['endereco']}, {empresa['numero']} - {empresa['bairro']}, {empresa['cidade']} - {empresa['estado']} ({empresa['cep']})</p>
+            {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
+        </div>
+        
+        <!-- BOTÕES DE AÇÃO -->
+        <div style="display: flex; gap: 15px; margin: 20px 0; padding: 0 30px; flex-wrap: wrap;">
+            <a href="/servicos_empresa/{id}" class="btn">📋 Serviços desta empresa</a>
+            <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
+            <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
+            <a href="/adicionar_orcamento?empresa_id={id}" class="btn btn-orange">➕ Novo Orçamento</a>
+        </div>
+        
+        <!-- ORÇAMENTOS ENVIADOS (HISTÓRICO COMPLETO) -->
+        <div class="section">
+            <h3>📋 Orçamentos Enviados ({len(orcamentos)})</h3>
+            {f'''
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+            ''' + "".join(f"""
+                    <tr>
+                        <td>{orc.get('codigo_servico', '—')}</td>
+                        <td>{orc.get('titulo', '—')}</td>
+                        <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
+                        <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
+                        <td><span style="color: {'#27ae60' if orc.get('status') == 'Entregue' else '#e67e22' if orc.get('status') == 'Pendente' else '#3498db'}; font-weight: 600;">{orc.get('status', '—')}</span></td>
+                        <td>
+                            <a href="/pdf_orcamento/{orc.get('id')}" class="btn btn-orange" style="padding: 5px 10px; font-size: 12px;">📄 PDF</a>
+                            <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f1c40f;">✏️</a>
+                        </td>
+                    </tr>
+            """ for orc in orcamentos) + '''
+                </tbody>
+            </table>
+            ''' if orcamentos else '<p class="empty">Nenhum orçamento enviado para este cliente ainda.</p>'}
+        </div>
+        
+        <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
@@ -3747,13 +3787,29 @@ def listar_orcamentos():
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join(f"""
+'''
+    # CORREÇÃO: tratar empresas como lista
+    for orc in orcamentos:
+        # Extrai nome da empresa (pode vir como lista ou None)
+        emp = orc.get('empresas')
+        if emp and isinstance(emp, list) and len(emp) > 0:
+            nome_empresa = emp[0].get('nome_empresa', '—')
+        elif emp and isinstance(emp, dict):
+            nome_empresa = emp.get('nome_empresa', '—')
+        else:
+            nome_empresa = '—'
+        
+        data_fmt = orc.get('data_abertura', '—')
+        if data_fmt and len(str(data_fmt)) >= 10:
+            data_fmt = str(data_fmt)[:10]
+        
+        html += f'''
                     <tr>
                         <td>{orc.get('codigo_servico', '—')}</td>
                         <td>{orc.get('titulo', '—')}</td>
-                        <td>{orc.get('empresas', {{}}).get('nome_empresa', '—')}</td>
+                        <td>{nome_empresa}</td>
                         <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
-                        <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
+                        <td>{data_fmt}</td>
                         <td>
                             <a href="/pdf_orcamento/{orc.get('id')}" class="btn-pdf">📄 PDF</a>
                             <a href="/complementar_orcamento/{orc.get('id')}" class="btn-aceito">✅ Aceito</a>
@@ -3761,31 +3817,36 @@ def listar_orcamentos():
                             <a href="/excluir_orcamento/{orc.get('id')}" class="btn-excluir" onclick="return confirm('Confirma exclusão?')">🗑️</a>
                         </td>
                     </tr>
-                    """ for orc in orcamentos) if orcamentos else '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento encontrado</td></tr>'}
+'''
+    
+    if not orcamentos:
+        html += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento encontrado</td></tr>'
+    
+    html += '''
                 </tbody>
             </table>
         </div>
     </div>
     
     <script>
-    function filtrarTabela() {{
+    function filtrarTabela() {
         const input = document.getElementById('searchInput').value.toLowerCase();
         const table = document.getElementById('tabelaOrcamentos');
         const tr = table.getElementsByTagName('tr');
         
-        for (let i = 1; i < tr.length; i++) {{
+        for (let i = 1; i < tr.length; i++) {
             const td = tr[i].getElementsByTagName('td')[1];
-            if (td) {{
+            if (td) {
                 const txtValue = td.textContent || td.innerText;
                 tr[i].style.display = txtValue.toLowerCase().indexOf(input) > -1 ? "" : "none";
-            }}
-        }}
-    }}
+            }
+        }
+    }
     </script>
     </body>
     </html>
     '''
-
+    
 def adicionar_dias_uteis(data_inicio, dias):
     """Adiciona dias úteis pulando finais de semana e feriados"""
     from datetime import timedelta
@@ -3831,16 +3892,21 @@ def adicionar_orcamento():
         condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
         condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
         observacoes = request.form.get('observacoes_gerais', '')
-        aoscuidadosde = request.form.get('aoscuidadosde', '')  # NOVO CAMPO
+        aoscuidadosde = request.form.get('aoscuidadosde', '')  # CAMPO MANUAL
+        
+        print(f"=== DEBUG: Dados recebidos ===")
+        print(f"empresa_id: {empresa_id}")
+        print(f"aoscuidadosde: '{aoscuidadosde}'")
+        print(f"==============================")
         
         if not empresa_id:
             flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        # Gera código sequencial único (ex: OR-300)
         codigo_servico = gerar_proximo_codigo('OR')
         
         try:
+            # PREPARA DADOS PARA SALVAR
             json_data = {
                 "codigo_servico": codigo_servico,
                 "titulo": "Orçamento Múltiplo",
@@ -3854,15 +3920,26 @@ def adicionar_orcamento():
                 "condicao_pagamento": condicao_pagamento,
                 "condicao_entrega": condicao_entrega,
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}",
-                "aoscuidadosde": aoscuidadosde  # SALVA CAMPO MANUAL
             }
             
+            # Só adiciona o campo se tiver valor (evita erro se a coluna não existir)
+            if aoscuidadosde and aoscuidadosde.strip():
+                json_data["aoscuidadosde"] = aoscuidadosde.strip()
+            
+            print(f"=== ENVIANDO PARA SUPABASE ===")
+            print(f"json_data keys: {list(json_data.keys())}")
+            print(f"================================")
+            
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
+            
+            print(f"Resposta Supabase: {resp.status_code}")
+            print(f"Conteúdo: {resp.text[:200]}")  # Mostra só os primeiros 200 chars
             
             if resp.status_code in [200, 201]:
                 try:
                     oid = resp.json().get('id')
-                except:
+                except Exception as e:
+                    print(f"Erro ao parsear JSON: {e}")
                     busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1", headers=headers)
                     if busca.status_code == 200 and busca.json():
                         oid = busca.json()[0].get('id')
@@ -3922,14 +3999,15 @@ def adicionar_orcamento():
                 flash("✅ Orçamento criado e salvo com sucesso!")
                 return redirect(url_for('listar_orcamentos'))
             else:
-                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code}")
+                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code} - {resp.text[:100]}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
-            print(f"ERRO GERAL: {str(e)}")
+            print(f"❌ ERRO GERAL: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash("❌ Erro ao criar orçamento.")
+            flash(f"❌ Erro ao criar orçamento: {str(e)[:100]}")
+            return redirect(url_for('adicionar_orcamento'))
     
     # GET - Renderiza o formulário
     try:
