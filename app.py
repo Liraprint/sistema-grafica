@@ -4024,21 +4024,20 @@ def adicionar_orcamento():
 
 @app.route('/arquivar_orcamento/<int:id>')
 def arquivar_orcamento(id):
-    """Arquiva o orçamento sem converter em OS (muda status para 'Fechado')"""
+    """Arquiva o orçamento como NÃO ACEITO (muda status para 'Fechado')"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
     try:
-        # Muda status para "Fechado" (arquiva)
         dados = {"status": "Fechado"}
         response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
         
         if response.status_code == 204:
-            flash("✅ Orçamento arquivado com sucesso!")
+            flash("✅ Orçamento arquivado (não aceito)!")
         else:
             flash("❌ Erro ao arquivar orçamento.")
     except Exception as e:
-        print(f"Erro ao arquivar: {e}")
+        print(f"Erro: {e}")
         flash("❌ Erro ao arquivar orçamento.")
     
     return redirect(url_for('listar_orcamentos'))
@@ -5267,26 +5266,6 @@ def processar_aceite_orcamento(id):
         traceback.print_exc()
         flash("❌ Erro ao processar aceite.")
         return redirect(url_for('listar_orcamentos'))
-
-@app.route('/arquivar_orcamento/<int:id>')
-def arquivar_orcamento(id):
-    """Arquiva o orçamento como NÃO ACEITO (muda status para 'Fechado')"""
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        dados = {"status": "Fechado"}
-        response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
-        
-        if response.status_code == 204:
-            flash("✅ Orçamento arquivado (não aceito)!")
-        else:
-            flash("❌ Erro ao arquivar orçamento.")
-    except Exception as e:
-        print(f"Erro: {e}")
-        flash("❌ Erro ao arquivar orçamento.")
-    
-    return redirect(url_for('listar_orcamentos'))
 
 
 # ========================
