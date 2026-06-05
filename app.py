@@ -3578,7 +3578,8 @@ def listar_orcamentos():
         return redirect(url_for('login'))
     busca = request.args.get('q', '').strip()
     try:
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
+        # FILTRA APENAS ORÇAMENTOS PENDENTES (status=eq.Pendente)
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&status=eq.Pendente&order=codigo_servico.desc"
         if busca:
             url += f"&titulo=ilike.*{busca}*"
         response = requests.get(url, headers=headers)
@@ -3597,11 +3598,11 @@ def listar_orcamentos():
             <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
             <td>{format_data(o.get('data_abertura'))}</td>
             <td>
-                <a href="/pdf_orcamento/{o['id']}" style="padding:6px 12px;background:#e67e22;color:white;text-decoration:none;border-radius:4px;margin-right:5px;"> PDF</a>
+                <a href="/pdf_orcamento/{o['id']}" style="padding:6px 12px;background:#e67e22;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">📄 PDF</a>
                 <a href="/complementar_orcamento/{o['id']}" style="padding:6px 12px;background:#27ae60;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✅ Aceito</a>
-                <a href="/arquivar_orcamento/{o['id']}" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado.')" style="padding:6px 12px;background:#3498db;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">💾 Salvar</a>
+                <a href="/arquivar_orcamento/{o['id']}" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado e sumirá desta lista.')" style="padding:6px 12px;background:#3498db;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">💾 Salvar</a>
                 <a href="/editar_orcamento/{o['id']}" style="padding:6px 12px;background:#f39c12;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✏️ Editar</a>
-                <a href="/excluir_servico/{o['id']}" onclick="return confirm('Tem certeza?')" style="padding:6px 12px;background:#e74c3c;color:white;text-decoration:none;border-radius:4px;">🗑️</a>
+                <a href="/excluir_orcamento/{o['id']}" onclick="return confirm('Tem certeza?')" style="padding:6px 12px;background:#e74c3c;color:white;text-decoration:none;border-radius:4px;">🗑️</a>
             </td>
         </tr>'''
     
@@ -3611,7 +3612,7 @@ def listar_orcamentos():
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orçamentos</title>
+    <title>Orçamentos Pendentes</title>
     <style>
     body {{ font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }}
     .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
@@ -3628,14 +3629,14 @@ def listar_orcamentos():
     </head>
     <body>
     <div class="container">
-        <div class="header"><h1 style="margin:0;">💰 Orçamentos</h1></div>
+        <div class="header"><h1 style="margin:0;">💰 Orçamentos Pendentes</h1></div>
         <div class="user-bar">
             <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
             <a href="/logout" style="color: #3498db;">🚪 Sair</a>
         </div>
         <div class="content">
             <div class="menu-container">{MENU_FLUTUANTE}</div>
-            <a href="/adicionar_orcamento" class="btn"> Novo Orçamento</a>
+            <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
             <div style="margin: 20px 0;">
                 <form method="get" style="display: inline-block;">
                     <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
@@ -3644,7 +3645,7 @@ def listar_orcamentos():
             </div>
             <table>
                 <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
-                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">Nenhum orçamento encontrado</td></tr>'}</tbody>
+                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">Nenhum orçamento pendente</td></tr>'}</tbody>
             </table>
         </div>
     </div>
@@ -5200,6 +5201,24 @@ def processar_aceite_orcamento(id):
         flash("❌ Erro ao processar aceite.")
         return redirect(url_for('listar_orcamentos'))
 
+@app.route('/excluir_orcamento/<int:id>')
+def excluir_orcamento(id):
+    """Exclui um orçamento e retorna para /orcamentos"""
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        response = requests.delete(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", headers=headers)
+        
+        if response.status_code in [200, 204]:
+            flash("✅ Orçamento excluído com sucesso!")
+        else:
+            flash("❌ Erro ao excluir orçamento.")
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("❌ Erro ao excluir orçamento.")
+    
+    return redirect(url_for('listar_orcamentos'))
 
 # ========================
 # INICIAR O APP (FORA DE QUALQUER FUNÇÃO!)
