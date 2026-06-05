@@ -449,113 +449,52 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/cliente/<int:id>')
-def detalhes_cliente(id):
+@app.route('/clientes')
+def clientes():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
-    try:
-        # Busca dados da empresa
-        url_emp = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
-        resp_emp = requests.get(url_emp, headers=headers)
-        if not resp_emp.json():
-            flash("❌ Cliente não encontrado!")
-            return redirect(url_for('listar_clientes'))
-        
-        empresa = resp_emp.json()[0]
-        
-        # Busca TODOS os orçamentos deste cliente (aceitos ou não)
-        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"
-        resp_orcs = requests.get(url_orcs, headers=headers)
-        orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
-        
-    except Exception as e:
-        print(f"Erro: {e}")
-        flash("❌ Erro ao carregar dados do cliente.")
-        return redirect(url_for('listar_clientes'))
-    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
-    <title>{empresa.get('nome_empresa', 'Cliente')}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu da Gráfica</title>
     <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #2c3e50; color: white; padding: 25px; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
-        .section {{ margin-bottom: 30px; }}
-        .section-title {{ font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
-        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-        .info-item {{ margin-bottom: 10px; }}
-        .info-item strong {{ color: #2c3e50; display: block; font-size: 12px; margin-bottom: 3px; }}
-        .info-item span {{ font-size: 14px; color: #333; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background: #2c3e50; color: white; font-weight: 700; }}
-        tr:hover {{ background: #f8f9fa; }}
-        .btn {{ padding: 8px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; font-size: 13px; }}
-        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 20px; }}
-        .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    .container {{ max-width: 900px; margin: 50px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 25px; }}
+    h1 {{ font-size: 26px; margin: 0; font-weight: 600; }}
+    .user-info {{ background: #34495e; color: white; padding: 12px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .btn-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px; }}
+    @media (max-width: 768px) {{ .btn-grid {{ grid-template-columns: 1fr; }} }}
+    .btn {{ display: block; width: 100%; padding: 10px 15px; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; border-radius: 8px; color: white; transition: all 0.3s ease; border: none; cursor: pointer; max-width: 250px; margin: 0 auto; }}
+    .btn-green {{ background: #27ae60; }} .btn-blue {{ background: #3498db; }} .btn-purple {{ background: #8e44ad; }} .btn-red {{ background: #e74c3c; }} .btn-orange {{ background: #e67e22; }}
+    .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
+    .footer {{ text-align: center; padding: 15px; background: #ecf0f1; color: #7f8c8d; font-size: 12px; border-top: 1px solid #bdc3c7; }}
     </style>
     </head>
-    <body>
+    <body>\n
     <div class="container">
-        <div class="header">
-            <h1 style="margin:0;">📋 {empresa.get('nome_empresa', 'Cliente')}</h1>
-        </div>
-        <div class="content">
-            <a href="/clientes" class="back-link">← Voltar à lista de clientes</a>
-            
-            <!-- DADOS CADASTRAIS -->
-            <div class="section">
-                <div class="section-title">📝 Dados Cadastrais</div>
-                <div class="info-grid">
-                    <div class="info-item"><strong>CNPJ</strong><span>{empresa.get('cnpj', '—')}</span></div>
-                    <div class="info-item"><strong>Telefone</strong><span>{empresa.get('telefone', '—')}</span></div>
-                    <div class="info-item"><strong>E-mail</strong><span>{empresa.get('email', '—')}</span></div>
-                    <div class="info-item"><strong>Responsável</strong><span>{empresa.get('responsavel', '—')}</span></div>
-                    <div class="info-item"><strong>CEP</strong><span>{empresa.get('cep', '—')}</span></div>
-                    <div class="info-item"><strong>Endereço</strong><span>{empresa.get('endereco', '—')}, {empresa.get('numero', '')} - {empresa.get('bairro', '—')}</span></div>
-                    <div class="info-item"><strong>Cidade/UF</strong><span>{empresa.get('cidade', '—')} - {empresa.get('estado', '—')}</span></div>
-                </div>
-            </div>
-            
-            <!-- ORÇAMENTOS ENVIADOS (HISTÓRICO COMPLETO) -->
-            <div class="section">
-                <div class="section-title">📋 Orçamentos Enviados ({len(orcamentos)})</div>
-                {f'''
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Título</th>
-                            <th>Data</th>
-                            <th>Valor</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {"".join(f"""
-                        <tr>
-                            <td>{orc.get('codigo_servico', '—')}</td>
-                            <td>{orc.get('titulo', '—')}</td>
-                            <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
-                            <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
-                            <td>{orc.get('status', '—')}</td>
-                            <td>
-                                <a href="/pdf_orcamento/{orc.get('id')}" class="btn" style="background:#f39c12;">📄 PDF</a>
-                                <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="background:#f1c40f;">✏️ Editar</a>
-                            </td>
-                        </tr>
-                        """ for orc in orcamentos) if orcamentos else '<tr><td colspan="6" class="empty">Nenhum orçamento enviado para este cliente</td></tr>'}
-                    </tbody>
-                </table>
-                ''' if orcamentos else '<p class="empty">Nenhum orçamento enviado para este cliente</p>'}
-            </div>
-        </div>
+    <div class="header"><h1>📋 Menu da Gráfica</h1></div>
+    <div class="user-info">
+    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+    <a href="/logout">🚪 Sair</a>
+    </div>
+    <div class="btn-grid">
+    <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
+    <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
+    <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
+    {f'<a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>' if session['nivel'] == 'administrador' else ''}
+    <a href="/envios" class="btn btn-blue">📦 Rastreamento</a>
+    {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
+    {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
+    {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
+    {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup</a>' if session['nivel'] == 'administrador' else ''}
+    {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
+    </div>
+    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
