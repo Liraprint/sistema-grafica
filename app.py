@@ -820,14 +820,20 @@ def detalhes_empresa(id):
         flash("Erro de conexão.")
         return redirect(url_for('listar_empresas'))
     
-    # Busca TODOS os orçamentos desta empresa (aceitos ou não)
+    # Busca TODOS os registros da empresa (orçamentos + OSs)
     try:
-        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"
+        # Query para buscar TODOS os serviços/orçamentos da empresa
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&order=data_abertura.desc"
         resp_orcs = requests.get(url_orcs, headers=headers)
-        orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
+        todos_registros = resp_orcs.json() if resp_orcs.status_code == 200 else []
+        
+        # Separa em orçamentos e OSs
+        orcamentos = [r for r in todos_registros if r.get('tipo') == 'Orçamento']
+        oss = [r for r in todos_registros if r.get('tipo') == 'Produção']
+        
     except Exception as e:
-        print(f"Erro ao carregar orçamentos: {e}")
-        orcamentos = []
+        print(f"Erro ao carregar registros: {e}")
+        orcamentos, oss = [], []
     
     return f'''
     <!DOCTYPE html>
@@ -839,7 +845,7 @@ def detalhes_empresa(id):
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
     .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
@@ -858,6 +864,10 @@ def detalhes_empresa(id):
     th {{ background: #ecf0f1; font-weight: 600; }}
     tr:hover {{ background: #f1f7fb; }}
     .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
+    .status-pendente {{ color: #e67e22; font-weight: 600; }}
+    .status-fechado {{ color: #95a5a6; font-weight: 600; }}
+    .status-producao {{ color: #3498db; font-weight: 600; }}
+    .status-entregue {{ color: #27ae60; font-weight: 600; }}
     </style>
     </head>
     <body>
@@ -880,15 +890,15 @@ def detalhes_empresa(id):
         
         <!-- BOTÕES DE AÇÃO -->
         <div style="display: flex; gap: 15px; margin: 20px 0; padding: 0 30px; flex-wrap: wrap;">
-            <a href="/servicos_empresa/{id}" class="btn">📋 Serviços desta empresa</a>
+            <a href="/servicos_empresa/{id}" class="btn">📋 Serviços/OSs</a>
             <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
             <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
             <a href="/adicionar_orcamento?empresa_id={id}" class="btn btn-orange">➕ Novo Orçamento</a>
         </div>
         
-        <!-- ORÇAMENTOS ENVIADOS (HISTÓRICO COMPLETO) -->
+        <!-- ORÇAMENTOS ENVIADOS (TODOS: Pendentes, Fechados) -->
         <div class="section">
-            <h3>📋 Orçamentos Enviados ({len(orcamentos)})</h3>
+            <h3>📋 Orçamentos ({len(orcamentos)})</h3>
             {f'''
             <table>
                 <thead>
@@ -908,7 +918,7 @@ def detalhes_empresa(id):
                         <td>{orc.get('titulo', '—')}</td>
                         <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
                         <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
-                        <td><span style="color: {'#27ae60' if orc.get('status') == 'Entregue' else '#e67e22' if orc.get('status') == 'Pendente' else '#3498db'}; font-weight: 600;">{orc.get('status', '—')}</span></td>
+                        <td class="{'status-pendente' if orc.get('status') == 'Pendente' else 'status-fechado' if orc.get('status') == 'Fechado' else ''}">{orc.get('status', '—')}</td>
                         <td>
                             <a href="/pdf_orcamento/{orc.get('id')}" class="btn btn-orange" style="padding: 5px 10px; font-size: 12px;">📄 PDF</a>
                             <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f1c40f;">✏️</a>
@@ -917,7 +927,41 @@ def detalhes_empresa(id):
             """ for orc in orcamentos) + '''
                 </tbody>
             </table>
-            ''' if orcamentos else '<p class="empty">Nenhum orçamento enviado para este cliente ainda.</p>'}
+            ''' if orcamentos else '<p class="empty">Nenhum orçamento registrado para este cliente.</p>'}
+        </div>
+        
+        <!-- ORDEM DE SERVIÇO (OSs) -->
+        <div class="section">
+            <h3>🔧 Ordens de Serviço ({len(oss)})</h3>
+            {f'''
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+            ''' + "".join(f"""
+                    <tr>
+                        <td>{os_item.get('codigo_servico', '—')}</td>
+                        <td>{os_item.get('titulo', '—')}</td>
+                        <td>{os_item.get('data_abertura', '—')[:10] if os_item.get('data_abertura') else '—'}</td>
+                        <td>R$ {os_item.get('valor_cobrado', 0):,.2f}</td>
+                        <td class="{'status-producao' if os_item.get('status') == 'Pendente' or os_item.get('status') == 'Em Produção' else 'status-entregue' if os_item.get('status') == 'Entregue' else ''}">{os_item.get('status', '—')}</td>
+                        <td>
+                            <a href="/os/{os_item.get('id')}" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px;">👁️ Ver</a>
+                            <a href="/pdf_os/{os_item.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f39c12;">📄 PDF</a>
+                        </td>
+                    </tr>
+            """ for os_item in oss) + '''
+                </tbody>
+            </table>
+            ''' if oss else '<p class="empty">Nenhuma OS gerada para este cliente.</p>'}
         </div>
         
         <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
@@ -1956,257 +2000,115 @@ def gerar_etiqueta(id):
     '''
 
 @app.route('/complementar_orcamento/<int:id>')
-def confirmar_aceite_orcamento(id):
+def complementar_orcamento(id):
+    """Tela para confirmar dados antes de gerar OS"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
     try:
-        url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
-        resp = requests.get(url_orc, headers=headers)
-        if not resp.json():
-            flash("❌ Orçamento não encontrado!")
+        url = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
+        resp = requests.get(url, headers=headers)
+        orc = resp.json()[0] if resp.json() else None
+        
+        if not orc:
+            flash("Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
-        orcamento = resp.json()[0]
-        empresa = orcamento.get('empresas', {})
+        emp = orc.get('empresas', {})
         
-        # Dados cadastrados
-        cnpj_cadastrado = empresa.get('cnpj', '')
-        cep_cadastrado = empresa.get('cep', '')
-        endereco_principal = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
-        
-        # Endereço de entrega
-        entrega_end = empresa.get('entrega_endereco')
-        if entrega_end:
-            endereco_entrega_padrao = f"{entrega_end}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
-            cep_entrega_padrao = empresa.get('entrega_cep', '') or cep_cadastrado
-        else:
-            endereco_entrega_padrao = endereco_principal
-            cep_entrega_padrao = cep_cadastrado
-        
-        # Pega "Aos cuidados de" do orçamento ou da empresa
-        aoscuidadosde_padrao = orcamento.get('aoscuidadosde', '') or empresa.get('responsavel', '')
-            
     except Exception as e:
-        print(f"Erro ao carregar dados: {e}")
-        flash("❌ Erro ao carregar dados do orçamento.")
+        flash("Erro ao carregar orçamento.")
         return redirect(url_for('listar_orcamentos'))
     
     return f'''
     <!DOCTYPE html>
-    <html lang="pt-BR">
+    <html>
     <head>
-    <meta charset="UTF-8">
-    <title>Confirmar Aceite do Orçamento</title>
+    <title>Confirmar Aceite</title>
     <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 750px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
-        .form-group {{ margin-bottom: 25px; }}
-        label.title-label {{ display: block; margin-bottom: 12px; font-weight: bold; color: #2c3e50; font-size: 15px; }}
-        .radio-option {{ display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; cursor: pointer; padding: 12px; border-radius: 6px; transition: background 0.2s; }}
-        .radio-option:hover {{ background: #f0f4f8; }}
-        .radio-option input {{ width: 18px; height: 18px; margin: 3px 0 0 0; cursor: pointer; }}
-        .radio-option span {{ font-size: 14px; flex: 1; }}
-        .hidden {{ display: none; }}
-        input[type="text"], textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; font-size: 14px; }}
-        .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-        .info-box {{ background: #e8f4f8; padding: 12px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #2980b9; border-left: 4px solid #3498db; }}
-        .btn {{ padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-right: 10px; }}
+        body {{ font-family: Arial; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }}
+        .btn {{ padding: 12px 25px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px; }}
         .btn-cancel {{ background: #95a5a6; }}
-        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
-        .field-group {{ margin-top: 10px; }}
-        .field-group label {{ font-size: 12px; font-weight: bold; margin-bottom: 4px; display: block; }}
     </style>
     </head>
     <body>
     <div class="container">
-        <div class="header"><h2 style="margin:0;">✅ Confirmar Aceite do Orçamento</h2></div>
-        <div class="content">
-            <a href="/orcamentos" class="back-link">← Voltar</a>
-            <p><strong>Orçamento:</strong> {orcamento.get('codigo_servico')} - {orcamento.get('titulo')}</p>
-            <p><strong>Cliente:</strong> {empresa.get('nome_empresa')}</p>
+        <h2>✅ Confirmar Aceite do Orçamento</h2>
+        <p><strong>Orçamento:</strong> {orc.get('codigo_servico')} - {orc.get('titulo')}</p>
+        <p><strong>Cliente:</strong> {emp.get('nome_empresa')}</p>
+        
+        <form method="post" action="/processar_aceite_orcamento/{id}">
+            <div style="margin: 20px 0;">
+                <label><strong>CNPJ para NF:</strong></label><br>
+                <input type="text" name="cnpj_nota" value="{emp.get('cnpj', '')}" style="width: 100%; padding: 8px; margin: 5px 0;">
+            </div>
+            <div style="margin: 20px 0;">
+                <label><strong>Endereço de Entrega:</strong></label><br>
+                <textarea name="endereco_entrega" rows="3" style="width: 100%; padding: 8px; margin: 5px 0;">{emp.get('entrega_endereco', '')}, {emp.get('entrega_numero', '')} - {emp.get('entrega_bairro', '')}, {emp.get('entrega_cidade', '')} - {emp.get('entrega_estado', '')}</textarea>
+            </div>
+            <div style="margin: 20px 0;">
+                <label><strong>Aos cuidados de:</strong></label><br>
+                <input type="text" name="aos_cuidados" value="{orc.get('aoscuidadosde', '') or emp.get('responsavel', '')}" style="width: 100%; padding: 8px; margin: 5px 0;">
+            </div>
             
-            <form method="post" action="/processar_aceite_orcamento/{id}" id="formAceite">
-                
-                <!-- CNPJ -->
-                <div class="form-group">
-                    <label class="title-label">🧾 CNPJ para emissão da Nota Fiscal</label>
-                    <div class="info-box">
-                        <strong>CNPJ Cadastrado:</strong> {cnpj_cadastrado or 'Não informado'}
-                    </div>
-                    <label class="radio-option">
-                        <input type="radio" name="usar_cnpj_cadastrado" value="sim" checked onchange="toggleCNPJ()">
-                        <span>Usar CNPJ cadastrado: <strong>{cnpj_cadastrado}</strong></span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="usar_cnpj_cadastrado" value="nao" onchange="toggleCNPJ()">
-                        <span>Usar outro CNPJ</span>
-                    </label>
-                    <div id="campo_cnpj_novo" class="hidden field-group">
-                        <input type="text" name="cnpj_nota_fiscal" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCNPJ(this)">
-                    </div>
-                </div>
-                
-                <!-- Endereço de Entrega -->
-                <div class="form-group">
-                    <label class="title-label">📍 Endereço de Entrega</label>
-                    <div class="info-box">
-                        <strong>CEP Cadastrado:</strong> {cep_entrega_padrao or 'Não informado'}<br>
-                        <strong>Endereço:</strong> {endereco_entrega_padrao}
-                    </div>
-                    <label class="radio-option">
-                        <input type="radio" name="usar_endereco_cadastrado" value="sim" checked onchange="toggleEndereco()">
-                        <span>Usar endereço cadastrado</span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="usar_endereco_cadastrado" value="nao" onchange="toggleEndereco()">
-                        <span>Usar outro endereço de entrega</span>
-                    </label>
-                    
-                    <!-- Campos para novo endereço -->
-                    <div id="campo_endereco_novo" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-                        <div class="grid-2">
-                            <div class="field-group">
-                                <label>CEP *</label>
-                                <input type="text" id="novo_cep" name="novo_cep" placeholder="00000-000" maxlength="9" onblur="buscarCEP()">
-                            </div>
-                            <div class="field-group">
-                                <label>Número *</label>
-                                <input type="text" id="novo_numero" name="novo_numero" placeholder="123">
-                            </div>
-                        </div>
-                        <div class="field-group">
-                            <label>Endereço</label>
-                            <input type="text" id="novo_endereco" name="novo_endereco" placeholder="Rua/Avenida" readonly style="background: #e9ecef;">
-                        </div>
-                        <div class="grid-2">
-                            <div class="field-group">
-                                <label>Bairro</label>
-                                <input type="text" id="novo_bairro" name="novo_bairro" readonly style="background: #e9ecef;">
-                            </div>
-                            <div class="field-group">
-                                <label>Cidade - UF</label>
-                                <input type="text" id="novo_cidade" name="novo_cidade" readonly style="background: #e9ecef;">
-                            </div>
-                        </div>
-                        <div class="field-group">
-                            <label>Complemento</label>
-                            <input type="text" id="novo_complemento" name="novo_complemento" placeholder="Apto, Sala, Bloco...">
-                        </div>
-                        <input type="hidden" name="endereco_entrega_os" id="endereco_completo">
-                    </div>
-                </div>
-                
-                <!-- Aos cuidados de -->
-                <div class="form-group">
-                    <label class="title-label">👤 Entrega aos cuidados de</label>
-                    <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{aoscuidadosde_padrao}">
-                </div>
-                
-                <!-- Observações -->
-                <div class="form-group">
-                    <label class="title-label">📝 Observações para entrega (opcional)</label>
-                    <textarea name="observacoes_entrega" rows="2" placeholder="Ex: Entregar na recepção, ligar antes, etc."></textarea>
-                </div>
-                
-                <div style="margin-top: 30px; text-align: center;">
-                    <button type="submit" class="btn">✅ Aceitar e Gerar OS</button>
-                    <a href="/orcamentos" class="btn btn-cancel">Cancelar</a>
-                </div>
-            </form>
-        </div>
+            <button type="submit" class="btn">✅ Gerar OS</button>
+            <a href="/orcamentos" class="btn btn-cancel">Cancelar</a>
+        </form>
     </div>
-    
-    <script>
-    function toggleCNPJ() {{
-        const radios = document.getElementsByName('usar_cnpj_cadastrado');
-        const campo = document.getElementById('campo_cnpj_novo');
-        for (let r of radios) {{
-            if (r.checked && r.value === 'nao') {{
-                campo.classList.remove('hidden');
-                campo.querySelector('input').setAttribute('required', 'required');
-                return;
-            }}
-        }}
-        campo.classList.add('hidden');
-        campo.querySelector('input').removeAttribute('required');
-        campo.querySelector('input').value = '';
-    }}
-    
-    function toggleEndereco() {{
-        const radios = document.getElementsByName('usar_endereco_cadastrado');
-        const campo = document.getElementById('campo_endereco_novo');
-        for (let r of radios) {{
-            if (r.checked && r.value === 'nao') {{
-                campo.classList.remove('hidden');
-                document.getElementById('novo_cep').setAttribute('required', 'required');
-                document.getElementById('novo_numero').setAttribute('required', 'required');
-                return;
-            }}
-        }}
-        campo.classList.add('hidden');
-        document.getElementById('novo_cep').removeAttribute('required');
-        document.getElementById('novo_numero').removeAttribute('required');
-        limparCamposEndereco();
-    }}
-    
-    function buscarCEP() {{
-        const cep = document.getElementById('novo_cep').value.replace(/\\D/g, '');
-        if (cep.length !== 8) {{
-            if(cep.length > 0) alert('CEP inválido! Digite 8 números.');
-            return;
-        }}
-        fetch('https://viacep.com.br/ws/' + cep + '/json/')
-            .then(response => response.json())
-            .then(data => {{
-                if (data.erro) {{ alert('CEP não encontrado!'); return; }}
-                document.getElementById('novo_endereco').value = data.logradouro;
-                document.getElementById('novo_bairro').value = data.bairro;
-                document.getElementById('novo_cidade').value = data.localidade + ' - ' + data.uf;
-                document.getElementById('novo_numero').focus();
-            }})
-            .catch(error => console.error('Erro:', error));
-    }}
-    
-    function limparCamposEndereco() {{
-        document.getElementById('novo_cep').value = '';
-        document.getElementById('novo_endereco').value = '';
-        document.getElementById('novo_bairro').value = '';
-        document.getElementById('novo_cidade').value = '';
-        document.getElementById('novo_numero').value = '';
-        document.getElementById('novo_complemento').value = '';
-    }}
-    
-    function mascaraCNPJ(input) {{
-        let value = input.value.replace(/\\D/g, "");
-        value = value.replace(/^(\\d{{2}})(\\d)/, "$1.$2");
-        value = value.replace(/^(\\d{{2}})\\.(\\d{{3}})(\\d)/, "$1.$2.$3");
-        value = value.replace(/\\.(\\d{{3}})(\\d)/, ".$1/$2");
-        value = value.replace(/(\\d{{4}})(\\d)/, "$1-$2");
-        input.value = value;
-    }}
-    
-    document.getElementById('formAceite').addEventListener('submit', function(e) {{
-        const usarCadastrado = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
-        if (usarCadastrado === 'nao') {{
-            const cep = document.getElementById('novo_cep').value;
-            const endereco = document.getElementById('novo_endereco').value;
-            const numero = document.getElementById('novo_numero').value;
-            const bairro = document.getElementById('novo_bairro').value;
-            const cidade = document.getElementById('novo_cidade').value;
-            const complemento = document.getElementById('novo_complemento').value;
-            
-            const enderecoCompleto = 'CEP: ' + cep + ' - ' + endereco + ', ' + numero + ' - ' + bairro + ', ' + cidade + (complemento ? ' (' + complemento + ')' : '');
-            document.getElementById('endereco_completo').value = enderecoCompleto;
-        }}
-    }});
-    </script>
     </body>
     </html>
     '''
 
+@app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
+def processar_aceite_orcamento(id):
+    """Converte orçamento em OS"""
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        # Busca orçamento
+        url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*"
+        resp = requests.get(url_orc, headers=headers)
+        orc = resp.json()[0] if resp.json() else None
+        
+        if not orc:
+            flash("Orçamento não encontrado!")
+            return redirect(url_for('listar_orcamentos'))
+        
+        # Gera novo código OS
+        codigo_os = gerar_proximo_codigo('OS')
+        
+        # Dados do formulário
+        cnpj_nota = request.form.get('cnpj_nota', '')
+        endereco_entrega = request.form.get('endereco_entrega', '')
+        aos_cuidados = request.form.get('aos_cuidados', '')
+        
+        # Monta observações com dados de entrega
+        obs_original = orc.get('observacoes', '') or ''
+        obs_completas = f"{obs_original}\n\n--- DADOS DE ENTREGA/NF ---\nCNPJ para NF: {cnpj_nota}\nEndereço de entrega: {endereco_entrega}\nAos cuidados de: {aos_cuidados}"
+        
+        # Atualiza para OS
+        dados_atualizacao = {
+            "tipo": "Produção",
+            "status": "Pendente",
+            "codigo_servico": codigo_os,
+            "observacoes": obs_completas
+        }
+        
+        response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados_atualizacao, headers=headers)
+        
+        if response.status_code == 204:
+            flash(f"✅ OS {codigo_os} gerada com sucesso!")
+            return redirect(url_for('imprimir_os', id=id))
+        else:
+            flash("❌ Erro ao gerar OS.")
+            return redirect(url_for('listar_orcamentos'))
+            
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("❌ Erro ao processar aceite.")
+        return redirect(url_for('listar_orcamentos'))
 
 @app.route('/excluir_servico/<int:id>')
 def excluir_servico(id):
@@ -3725,7 +3627,7 @@ def listar_orcamentos():
         return redirect(url_for('login'))
     
     try:
-        # Busca APENAS orçamentos pendentes (aguardando decisão)
+        # Busca APENAS orçamentos com status "Pendente"
         url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&status=eq.Pendente&order=data_abertura.desc"
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
@@ -3743,7 +3645,7 @@ def listar_orcamentos():
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
-    <title>Orçamentos</title>
+    <title>Orçamentos Pendentes</title>
     <style>
         body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
         .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
@@ -3757,11 +3659,11 @@ def listar_orcamentos():
         th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
         th {{ background: #2c3e50; color: white; font-weight: 700; }}
         tr:hover {{ background: #f8f9fa; }}
-        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
-        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
-        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
-        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
-        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; }}
+        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; display: inline-block; }}
     </style>
     </head>
     <body>
@@ -3790,9 +3692,8 @@ def listar_orcamentos():
                 </thead>
                 <tbody>
 '''
-    # Loop para tratar empresas corretamente
+    html_tbody = ""
     for orc in orcamentos:
-        # Extrai nome da empresa (pode vir como lista ou None)
         emp = orc.get('empresas')
         if emp and isinstance(emp, list) and len(emp) > 0:
             nome_empresa = emp[0].get('nome_empresa', '—')
@@ -3801,11 +3702,9 @@ def listar_orcamentos():
         else:
             nome_empresa = '—'
         
-        data_fmt = orc.get('data_abertura', '—')
-        if data_fmt and len(str(data_fmt)) >= 10:
-            data_fmt = str(data_fmt)[:10]
+        data_fmt = str(orc.get('data_abertura', '—'))[:10] if orc.get('data_abertura') else '—'
         
-        html += f'''
+        html_tbody += f'''
                     <tr>
                         <td>{orc.get('codigo_servico', '—')}</td>
                         <td>{orc.get('titulo', '—')}</td>
@@ -3815,7 +3714,7 @@ def listar_orcamentos():
                         <td>
                             <a href="/pdf_orcamento/{orc.get('id')}" class="btn-pdf">📄 PDF</a>
                             <a href="/complementar_orcamento/{orc.get('id')}" class="btn-aceito">✅ Aceito</a>
-                            <a href="/arquivar_orcamento/{orc.get('id')}" class="btn-salvar" onclick="return confirm('Deseja salvar este orçamento? Ele será arquivado e não virará OS.')">💾 Salvar</a>
+                            <a href="/arquivar_orcamento/{orc.get('id')}" class="btn-salvar" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado.')">💾 Salvar</a>
                             <a href="/editar_orcamento/{orc.get('id')}" class="btn-editar">✏️ Editar</a>
                             <a href="/excluir_orcamento/{orc.get('id')}" class="btn-excluir" onclick="return confirm('Confirma exclusão?')">🗑️</a>
                         </td>
@@ -3823,33 +3722,52 @@ def listar_orcamentos():
 '''
     
     if not orcamentos:
-        html += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento pendente</td></tr>'
+        html_tbody += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento pendente</td></tr>'
     
-    html += '''
+    return f'''
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="UTF-8">
+    <title>Orçamentos Pendentes</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #27ae60; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .btn {{ padding: 12px 25px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-bottom: 20px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background: #2c3e50; color: white; font-weight: 700; }}
+        tr:hover {{ background: #f8f9fa; }}
+        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
+        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; display: inline-block; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin:0;">📋 Orçamentos Pendentes</h1>
+        </div>
+        <div class="content">
+            <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
+            <table>
+                <thead>
+                    <tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                    {html_tbody}
                 </tbody>
             </table>
         </div>
     </div>
-    
-    <script>
-    function filtrarTabela() {
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        const table = document.getElementById('tabelaOrcamentos');
-        const tr = table.getElementsByTagName('tr');
-        
-        for (let i = 1; i < tr.length; i++) {
-            const td = tr[i].getElementsByTagName('td')[1];
-            if (td) {
-                const txtValue = td.textContent || td.innerText;
-                tr[i].style.display = txtValue.toLowerCase().indexOf(input) > -1 ? "" : "none";
-            }
-        }
-    }
-    </script>
     </body>
     </html>
     '''
-        
+    
 def adicionar_dias_uteis(data_inicio, dias):
     """Adiciona dias úteis pulando finais de semana e feriados"""
     from datetime import timedelta
