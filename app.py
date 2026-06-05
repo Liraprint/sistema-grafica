@@ -3576,142 +3576,75 @@ def excluir_fornecedor_view(id):
 def listar_orcamentos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    
+    busca = request.args.get('q', '').strip()
     try:
-        # Busca APENAS orçamentos com status "Pendente"
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&status=eq.Pendente&order=data_abertura.desc"
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
+        if busca:
+            url += f"&titulo=ilike.*{busca}*"
         response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            flash("Erro ao carregar orçamentos.")
-            orcamentos = []
-        else:
-            orcamentos = response.json() or []
-    except Exception as e:
-        print(f"Erro: {e}")
-        flash("Erro ao carregar orçamentos.")
+        orcamentos = response.json() if response.status_code == 200 else []
+    except:
         orcamentos = []
     
+    rows = ""
+    for o in orcamentos:
+        cliente = o.get('empresas', {}).get('nome_empresa', '—') if o.get('empresas') else '—'
+        rows += f'''
+        <tr>
+            <td>{o.get('codigo_servico', '—')}</td>
+            <td>{o.get('titulo', '—')}</td>
+            <td>{cliente}</td>
+            <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
+            <td>{format_data(o.get('data_abertura'))}</td>
+            <td>
+                <a href="/pdf_orcamento/{o['id']}" style="padding:6px 12px;background:#e67e22;color:white;text-decoration:none;border-radius:4px;margin-right:5px;"> PDF</a>
+                <a href="/complementar_orcamento/{o['id']}" style="padding:6px 12px;background:#27ae60;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✅ Aceito</a>
+                <a href="/arquivar_orcamento/{o['id']}" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado.')" style="padding:6px 12px;background:#3498db;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">💾 Salvar</a>
+                <a href="/editar_orcamento/{o['id']}" style="padding:6px 12px;background:#f39c12;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✏️ Editar</a>
+                <a href="/excluir_servico/{o['id']}" onclick="return confirm('Tem certeza?')" style="padding:6px 12px;background:#e74c3c;color:white;text-decoration:none;border-radius:4px;">🗑️</a>
+            </td>
+        </tr>'''
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
-    <title>Orçamentos Pendentes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orçamentos</title>
     <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #27ae60; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
-        .btn {{ padding: 12px 25px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-bottom: 20px; }}
-        .search-box {{ margin: 20px 0; }}
-        .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }}
-        .search-box button {{ padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background: #2c3e50; color: white; font-weight: 700; }}
-        tr:hover {{ background: #f8f9fa; }}
-        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; display: inline-block; }}
+    body {{ font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }}
+    .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+    .header {{ background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+    .user-bar {{ background: #34495e; color: white; padding: 10px 20px; display: flex; justify-content: space-between; }}
+    .content {{ padding: 30px; }}
+    table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+    th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }}
+    th {{ background: #f8f9fa; font-weight: bold; color: #2c3e50; }}
+    .btn {{ padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }}
+    .search {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }}
+    .menu-container {{ position: relative; z-index: 9999; margin: 20px 0; }}
     </style>
     </head>
     <body>
     <div class="container">
-        <div class="header">
-            <h1 style="margin:0;">📋 Orçamentos Pendentes</h1>
+        <div class="header"><h1 style="margin:0;">💰 Orçamentos</h1></div>
+        <div class="user-bar">
+            <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
+            <a href="/logout" style="color: #3498db;">🚪 Sair</a>
         </div>
         <div class="content">
-            <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
-            
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Pesquisar por título...">
-                <button onclick="filtrarTabela()">🔍 Pesquisar</button>
+            <div class="menu-container">{MENU_FLUTUANTE}</div>
+            <a href="/adicionar_orcamento" class="btn"> Novo Orçamento</a>
+            <div style="margin: 20px 0;">
+                <form method="get" style="display: inline-block;">
+                    <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 Pesquisar</button>
+                </form>
             </div>
-            
-            <table id="tabelaOrcamentos">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Título</th>
-                        <th>Cliente</th>
-                        <th>Valor</th>
-                        <th>Data</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-'''
-    html_tbody = ""
-    for orc in orcamentos:
-        emp = orc.get('empresas')
-        if emp and isinstance(emp, list) and len(emp) > 0:
-            nome_empresa = emp[0].get('nome_empresa', '—')
-        elif emp and isinstance(emp, dict):
-            nome_empresa = emp.get('nome_empresa', '—')
-        else:
-            nome_empresa = '—'
-        
-        data_fmt = str(orc.get('data_abertura', '—'))[:10] if orc.get('data_abertura') else '—'
-        
-        html_tbody += f'''
-                    <tr>
-                        <td>{orc.get('codigo_servico', '—')}</td>
-                        <td>{orc.get('titulo', '—')}</td>
-                        <td>{nome_empresa}</td>
-                        <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
-                        <td>{data_fmt}</td>
-                        <td>
-                            <a href="/pdf_orcamento/{orc.get('id')}" class="btn-pdf">📄 PDF</a>
-                            <a href="/complementar_orcamento/{orc.get('id')}" class="btn-aceito">✅ Aceito</a>
-                            <a href="/arquivar_orcamento/{orc.get('id')}" class="btn-salvar" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado.')">💾 Salvar</a>
-                            <a href="/editar_orcamento/{orc.get('id')}" class="btn-editar">✏️ Editar</a>
-                            <a href="/excluir_orcamento/{orc.get('id')}" class="btn-excluir" onclick="return confirm('Confirma exclusão?')">🗑️</a>
-                        </td>
-                    </tr>
-'''
-    
-    if not orcamentos:
-        html_tbody += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento pendente</td></tr>'
-    
-    return f'''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-    <meta charset="UTF-8">
-    <title>Orçamentos Pendentes</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #27ae60; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
-        .btn {{ padding: 12px 25px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-bottom: 20px; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background: #2c3e50; color: white; font-weight: 700; }}
-        tr:hover {{ background: #f8f9fa; }}
-        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; display: inline-block; }}
-        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; display: inline-block; }}
-    </style>
-    </head>
-    <body>
-    <div class="container">
-        <div class="header">
-            <h1 style="margin:0;">📋 Orçamentos Pendentes</h1>
-        </div>
-        <div class="content">
-            <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
             <table>
-                <thead>
-                    <tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr>
-                </thead>
-                <tbody>
-                    {html_tbody}
-                </tbody>
+                <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
+                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">Nenhum orçamento encontrado</td></tr>'}</tbody>
             </table>
         </div>
     </div>
