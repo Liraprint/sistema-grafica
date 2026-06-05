@@ -449,52 +449,113 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/clientes')
-def clientes():
+@app.route('/cliente/<int:id>')
+def detalhes_cliente(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    try:
+        # Busca dados da empresa
+        url_emp = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
+        resp_emp = requests.get(url_emp, headers=headers)
+        if not resp_emp.json():
+            flash("❌ Cliente não encontrado!")
+            return redirect(url_for('listar_clientes'))
+        
+        empresa = resp_emp.json()[0]
+        
+        # Busca TODOS os orçamentos deste cliente (aceitos ou não)
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"
+        resp_orcs = requests.get(url_orcs, headers=headers)
+        orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
+        
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("❌ Erro ao carregar dados do cliente.")
+        return redirect(url_for('listar_clientes'))
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menu da Gráfica</title>
+    <title>{empresa.get('nome_empresa', 'Cliente')}</title>
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 900px; margin: 50px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 25px; }}
-    h1 {{ font-size: 26px; margin: 0; font-weight: 600; }}
-    .user-info {{ background: #34495e; color: white; padding: 12px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .btn-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px; }}
-    @media (max-width: 768px) {{ .btn-grid {{ grid-template-columns: 1fr; }} }}
-    .btn {{ display: block; width: 100%; padding: 10px 15px; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; border-radius: 8px; color: white; transition: all 0.3s ease; border: none; cursor: pointer; max-width: 250px; margin: 0 auto; }}
-    .btn-green {{ background: #27ae60; }} .btn-blue {{ background: #3498db; }} .btn-purple {{ background: #8e44ad; }} .btn-red {{ background: #e74c3c; }} .btn-orange {{ background: #e67e22; }}
-    .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
-    .footer {{ text-align: center; padding: 15px; background: #ecf0f1; color: #7f8c8d; font-size: 12px; border-top: 1px solid #bdc3c7; }}
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #2c3e50; color: white; padding: 25px; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .section {{ margin-bottom: 30px; }}
+        .section-title {{ font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
+        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+        .info-item {{ margin-bottom: 10px; }}
+        .info-item strong {{ color: #2c3e50; display: block; font-size: 12px; margin-bottom: 3px; }}
+        .info-item span {{ font-size: 14px; color: #333; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
+        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background: #2c3e50; color: white; font-weight: 700; }}
+        tr:hover {{ background: #f8f9fa; }}
+        .btn {{ padding: 8px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; font-size: 13px; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 20px; }}
+        .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
-    <div class="header"><h1>📋 Menu da Gráfica</h1></div>
-    <div class="user-info">
-    <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
-    </div>
-    <div class="btn-grid">
-    <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
-    <a href="/servicos" class="btn btn-blue">🔧 Todos os Serviços</a>
-    <a href="/orcamentos" class="btn btn-blue">💰 Orçamentos</a>
-    {f'<a href="/estoque" class="btn btn-purple">📊 Meu Estoque</a>' if session['nivel'] == 'administrador' else ''}
-    <a href="/envios" class="btn btn-blue">📦 Rastreamento</a>
-    {f'<a href="/fornecedores" class="btn btn-orange">📦 Fornecedores</a>' if session['nivel'] == 'administrador' else ''}
-    {f'<a href="/configuracoes" class="btn btn-red">⚙️ Configurações</a>' if session['nivel'] == 'administrador' else ''}
-    {f'<a href="/gerenciar_usuarios" class="btn btn-red">🔐 Gerenciar Usuários</a>' if session['nivel'] == 'administrador' else ''}
-    {f'<a href="/exportar_excel" class="btn btn-red">📥 Exportar Backup</a>' if session['nivel'] == 'administrador' else ''}
-    {f'<a href="/importar_excel" class="btn btn-red">📤 Importar Excel</a>' if session['nivel'] == 'administrador' else ''}
-    </div>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        <div class="header">
+            <h1 style="margin:0;">📋 {empresa.get('nome_empresa', 'Cliente')}</h1>
+        </div>
+        <div class="content">
+            <a href="/clientes" class="back-link">← Voltar à lista de clientes</a>
+            
+            <!-- DADOS CADASTRAIS -->
+            <div class="section">
+                <div class="section-title">📝 Dados Cadastrais</div>
+                <div class="info-grid">
+                    <div class="info-item"><strong>CNPJ</strong><span>{empresa.get('cnpj', '—')}</span></div>
+                    <div class="info-item"><strong>Telefone</strong><span>{empresa.get('telefone', '—')}</span></div>
+                    <div class="info-item"><strong>E-mail</strong><span>{empresa.get('email', '—')}</span></div>
+                    <div class="info-item"><strong>Responsável</strong><span>{empresa.get('responsavel', '—')}</span></div>
+                    <div class="info-item"><strong>CEP</strong><span>{empresa.get('cep', '—')}</span></div>
+                    <div class="info-item"><strong>Endereço</strong><span>{empresa.get('endereco', '—')}, {empresa.get('numero', '')} - {empresa.get('bairro', '—')}</span></div>
+                    <div class="info-item"><strong>Cidade/UF</strong><span>{empresa.get('cidade', '—')} - {empresa.get('estado', '—')}</span></div>
+                </div>
+            </div>
+            
+            <!-- ORÇAMENTOS ENVIADOS (HISTÓRICO COMPLETO) -->
+            <div class="section">
+                <div class="section-title">📋 Orçamentos Enviados ({len(orcamentos)})</div>
+                {f'''
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Título</th>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {"".join(f"""
+                        <tr>
+                            <td>{orc.get('codigo_servico', '—')}</td>
+                            <td>{orc.get('titulo', '—')}</td>
+                            <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
+                            <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
+                            <td>{orc.get('status', '—')}</td>
+                            <td>
+                                <a href="/pdf_orcamento/{orc.get('id')}" class="btn" style="background:#f39c12;">📄 PDF</a>
+                                <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="background:#f1c40f;">✏️ Editar</a>
+                            </td>
+                        </tr>
+                        """ for orc in orcamentos) if orcamentos else '<tr><td colspan="6" class="empty">Nenhum orçamento enviado para este cliente</td></tr>'}
+                    </tbody>
+                </table>
+                ''' if orcamentos else '<p class="empty">Nenhum orçamento enviado para este cliente</p>'}
+            </div>
+        </div>
     </div>
     </body>
     </html>
@@ -1935,7 +1996,7 @@ def confirmar_aceite_orcamento(id):
         cep_cadastrado = empresa.get('cep', '')
         endereco_principal = f"{empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         
-        # Endereço de entrega (prioriza se existir, senão usa o principal)
+        # Endereço de entrega
         entrega_end = empresa.get('entrega_endereco')
         if entrega_end:
             endereco_entrega_padrao = f"{entrega_end}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
@@ -1943,6 +2004,9 @@ def confirmar_aceite_orcamento(id):
         else:
             endereco_entrega_padrao = endereco_principal
             cep_entrega_padrao = cep_cadastrado
+        
+        # Pega "Aos cuidados de" do orçamento ou da empresa
+        aoscuidadosde_padrao = orcamento.get('aoscuidadosde', '') or empresa.get('responsavel', '')
             
     except Exception as e:
         print(f"Erro ao carregar dados: {e}")
@@ -2059,7 +2123,7 @@ def confirmar_aceite_orcamento(id):
                 <!-- Aos cuidados de -->
                 <div class="form-group">
                     <label class="title-label">👤 Entrega aos cuidados de</label>
-                    <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{empresa.get('responsavel', '')}">
+                    <input type="text" name="aos_cuidados_de" placeholder="Nome da pessoa que receberá" value="{aoscuidadosde_padrao}">
                 </div>
                 
                 <!-- Observações -->
@@ -2069,7 +2133,7 @@ def confirmar_aceite_orcamento(id):
                 </div>
                 
                 <div style="margin-top: 30px; text-align: center;">
-                    <button type="submit" class="btn">✅ Confirmar e Gerar OS</button>
+                    <button type="submit" class="btn">✅ Aceitar e Gerar OS</button>
                     <a href="/orcamentos" class="btn btn-cancel">Cancelar</a>
                 </div>
             </form>
@@ -2077,7 +2141,6 @@ def confirmar_aceite_orcamento(id):
     </div>
     
     <script>
-    // Toggle CNPJ
     function toggleCNPJ() {{
         const radios = document.getElementsByName('usar_cnpj_cadastrado');
         const campo = document.getElementById('campo_cnpj_novo');
@@ -2093,7 +2156,6 @@ def confirmar_aceite_orcamento(id):
         campo.querySelector('input').value = '';
     }}
     
-    // Toggle Endereço
     function toggleEndereco() {{
         const radios = document.getElementsByName('usar_endereco_cadastrado');
         const campo = document.getElementById('campo_endereco_novo');
@@ -2111,7 +2173,6 @@ def confirmar_aceite_orcamento(id):
         limparCamposEndereco();
     }}
     
-    // Buscar CEP
     function buscarCEP() {{
         const cep = document.getElementById('novo_cep').value.replace(/\\D/g, '');
         if (cep.length !== 8) {{
@@ -2139,7 +2200,6 @@ def confirmar_aceite_orcamento(id):
         document.getElementById('novo_complemento').value = '';
     }}
     
-    // Máscara CNPJ
     function mascaraCNPJ(input) {{
         let value = input.value.replace(/\\D/g, "");
         value = value.replace(/^(\\d{{2}})(\\d)/, "$1.$2");
@@ -2149,7 +2209,6 @@ def confirmar_aceite_orcamento(id):
         input.value = value;
     }}
     
-    // Preparar endereço antes do envio (COM CEP INCLUÍDO)
     document.getElementById('formAceite').addEventListener('submit', function(e) {{
         const usarCadastrado = document.querySelector('input[name="usar_endereco_cadastrado"]:checked').value;
         if (usarCadastrado === 'nao') {{
@@ -2160,7 +2219,6 @@ def confirmar_aceite_orcamento(id):
             const cidade = document.getElementById('novo_cidade').value;
             const complemento = document.getElementById('novo_complemento').value;
             
-            // Concatenação padrão para evitar conflito com f-string do Python
             const enderecoCompleto = 'CEP: ' + cep + ' - ' + endereco + ', ' + numero + ' - ' + bairro + ', ' + cidade + (complemento ? ' (' + complemento + ')' : '');
             document.getElementById('endereco_completo').value = enderecoCompleto;
         }}
@@ -3686,77 +3744,105 @@ def excluir_fornecedor_view(id):
 def listar_orcamentos():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    busca = request.args.get('q', '').strip()
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=codigo_servico.desc"
-        if busca:
-            url += f"&titulo=ilike.*{busca}*"
-        response = requests.get(url, headers=headers)
-        orcamentos = response.json() if response.status_code == 200 else []
-    except:
-        orcamentos = []
     
-    rows = ""
-    for o in orcamentos:
-        cliente = o.get('empresas', {}).get('nome_empresa', '—') if o.get('empresas') else '—'
-        rows += f'''
-        <tr>
-            <td>{o.get('codigo_servico', '—')}</td>
-            <td>{o.get('titulo', '—')}</td>
-            <td>{cliente}</td>
-            <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
-            <td>{format_data(o.get('data_abertura'))}</td>
-            <td>
-                <a href="/pdf_orcamento/{o['id']}" style="padding:6px 12px;background:#e67e22;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">📄 PDF</a>
-                <a href="/complementar_orcamento/{o['id']}" style="padding:6px 12px;background:#27ae60;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✅ Aceito</a>
-                <a href="/editar_orcamento/{o['id']}" style="padding:6px 12px;background:#f39c12;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✏️ Editar</a>
-                <a href="/excluir_servico/{o['id']}" onclick="return confirm('Tem certeza?')" style="padding:6px 12px;background:#e74c3c;color:white;text-decoration:none;border-radius:4px;">🗑️</a>
-            </td>
-        </tr>'''
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=data_abertura.desc"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            flash("Erro ao carregar orçamentos.")
+            orcamentos = []
+        else:
+            orcamentos = response.json() or []
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("Erro ao carregar orçamentos.")
+        orcamentos = []
     
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orçamentos</title>
     <style>
-    body {{ font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }}
-    .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-    .header {{ background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-    .user-bar {{ background: #34495e; color: white; padding: 10px 20px; display: flex; justify-content: space-between; }}
-    .content {{ padding: 30px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-    th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }}
-    th {{ background: #f8f9fa; font-weight: bold; color: #2c3e50; }}
-    .btn {{ padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }}
-    .search {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }}
-    .menu-container {{ position: relative; z-index: 9999; margin: 20px 0; }}
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
+        .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: #27ae60; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ padding: 30px; }}
+        .btn {{ padding: 12px 25px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-bottom: 20px; }}
+        .search-box {{ margin: 20px 0; }}
+        .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }}
+        .search-box button {{ padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background: #2c3e50; color: white; font-weight: 700; }}
+        tr:hover {{ background: #f8f9fa; }}
+        .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
+        .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
+        .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
+        .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; }}
     </style>
     </head>
     <body>
     <div class="container">
-        <div class="header"><h1 style="margin:0;">💰 Orçamentos</h1></div>
-        <div class="user-bar">
-            <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-            <a href="/logout" style="color: #3498db;">🚪 Sair</a>
+        <div class="header">
+            <h1 style="margin:0;">📋 Orçamentos</h1>
         </div>
         <div class="content">
-            <div class="menu-container">{MENU_FLUTUANTE}</div>
             <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
-            <div style="margin: 20px 0;">
-                <form method="get" style="display: inline-block;">
-                    <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
-                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 Pesquisar</button>
-                </form>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Pesquisar por título...">
+                <button onclick="filtrarTabela()">🔍 Pesquisar</button>
             </div>
-            <table>
-                <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
-                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">Nenhum orçamento encontrado</td></tr>'}</tbody>
+            
+            <table id="tabelaOrcamentos">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Cliente</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join(f"""
+                    <tr>
+                        <td>{orc.get('codigo_servico', '—')}</td>
+                        <td>{orc.get('titulo', '—')}</td>
+                        <td>{orc.get('empresas', {{}}).get('nome_empresa', '—')}</td>
+                        <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
+                        <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
+                        <td>
+                            <a href="/pdf_orcamento/{orc.get('id')}" class="btn-pdf">📄 PDF</a>
+                            <a href="/complementar_orcamento/{orc.get('id')}" class="btn-aceito">✅ Aceito</a>
+                            <a href="/editar_orcamento/{orc.get('id')}" class="btn-editar">✏️ Editar</a>
+                            <a href="/excluir_orcamento/{orc.get('id')}" class="btn-excluir" onclick="return confirm('Confirma exclusão?')">🗑️</a>
+                        </td>
+                    </tr>
+                    """ for orc in orcamentos) if orcamentos else '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento encontrado</td></tr>'}
+                </tbody>
             </table>
         </div>
     </div>
+    
+    <script>
+    function filtrarTabela() {{
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const table = document.getElementById('tabelaOrcamentos');
+        const tr = table.getElementsByTagName('tr');
+        
+        for (let i = 1; i < tr.length; i++) {{
+            const td = tr[i].getElementsByTagName('td')[1];
+            if (td) {{
+                const txtValue = td.textContent || td.innerText;
+                tr[i].style.display = txtValue.toLowerCase().indexOf(input) > -1 ? "" : "none";
+            }}
+        }}
+    }}
+    </script>
     </body>
     </html>
     '''
@@ -3806,12 +3892,13 @@ def adicionar_orcamento():
         condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
         condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
         observacoes = request.form.get('observacoes_gerais', '')
+        aoscuidadosde = request.form.get('aoscuidadosde', '')  # NOVO CAMPO
         
         if not empresa_id:
             flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        # Gera código sequencial único (ex: OR-005)
+        # Gera código sequencial único (ex: OR-300)
         codigo_servico = gerar_proximo_codigo('OR')
         
         try:
@@ -3827,7 +3914,8 @@ def adicionar_orcamento():
                 "prazo_dias": int(prazo_dias),
                 "condicao_pagamento": condicao_pagamento,
                 "condicao_entrega": condicao_entrega,
-                "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}"
+                "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}",
+                "aoscuidadosde": aoscuidadosde  # SALVA CAMPO MANUAL
             }
             
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
@@ -3847,7 +3935,7 @@ def adicionar_orcamento():
                     flash("❌ Erro ao criar orçamento.")
                     return redirect(url_for('adicionar_orcamento'))
                 
-                # Processa os itens COM MATERIAL E DESCRIÇÃO SEPARADOS
+                # Processa os itens
                 vt = 0.0
                 descricoes = request.form.getlist('item_descricao[]')
                 materiais = request.form.getlist('item_material[]')
@@ -3892,7 +3980,7 @@ def adicionar_orcamento():
                 requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                     json={"valor_cobrado": vt}, headers=headers)
                 
-                flash("✅ Orçamento criado com sucesso!")
+                flash("✅ Orçamento criado e salvo com sucesso!")
                 return redirect(url_for('listar_orcamentos'))
             else:
                 flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code}")
@@ -3968,6 +4056,10 @@ def adicionar_orcamento():
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>Aos cuidados de</label>
+                    <input type="text" name="aoscuidadosde" placeholder="Nome da pessoa que receberá (opcional)">
+                </div>
+                <div class="form-group">
                     <label>Observações Gerais</label>
                     <textarea name="observacoes_gerais" rows="2"></textarea>
                 </div>
@@ -4006,7 +4098,7 @@ def adicionar_orcamento():
                     </div>
                 </div>
                 <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Gerar Orçamento</button>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Salvar Orçamento</button>
             </form>
         </div>
     </div>
