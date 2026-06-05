@@ -4154,7 +4154,7 @@ def adicionar_orcamento():
     '''
 
     @app.route('/arquivar_orcamento/<int:id>')
-def arquivar_orcamento(id):
+    def arquivar_orcamento(id):
     """Arquiva o orçamento sem converter em OS (muda status para 'Fechado')"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
