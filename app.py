@@ -3725,7 +3725,8 @@ def listar_orcamentos():
         return redirect(url_for('login'))
     
     try:
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&order=data_abertura.desc"
+        # Busca APENAS orçamentos pendentes (aguardando decisão)
+        url = f"{SUPABASE_URL}/rest/v1/servicos?select=*,empresas(nome_empresa)&tipo=eq.Orçamento&status=eq.Pendente&order=data_abertura.desc"
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             flash("Erro ao carregar orçamentos.")
@@ -3758,6 +3759,7 @@ def listar_orcamentos():
         tr:hover {{ background: #f8f9fa; }}
         .btn-pdf {{ background: #f39c12; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
         .btn-aceito {{ background: #27ae60; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
+        .btn-salvar {{ background: #3498db; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
         .btn-editar {{ background: #f1c40f; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; margin-right: 5px; }}
         .btn-excluir {{ background: #e74c3c; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; }}
     </style>
@@ -3765,7 +3767,7 @@ def listar_orcamentos():
     <body>
     <div class="container">
         <div class="header">
-            <h1 style="margin:0;">📋 Orçamentos</h1>
+            <h1 style="margin:0;">📋 Orçamentos Pendentes</h1>
         </div>
         <div class="content">
             <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
@@ -3788,7 +3790,7 @@ def listar_orcamentos():
                 </thead>
                 <tbody>
 '''
-    # CORREÇÃO: tratar empresas como lista
+    # Loop para tratar empresas corretamente
     for orc in orcamentos:
         # Extrai nome da empresa (pode vir como lista ou None)
         emp = orc.get('empresas')
@@ -3813,6 +3815,7 @@ def listar_orcamentos():
                         <td>
                             <a href="/pdf_orcamento/{orc.get('id')}" class="btn-pdf">📄 PDF</a>
                             <a href="/complementar_orcamento/{orc.get('id')}" class="btn-aceito">✅ Aceito</a>
+                            <a href="/arquivar_orcamento/{orc.get('id')}" class="btn-salvar" onclick="return confirm('Deseja salvar este orçamento? Ele será arquivado e não virará OS.')">💾 Salvar</a>
                             <a href="/editar_orcamento/{orc.get('id')}" class="btn-editar">✏️ Editar</a>
                             <a href="/excluir_orcamento/{orc.get('id')}" class="btn-excluir" onclick="return confirm('Confirma exclusão?')">🗑️</a>
                         </td>
@@ -3820,7 +3823,7 @@ def listar_orcamentos():
 '''
     
     if not orcamentos:
-        html += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento encontrado</td></tr>'
+        html += '<tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Nenhum orçamento pendente</td></tr>'
     
     html += '''
                 </tbody>
@@ -3846,7 +3849,7 @@ def listar_orcamentos():
     </body>
     </html>
     '''
-    
+        
 def adicionar_dias_uteis(data_inicio, dias):
     """Adiciona dias úteis pulando finais de semana e feriados"""
     from datetime import timedelta
@@ -4149,6 +4152,27 @@ def adicionar_orcamento():
     </body>
     </html>
     '''
+
+    @app.route('/arquivar_orcamento/<int:id>')
+def arquivar_orcamento(id):
+    """Arquiva o orçamento sem converter em OS (muda status para 'Fechado')"""
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        # Muda status para "Fechado" (arquiva)
+        dados = {"status": "Fechado"}
+        response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
+        
+        if response.status_code == 204:
+            flash("✅ Orçamento arquivado com sucesso!")
+        else:
+            flash("❌ Erro ao arquivar orçamento.")
+    except Exception as e:
+        print(f"Erro ao arquivar: {e}")
+        flash("❌ Erro ao arquivar orçamento.")
+    
+    return redirect(url_for('listar_orcamentos'))
 
 @app.route('/editar_orcamento/<int:id>', methods=['GET', 'POST'])
 def editar_orcamento(id):
