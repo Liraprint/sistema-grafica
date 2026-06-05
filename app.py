@@ -5268,6 +5268,27 @@ def processar_aceite_orcamento(id):
         flash("❌ Erro ao processar aceite.")
         return redirect(url_for('listar_orcamentos'))
 
+@app.route('/arquivar_orcamento/<int:id>')
+def arquivar_orcamento(id):
+    """Arquiva o orçamento como NÃO ACEITO (muda status para 'Fechado')"""
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        dados = {"status": "Fechado"}
+        response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados, headers=headers)
+        
+        if response.status_code == 204:
+            flash("✅ Orçamento arquivado (não aceito)!")
+        else:
+            flash("❌ Erro ao arquivar orçamento.")
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash("❌ Erro ao arquivar orçamento.")
+    
+    return redirect(url_for('listar_orcamentos'))
+
+
 # ========================
 # INICIAR O APP (FORA DE QUALQUER FUNÇÃO!)
 # ========================
