@@ -805,7 +805,6 @@ def detalhes_empresa(id):
         return redirect(url_for('login'))
     
     try:
-        # Busca dados da empresa
         url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -820,16 +819,17 @@ def detalhes_empresa(id):
         flash("Erro de conexão.")
         return redirect(url_for('listar_empresas'))
     
-    # Busca TODOS os registros da empresa (orçamentos + OSs)
+    # Busca APENAS orçamentos FECHADOS (salvos) e OSs (Produção)
     try:
-        # Query para buscar TODOS os serviços/orçamentos da empresa
-        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&order=data_abertura.desc"
+        # Orçamentos fechados (não aceitos)
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&status=eq.Fechado&order=data_abertura.desc"
         resp_orcs = requests.get(url_orcs, headers=headers)
-        todos_registros = resp_orcs.json() if resp_orcs.status_code == 200 else []
+        orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
         
-        # Separa em orçamentos e OSs
-        orcamentos = [r for r in todos_registros if r.get('tipo') == 'Orçamento']
-        oss = [r for r in todos_registros if r.get('tipo') == 'Produção']
+        # OSs (Produção)
+        url_oss = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Produção&order=data_abertura.desc"
+        resp_oss = requests.get(url_oss, headers=headers)
+        oss = resp_oss.json() if resp_oss.status_code == 200 else []
         
     except Exception as e:
         print(f"Erro ao carregar registros: {e}")
@@ -864,7 +864,6 @@ def detalhes_empresa(id):
     th {{ background: #ecf0f1; font-weight: 600; }}
     tr:hover {{ background: #f1f7fb; }}
     .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
-    .status-pendente {{ color: #e67e22; font-weight: 600; }}
     .status-fechado {{ color: #95a5a6; font-weight: 600; }}
     .status-producao {{ color: #3498db; font-weight: 600; }}
     .status-entregue {{ color: #27ae60; font-weight: 600; }}
@@ -877,7 +876,6 @@ def detalhes_empresa(id):
         
         <a href="/empresas" class="back-link">← Voltar à Lista</a>
         
-        <!-- DADOS CADASTRAIS -->
         <div class="details">
             <p><strong>CNPJ:</strong> {empresa['cnpj']}</p>
             <p><strong>Responsável:</strong> {empresa['responsavel']}</p>
@@ -888,7 +886,6 @@ def detalhes_empresa(id):
             {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
         </div>
         
-        <!-- BOTÕES DE AÇÃO -->
         <div style="display: flex; gap: 15px; margin: 20px 0; padding: 0 30px; flex-wrap: wrap;">
             <a href="/servicos_empresa/{id}" class="btn">📋 Serviços/OSs</a>
             <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
@@ -896,7 +893,6 @@ def detalhes_empresa(id):
             <a href="/adicionar_orcamento?empresa_id={id}" class="btn btn-orange">➕ Novo Orçamento</a>
         </div>
         
-        <!-- ORÇAMENTOS ENVIADOS (TODOS: Pendentes, Fechados) -->
         <div class="section">
             <h3>📋 Orçamentos ({len(orcamentos)})</h3>
             {f'''
@@ -918,19 +914,19 @@ def detalhes_empresa(id):
                         <td>{orc.get('titulo', '—')}</td>
                         <td>{orc.get('data_abertura', '—')[:10] if orc.get('data_abertura') else '—'}</td>
                         <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
-                        <td class="{'status-pendente' if orc.get('status') == 'Pendente' else 'status-fechado' if orc.get('status') == 'Fechado' else ''}">{orc.get('status', '—')}</td>
+                        <td class="status-fechado">{orc.get('status', '—')}</td>
                         <td>
                             <a href="/pdf_orcamento/{orc.get('id')}" class="btn btn-orange" style="padding: 5px 10px; font-size: 12px;">📄 PDF</a>
                             <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f1c40f;">✏️</a>
+                            <a href="/excluir_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #e74c3c;" onclick="return confirm('Confirma exclusão deste orçamento?')">🗑️</a>
                         </td>
                     </tr>
             """ for orc in orcamentos) + '''
                 </tbody>
             </table>
-            ''' if orcamentos else '<p class="empty">Nenhum orçamento registrado para este cliente.</p>'}
+            ''' if orcamentos else '<p class="empty">Nenhum orçamento arquivado para este cliente.</p>'}
         </div>
         
-        <!-- ORDEM DE SERVIÇO (OSs) -->
         <div class="section">
             <h3>🔧 Ordens de Serviço ({len(oss)})</h3>
             {f'''
@@ -4925,12 +4921,13 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
+        # PEGA O CAMPO "AOS CUIDADOS DE"
+        aoscuidadosde = orc.get('aoscuidadosde', '') or '—'
+        
         usuario_logado = session.get('usuario', '')
         
-        # Data sem a cidade "Guarulhos"
         data_abr = orc.get('data_abertura', '')
         data_fmt = f"{data_abr[8:10]}/{data_abr[5:7]}/{data_abr[:4]}" if len(data_abr) >= 10 else datetime.now().strftime('%d/%m/%Y')
-        
         prazo = orc.get('prazo_dias', '7')
         condicao_pagamento = orc.get('condicao_pagamento', '28 dias')
         condicao_entrega = orc.get('condicao_entrega', 'a combinar')
@@ -4951,58 +4948,35 @@ def pdf_orcamento(id):
                 
                 linhas_html += f'''
                 <tr>
-                    <td class="text-center" style="font-weight:bold; font-size: 14px;">{qtd}</td>
-                    <td style="font-weight: 600; font-size: 14px;">{desc}</td>
-                    <td style="font-size: 14px;">{material}</td>
-                    <td class="text-center" style="font-size: 14px;">{cor}</td>
-                    <td class="text-right" style="font-size: 14px;">R$ {vu:,.2f}</td>
-                    <td class="text-right" style="font-weight: 700; font-size: 14px;">R$ {vt:,.2f}</td>
+                    <td class="text-center" style="font-weight:bold;">{qtd}</td>
+                    <td style="font-weight: 600;">{desc}</td>
+                    <td>{material}</td>
+                    <td class="text-center">{cor}</td>
+                    <td class="text-right">R$ {vu:,.2f}</td>
+                    <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
                 </tr>'''
         else:
-            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 30px; color: #888; font-size: 14px;">Nenhum item adicionado</td></tr>'
+            linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
 
-        # HTML COM FLEXBOX PARA RODAPÉ CORRETO
         html = f'''<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ 
-        size: A4; 
-        margin: 15mm; /* Margens seguras para não cortar nada */
-    }}
+    @page {{ size: A4; margin: 15mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    
-    /* Layout de Página Inteira com Flexbox */
     body {{ 
         font-family: "Segoe UI", Arial, sans-serif; 
-        font-size: 15px;
+        font-size: 13px;
         color: #1a1a1a; 
-        line-height: 1.6;
-        display: flex;
-        flex-direction: column;
-        min-height: 250mm; /* Garante altura mínima de A4 */
+        line-height: 1.5;
     }}
-    
-    /* Cabeçalho e Conteúdo Principal */
-    .main-content {{ 
-        flex: 1; /* Ocupa todo o espaço disponível */
-    }}
-    
     .header {{ text-align: center; margin-bottom: 25px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }}
     .logo {{ max-width: 200px; margin-bottom: 10px; }}
-    .titulo {{ 
-        font-size: 28px;
-        font-weight: 900; 
-        text-transform: uppercase; 
-        letter-spacing: 5px; 
-        color: #2c3e50;
-        margin-bottom: 10px;
-    }}
-    .data-line {{ text-align: right; font-size: 15px; color: #555; margin-bottom: 20px; }}
-    
+    .titulo {{ font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 10px 0; }}
+    .data-line {{ text-align: right; font-size: 13px; color: #555; margin-bottom: 20px; }}
     .client-info {{ 
         background: #f0f4f8; 
         padding: 15px 18px; 
@@ -5010,54 +4984,46 @@ def pdf_orcamento(id):
         border-left: 5px solid #2c3e50;
         border-radius: 0 6px 6px 0;
     }}
-    .client-info p {{ margin: 5px 0; font-size: 14px; }}
-    .client-info strong {{ color: #2c3e50; font-weight: 800; font-size: 13px; }}
-    
-    .table-title {{ font-size: 17px; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; letter-spacing: 1px; }}
+    .client-info p {{ margin: 5px 0; font-size: 13px; }}
+    .client-info strong {{ color: #2c3e50; font-weight: 700; font-size: 12px; }}
+    .table-title {{ font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; color: #2c3e50; letter-spacing: 1px; }}
     table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 13px; }}
-    th {{ background: #2c3e50; color: white; font-weight: 800; text-transform: uppercase; font-size: 12px; }}
+    th, td {{ padding: 10px 8px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 12px; }}
+    th {{ background: #2c3e50; color: white; font-weight: 700; text-transform: uppercase; font-size: 11px; }}
     tr:nth-child(even) {{ background: #f8fafc; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
-    
     .total-block {{ 
         text-align: right; 
         margin-top: 20px; 
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 900; 
         color: #2c3e50; 
         border-top: 3px solid #2c3e50;
         padding-top: 12px;
     }}
-    
     .terms {{ 
         margin-top: 25px; 
-        font-size: 14px; 
+        font-size: 12px; 
         color: #444; 
         padding: 12px 0;
         border-top: 2px solid #e2e8f0;
         line-height: 1.8;
-        margin-bottom: 20px; /* Espaço entre termos e rodapé se houver conteúdo */
     }}
     .terms strong {{ color: #1a202c; font-weight: 700; }}
-    
-    /* RODAPÉ SEMPRE NO FINAL (Graças ao Flexbox) */
     .footer {{ 
-        margin-top: auto; /* Empurra para o final */
-        text-align: center;
-        background: white;
-        padding-top: 15px;
-        border-top: 2px solid #cbd5e0;
-        page-break-inside: avoid;
+        margin-top: 40px; 
+        text-align: center; 
+        border-top: 2px solid #e2e8f0;
+        padding-top: 20px;
     }}
-    .signature {{ margin: 15px 0; }}
-    .signature p {{ margin: 4px 0; line-height: 1.4; }}
-    .signature .name {{ font-size: 17px; font-weight: 900; color: #2c3e50; margin: 8px 0; }}
-    .signature .role {{ font-size: 13px; color: #4a5568; font-weight: 600; }}
-    .signature .company {{ font-size: 11px; color: #718096; margin-top: 5px; }}
-    
+    .signature {{ margin: 20px 0; }}
+    .signature p {{ margin: 5px 0; line-height: 1.4; }}
+    .signature .name {{ font-size: 15px; font-weight: 800; color: #2c3e50; margin: 10px 0; }}
+    .signature .role {{ font-size: 12px; color: #4a5568; font-weight: 600; }}
+    .empresa-info {{ font-size: 11px; color: #718096; margin-top: 10px; }}
     .ref-num {{ 
+        text-align: right; 
         font-size: 11px; 
         font-weight: 800; 
         color: #718096;
@@ -5068,62 +5034,60 @@ def pdf_orcamento(id):
 </head>
 <body>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <div class="main-content">
-        <div class="header">
-            <img src="{logo_url}" class="logo" alt="LIRAPRINT">
-            <br>
-            <div class="titulo">Proposta Comercial</div>
-        </div>
-        
-        <div class="data-line">{data_fmt}</div>
+<div class="header">
+    <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
+    <br>
+    <div class="titulo">Proposta Comercial</div>
+</div>
+<div class="data-line">Guarulhos, {data_fmt}</div>
 
-        <div class="client-info">
-            <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {responsavel}</p>
-            <p><strong>CNPJ:</strong> {cnpj}</p>
-            <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
-        </div>
+<div class="client-info">
+    <p><strong>Cliente:</strong> {cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>A/C:</strong> {aoscuidadosde}</p>
+    <p><strong>CNPJ:</strong> {cnpj}</p>
+    <p><strong>Tel:</strong> {tel_cliente} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Email:</strong> {email}</p>
+</div>
 
-        <div class="table-title">Itens Orçados</div>
-        <table>
-            <thead>
-                <tr>
-                    <th width="10%" class="text-center">QTD</th>
-                    <th width="30%">DESCRIÇÃO</th>
-                    <th width="30%">MATERIAL</th>
-                    <th width="10%" class="text-center">COR</th>
-                    <th width="10%" class="text-right">VALOR UNIT.</th>
-                    <th width="10%" class="text-right">TOTAL</th>
-                </tr>
-            </thead>
-            <tbody>
-                {linhas_html}
-            </tbody>
-        </table>
+<div class="table-title">Itens Orçados</div>
+<table>
+    <thead>
+        <tr>
+            <th width="10%" class="text-center">QTD</th>
+            <th width="30%">DESCRIÇÃO</th>
+            <th width="30%">MATERIAL</th>
+            <th width="10%" class="text-center">COR</th>
+            <th width="10%" class="text-right">VALOR UNIT.</th>
+            <th width="10%" class="text-right">TOTAL</th>
+        </tr>
+    </thead>
+    <tbody>
+        {linhas_html}
+    </tbody>
+</table>
 
-        <div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
 
-        <div class="terms">
-            <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
-            <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
-        </div>
+<div class="terms">
+    <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
+    <strong>Pagamento:</strong> {condicao_pagamento} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Entrega:</strong> {condicao_entrega}
+</div>
+
+<div class="footer">
+    <div class="signature">
+        <p>Atenciosamente,</p>
+        <p class="name">{usuario_logado}</p>
+        <p class="role">LIRAPRINT - Depto de Vendas</p>
     </div>
-
-    <!-- RODAPÉ (Fica no final da folha A4) -->
-    <div class="footer">
-        <div class="signature">
-            <p style="font-size: 14px; color: #555;">Atenciosamente,</p>
-            <p class="name">{usuario_logado}</p>
-            <p class="role">LIRAPRINT - Depto de Vendas</p>
-            <p class="company">LIRAPRINT | Guarulhos - SP</p>
-        </div>
-        <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
+    
+    <div class="empresa-info">
+        LIRAPRINT | Guarulhos - SP
     </div>
+    
+    <div class="ref-num">Ref: {orc.get('codigo_servico', '—')}</div>
+</div>
 
 </body>
 </html>'''
 
-        # GERA O PDF
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "",
             "encoding": "UTF-8",
@@ -5135,12 +5099,7 @@ def pdf_orcamento(id):
             "enable-local-file-access": None
         })
         
-        return send_file(
-            BytesIO(pdf), 
-            as_attachment=True, 
-            download_name=f"Proposta_{orc.get('codigo_servico','')}.pdf", 
-            mimetype="application/pdf"
-        )
+        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"Proposta_{orc.get('codigo_servico','')}.pdf", mimetype="application/pdf")
         
     except Exception as e:
         print("ERRO PDF:", str(e))
