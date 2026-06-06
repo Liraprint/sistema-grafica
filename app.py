@@ -5320,9 +5320,30 @@ def processar_aceite_orcamento(id):
         empresa = orcamento.get('empresas', {})
         
         # 2. Coleta dados do formulário
-        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip()
-        endereco_entrega = request.form.get('endereco_entrega_os', '').strip()
+        usar_cnpj_cadastrado = request.form.get('usar_cnpj_cadastrado') == 'sim'
+        usar_endereco_cadastrado = request.form.get('usar_endereco_cadastrado') == 'sim'
+        
+        # CNPJ
+        cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else empresa.get('cnpj', '')
+        
+        # Endereço COM CEP
+        if usar_endereco_cadastrado:
+            cep_emp = empresa.get('entrega_cep') or empresa.get('cep', '')
+            if empresa.get('entrega_endereco'):
+                endereco_entrega = f"CEP: {cep_emp} - {empresa.get('entrega_endereco', '')}, {empresa.get('entrega_numero', '')} - {empresa.get('entrega_bairro', '')}, {empresa.get('entrega_cidade', '')} - {empresa.get('entrega_estado', '')}"
+            else:
+                endereco_entrega = f"CEP: {cep_emp} - {empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
+        else:
+            endereco_entrega = request.form.get('endereco_entrega_os', '').strip()
+        
+        # Aos cuidados de
         aos_cuidados = request.form.get('aos_cuidados_de', '').strip() or empresa.get('responsavel', '')
+        
+        print(f"=== DADOS DE ENTREGA ===")
+        print(f"CNPJ: {cnpj_nota}")
+        print(f"Endereço: {endereco_entrega}")
+        print(f"A/C: {aos_cuidados}")
+        print(f"========================")
         
         # 3. Busca itens
         url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}&order=id.asc"
@@ -5366,12 +5387,31 @@ def processar_aceite_orcamento(id):
         codigo_atual = orcamento.get('codigo_servico', '')
         novo_codigo = codigo_atual.replace('OR-', 'OS-') if codigo_atual.startswith('OR-') else f"OS-{codigo_atual.split('-')[1] if '-' in codigo_atual else '000'}"
         
-        # 6. Monta observações
+        # 6. MONTA OBSERVAÇÕES COM DADOS DE ENTREGA
         obs_original = orcamento.get('observacoes', '') or ''
+        
+        # Remove dados de entrega antigos se existirem
         if '--- DADOS DE ENTREGA/NF ---' in obs_original:
             obs_original = obs_original.split('--- DADOS DE ENTREGA/NF ---')[0].strip()
         
-        obs_completas = f"{obs_original}\n\n--- DADOS DE ENTREGA/NF ---\nCNPJ para NF: {cnpj_nota}\nEndereço de entrega: {endereco_entrega}\nAos cuidados de: {aos_cuidados}"
+        # Monta NOVAS observações com dados de entrega
+        obs_completas = obs_original
+        
+        if lista_descricoes:
+            obs_completas += "\n\nITENS DO PEDIDO:"
+            obs_completas += "\n" + "\n".join(lista_descricoes)
+        
+        obs_completas += "\n\n--- DADOS DE ENTREGA/NF ---"
+        if cnpj_nota:
+            obs_completas += f"\nCNPJ para NF: {cnpj_nota}"
+        if endereco_entrega:
+            obs_completas += f"\nEndereço de entrega: {endereco_entrega}"
+        if aos_cuidados:
+            obs_completas += f"\nAos cuidados de: {aos_cuidados}"
+        
+        print(f"=== OBSERVAÇÕES SALVAS ===")
+        print(obs_completas)
+        print(f"==========================")
         
         # 7. DUPLICA orçamento para histórico (status: Fechado)
         dados_copia = {
@@ -5382,7 +5422,7 @@ def processar_aceite_orcamento(id):
             "status": "Fechado",
             "data_abertura": orcamento.get('data_abertura'),
             "valor_cobrado": orcamento.get('valor_cobrado', 0),
-            "observacoes": obs_original,
+            "observacoes": obs_original,  # Sem dados de entrega
             "aoscuidadosde": orcamento.get('aoscuidadosde', '')
         }
         
@@ -5406,7 +5446,7 @@ def processar_aceite_orcamento(id):
         except Exception as e:
             print(f"Erro ao duplicar orçamento: {e}")
         
-        # 8. CONVERTE em OS (ATUALIZA o original)
+        # 8. CONVERTE em OS
         dados_atualizacao = {
             "tipo": "Produção",
             "status": "Pendente",
@@ -5414,15 +5454,13 @@ def processar_aceite_orcamento(id):
             "quantidade": quantidade_total if quantidade_total > 0 else None,
             "dimensao": dimensao if dimensao else None,
             "numero_cores": numero_cores if numero_cores else None,
-            "observacoes": obs_completas
+            "observacoes": obs_completas  # OBSERVAÇÕES COM DADOS DE ENTREGA
         }
         
         if orcamento.get('previsao_entrega'):
             dados_atualizacao['previsao_entrega'] = orcamento.get('previsao_entrega')
         
-        print(f"Convertendo orçamento {id} em OS {novo_codigo}...")
         response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados_atualizacao, headers=headers)
-        print(f"Resposta: {response.status_code}")
         
         if response.status_code == 204:
             # 9. Cria materiais_usados
