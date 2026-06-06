@@ -1600,9 +1600,11 @@ def editar_servico(id):
             return redirect(url_for('listar_servicos'))
         servico = response.json()[0]
     except Exception as e:
-        print(f"Erro ao carregar: {e}")
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
+    
+    # Verifica se é administrador
+    eh_admin = session.get('nivel') == 'administrador'
     
     # Tratamento de dados
     qtd_raw = servico.get('quantidade')
@@ -1620,7 +1622,7 @@ def editar_servico(id):
     cor_raw = servico.get('numero_cores')
     cor_display = '' if (not cor_raw or cor_raw == 'None') else cor_raw
     
-    # Busca materiais
+    # Busca materiais usados
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
         response_mats = requests.get(url_mats, headers=headers)
@@ -1629,23 +1631,20 @@ def editar_servico(id):
         materiais_usados = []
         
     if request.method == 'POST':
-        # COLETA TODOS OS DADOS DO FORM
         titulo = request.form.get('titulo', '').strip()
         empresa_id = request.form.get('empresa_id', '').strip()
         tipo = request.form.get('tipo', '')
         quantidade = request.form.get('quantidade', '')
         dimensao = request.form.get('dimensao', '')
         numero_cores = request.form.get('numero_cores', '')
-        aplicacao = request.form.get('aplicacao', '')  # <-- CAMPO APLICACAO
         status = request.form.get('status', '')
         data_abertura = request.form.get('data_abertura', '')
         previsao_entrega = request.form.get('previsao_entrega', '')
         valor_cobrado_str = request.form.get('valor_cobrado', '0').replace(',', '.')
         observacoes = request.form.get('observacoes', '')
         
-        print(f"=== DADOS RECEBIDOS ===")
-        print(f"Aplicação: '{aplicacao}'")
-        print(f"=======================")
+        # CAMPO APLICACAO: só admin pode salvar
+        aplicacao = request.form.get('aplicacao', '') if eh_admin else ''
         
         if not titulo or not empresa_id:
             flash("Título e Cliente são obrigatórios!")
@@ -1656,7 +1655,6 @@ def editar_servico(id):
         except:
             valor_cobrado = 0.0
         
-        # PREPARA DADOS PARA SALVAR
         dados = {
             "titulo": titulo,
             "empresa_id": int(empresa_id),
@@ -1664,7 +1662,6 @@ def editar_servico(id):
             "quantidade": quantidade if quantidade else None,
             "dimensao": dimensao if dimensao else None,
             "numero_cores": numero_cores if numero_cores else None,
-            "aplicacao": aplicacao if aplicacao else None,  # <-- SALVA APLICACAO
             "status": status,
             "data_abertura": data_abertura if data_abertura else None,
             "previsao_entrega": previsao_entrega if previsao_entrega else None,
@@ -1672,15 +1669,12 @@ def editar_servico(id):
             "observacoes": observacoes
         }
         
-        print(f"=== ENVIANDO PARA SUPABASE ===")
-        print(f"Dados: {dados}")
-        print(f"==============================")
+        # Só adiciona aplicacao se for admin
+        if eh_admin:
+            dados["aplicacao"] = aplicacao if aplicacao else None
         
         try:
-            # ATUALIZA NO SUPABASE
             response = requests.patch(url, json=dados, headers=headers)
-            print(f"Resposta Supabase: {response.status_code}")
-            print(f"Conteúdo: {response.text}")
             
             if response.status_code == 204:
                 flash("✅ Serviço atualizado com sucesso!")
@@ -1700,19 +1694,15 @@ def editar_servico(id):
                             "valor_total": total
                         }
                         requests.patch(f"{SUPABASE_URL}/rest/v1/materiais_usados?id=eq.{mat_id}", json=dados_mat, headers=headers)
-                    except Exception as e:
-                        print(f"Erro ao atualizar material {mat_id}: {e}")
+                    except:
                         continue
                 
                 return redirect(url_for('listar_servicos'))
             else:
                 flash(f"❌ Erro ao atualizar. Status: {response.status_code}")
-                print(f"Erro: {response.text}")
                 
         except Exception as e:
             print(f"Exceção ao salvar: {e}")
-            import traceback
-            traceback.print_exc()
             flash("❌ Erro de conexão ao salvar.")
         
         return redirect(request.url)
@@ -1726,6 +1716,28 @@ def editar_servico(id):
     
     opts_empresas = "".join([f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas])
     opts_materiais = "".join([f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais])
+    
+    # Campo aplicação só aparece para admin
+    campo_aplicacao_html = ""
+    if eh_admin:
+        campo_aplicacao_html = f'''
+        <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <label style="color: #856404;">🔒 Aplicação / Uso / Ambiente (Informações Administrativas)</label>
+            <textarea name="aplicacao" rows="3" placeholder="Informações financeiras, custos, margem, observações internas...">{servico.get('aplicacao', '') or ''}</textarea>
+            <small style="color: #856404; display: block; margin-top: 5px;"> Este campo só é visível para administradores</small>
+        </div>
+        '''
+    else:
+        # Vendedor vê como readonly (sem name, não é enviado no form)
+        aplicacao_valor = servico.get('aplicacao', '') or ''
+        if aplicacao_valor:
+            campo_aplicacao_html = f'''
+            <div class="form-group" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #6c757d;">
+                <label style="color: #6c757d;">📋 Aplicação / Uso / Ambiente</label>
+                <div style="padding: 10px; background: white; border-radius: 4px; color: #495057;">{aplicacao_valor}</div>
+                <small style="color: #6c757d; display: block; margin-top: 5px;">🔒 Campo somente leitura - contato o administrador para alterar</small>
+            </div>
+            '''
     
     return f'''
     <!DOCTYPE html>
@@ -1771,11 +1783,7 @@ def editar_servico(id):
                     <div class="form-group"><label>Previsão Entrega</label><input type="date" name="previsao_entrega" value="{servico.get('previsao_entrega', '')[:10] if servico.get('previsao_entrega') else ''}"></div>
                 </div>
                 
-                <!-- CAMPO APLICAÇÃO -->
-                <div class="form-group">
-                    <label>📋 Aplicação / Uso / Ambiente (Informações para Produção)</label>
-                    <textarea name="aplicacao" rows="3" placeholder="Ex: Uso interno, ambiente externo, aplicar em vidro, etc.">{servico.get('aplicacao', '') or ''}</textarea>
-                </div>
+                {campo_aplicacao_html}
                 
                 <div class="form-group"><label>Observações</label><textarea name="observacoes" rows="3">{servico.get('observacoes', '')}</textarea></div>
                 
@@ -2554,6 +2562,10 @@ def pdf_os(id):
     data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}" if data_abertura and len(data_abertura) >= 10 else datetime.now().strftime('%d/%m/%Y')
     
     aplicacao = servico.get('aplicacao') or ''
+    
+    # VERIFICA SE É ADMINISTRADOR
+    eh_admin = session.get('nivel') == 'administrador'
+    
     logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
     html = f'''<!DOCTYPE html>
@@ -2561,56 +2573,43 @@ def pdf_os(id):
 <head>
 <meta charset="UTF-8">
 <style>
-    @page {{ size: A4; margin: 10mm 15mm 12mm 15mm; }}
+    @page {{ size: A4; margin: 12mm 18mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 9.5pt; color: #1a1a1a; line-height: 1.35; }}
+    body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #1a1a1a; line-height: 1.35; }}
     
-    .header {{ text-align: center; margin-bottom: 15px; border-bottom: 3px solid #2c3e50; padding-bottom: 10px; }}
-    .logo {{ max-width: 130px; margin-bottom: 8px; }}
-    .titulo {{ font-size: 20pt; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; color: #2c3e50; }}
-    .codigo {{ font-size: 10.5pt; color: #555; background: #ecf0f1; display: inline-block; padding: 4px 10px; border-radius: 3px; margin-top: 5px; }}
+    .header {{ text-align: center; margin-bottom: 20px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }}
+    .logo {{ max-width: 150px; margin-bottom: 10px; }}
+    .titulo {{ font-size: 24pt; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 10px 0; }}
+    .codigo {{ font-size: 12pt; color: #555; background: #ecf0f1; display: inline-block; padding: 6px 15px; border-radius: 4px; }}
     
-    .section {{ margin-bottom: 12px; }}
-    .section-title {{ font-size: 9.5pt; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 2px; }}
+    .section {{ margin-bottom: 20px; }}
+    .section-title {{ font-size: 11pt; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px; }}
     
-    /* CLIENTE EM 3 COLUNAS COMPACTAS */
-    .cliente-grid {{ 
-        display: grid; 
-        grid-template-columns: repeat(3, 1fr);
-        gap: 4px 8px;
-        font-size: 8.5pt;
-    }}
-    .cliente-item {{ margin-bottom: 2px; }}
-    .cliente-item strong {{ 
-        color: #2c3e50; display: block; font-size: 7pt; text-transform: uppercase; font-weight: 700; margin-bottom: 1px;
-    }}
-    .cliente-item span {{ font-size: 9pt; color: #333; word-break: break-word; display: block; }}
+    .cliente-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 15px; font-size: 9.5pt; }}
+    .cliente-item strong {{ color: #2c3e50; display: block; font-size: 8.5pt; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }}
+    .cliente-item span {{ font-size: 10pt; color: #333; word-break: break-word; }}
     
-    table {{ width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8.5pt; }}
-    th {{ background: #2c3e50; color: white; padding: 6px 4px; text-align: left; font-size: 8pt; font-weight: 700; text-transform: uppercase; }}
-    td {{ padding: 6px 4px; border-bottom: 1px solid #ddd; font-size: 8.5pt; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }}
+    th {{ background: #2c3e50; color: white; padding: 8px 6px; text-align: left; font-size: 9pt; font-weight: 700; text-transform: uppercase; }}
+    td {{ padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
     
-    .box {{ background: #f8f9fa; border-left: 3px solid #3498db; padding: 8px; margin: 8px 0; border-radius: 0 3px 3px 0; font-size: 9pt; }}
+    .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 12px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 9.5pt; }}
     .box-aplicacao {{ background: #fff3cd; border-left-color: #ffc107; }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
-    .box-obs {{ 
-        background: #fffef0; border-left: 3px solid #f39c12; padding: 10px; 
-        margin: 8px 0 12px 0; border-radius: 0 3px 3px 0; font-size: 9pt;
-        page-break-inside: avoid; overflow: visible; white-space: pre-wrap; word-wrap: break-word;
-    }}
-    .box p {{ margin: 3px 0; line-height: 1.3; }}
-    .box strong {{ color: #2c3e50; margin-right: 5px; font-weight: 700; }}
+    .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
+    .box p {{ margin: 5px 0; line-height: 1.5; }}
+    .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
     
-    .valores {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; padding: 10px; margin: 12px 0; }}
-    .valores p {{ margin: 4px 0; font-size: 9.5pt; display: flex; justify-content: space-between; }}
+    .valores {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; padding: 15px; margin: 20px 0; }}
+    .valores p {{ margin: 6px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
     
-    .footer {{ margin-top: 20px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 12px; }}
-    .assinatura {{ margin: 12px 0; }}
-    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 220px; margin: 0 auto 6px auto; padding-top: 5px; }}
-    .assinatura p {{ font-size: 10pt; font-weight: 800; color: #2c3e50; margin: 2px 0; }}
-    .assinatura .cargo {{ font-size: 8.5pt; color: #666; }}
-    .empresa-info {{ font-size: 8pt; color: #888; margin-top: 8px; }}
+    .footer {{ margin-top: 30px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 20px; }}
+    .assinatura {{ margin: 20px 0; }}
+    .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 250px; margin: 0 auto 10px auto; padding-top: 8px; }}
+    .assinatura p {{ font-size: 11pt; font-weight: 800; color: #2c3e50; margin: 3px 0; }}
+    .assinatura .cargo {{ font-size: 9.5pt; color: #666; }}
+    .empresa-info {{ font-size: 8.5pt; color: #888; margin-top: 15px; }}
 </style>
 </head>
 <body>
@@ -2621,15 +2620,17 @@ def pdf_os(id):
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
 
-<!-- APLICAÇÃO -->
+<!-- APLICAÇÃO / USO / AMBIENTE (SÓ ADMINISTRADOR VÊ) -->
+{f'''
 <div class="section">
-    <div class="section-title">📋 Aplicação / Uso / Ambiente</div>
+    <div class="section-title" style="color: #856404;">🔒 Informações Administrativas / Financeiras</div>
     <div class="box box-aplicacao">
-        {(aplicacao or '').replace(chr(10), "<br>") if aplicacao.strip() else 'Sem informações'}
+        {aplicacao.replace(chr(10), "<br>") if aplicacao and aplicacao.strip() else 'Sem informações'}
     </div>
 </div>
+''' if eh_admin else ''}
 
-<!-- CLIENTE COMPACTO 3 COLUNAS -->
+<!-- CLIENTE -->
 <div class="section">
     <div class="section-title">📋 Cliente</div>
     <div class="cliente-grid">
@@ -2642,7 +2643,7 @@ def pdf_os(id):
     </div>
 </div>
 
-<!-- ITENS -->
+<!-- ITENS DO SERVIÇO -->
 <div class="section">
     <div class="section-title">📦 Itens do Serviço</div>
     <table>
@@ -2653,7 +2654,7 @@ def pdf_os(id):
         for item in itens_pedido:
             html += f'<tr><td>{item}</td></tr>'
     else:
-        html += '<tr><td style="text-align: center; padding: 12px; color: #888;">Nenhum item</td></tr>'
+        html += '<tr><td style="text-align: center; padding: 20px; color: #888;">Nenhum item</td></tr>'
 
     html += '''
         </tbody>
@@ -2678,7 +2679,9 @@ def pdf_os(id):
         html += f'''
 <div class="section">
     <div class="section-title">📝 Observações</div>
-    <div class="box box-obs">{obs_geral.replace(chr(10), "<br>")}</div>
+    <div class="box box-obs">
+        {obs_geral.replace(chr(10), "<br>")}
+    </div>
 </div>
 '''
 
@@ -2705,8 +2708,8 @@ def pdf_os(id):
     try:
         pdf = pdfkit.from_string(html, False, options={
             "quiet": "", "encoding": "UTF-8", "page-size": "A4",
-            "margin-top": "10mm", "margin-bottom": "12mm", 
-            "margin-left": "15mm", "margin-right": "15mm",
+            "margin-top": "12mm", "margin-bottom": "12mm", 
+            "margin-left": "18mm", "margin-right": "18mm",
             "enable-local-file-access": None
         })
         return send_file(BytesIO(pdf), as_attachment=True, 
