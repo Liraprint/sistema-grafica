@@ -5134,7 +5134,17 @@ def pdf_orcamento(id):
         
         if itens:
             for item in itens:
-                qtd = item.get('quantidade', '1')
+                # ALTERAÇÃO 1: Formatar quantidade sem .0 e com separador de milhar
+                qtd_raw = item.get('quantidade', 1)
+                try:
+                    qtd_float = float(qtd_raw)
+                    if qtd_float.is_integer():
+                        qtd = f"{int(qtd_float):,}".replace(",", ".")
+                    else:
+                        qtd = f"{qtd_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                except:
+                    qtd = str(qtd_raw)
+                
                 desc = item.get('titulo', '—')
                 material = item.get('material', '—')
                 cor = item.get('numero_cores', '—')
@@ -5247,12 +5257,13 @@ def pdf_orcamento(id):
 <table>
     <thead>
         <tr>
+            <!-- ALTERAÇÃO 2: Ajuste das larguras das colunas -->
             <th width="10%" class="text-center">QTD</th>
-            <th width="30%">DESCRIÇÃO</th>
-            <th width="30%">MATERIAL</th>
-            <th width="10%" class="text-center">COR</th>
+            <th width="28%">DESCRIÇÃO</th>
+            <th width="28%">MATERIAL</th>
+            <th width="7%" class="text-center">COR</th>
             <th width="10%" class="text-right">VALOR UNIT.</th>
-            <th width="10%" class="text-right">TOTAL</th>
+            <th width="17%" class="text-right">TOTAL</th>
         </tr>
     </thead>
     <tbody>
