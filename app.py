@@ -5117,9 +5117,7 @@ def pdf_orcamento(id):
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
         
-        # PEGA O CAMPO "AOS CUIDADOS DE"
         aoscuidadosde = orc.get('aoscuidadosde', '') or '—'
-        
         usuario_logado = session.get('usuario', '')
         
         data_abr = orc.get('data_abertura', '')
@@ -5134,7 +5132,7 @@ def pdf_orcamento(id):
         
         if itens:
             for item in itens:
-                # ALTERAÇÃO 1: Formatar quantidade sem .0 e com separador de milhar
+                # Formatar quantidade
                 qtd_raw = item.get('quantidade', 1)
                 try:
                     qtd_float = float(qtd_raw)
@@ -5152,19 +5150,26 @@ def pdf_orcamento(id):
                 vt = float(item.get('valor_total', 0) or 0)
                 total_geral += vt
                 
+                # CORREÇÃO: Formatar valores no padrão brasileiro (12.456,00)
+                vu_formatado = f"{vu:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                vt_formatado = f"{vt:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
                 linhas_html += f'''
                 <tr>
                     <td class="text-center" style="font-weight:bold;">{qtd}</td>
                     <td style="font-weight: 600;">{desc}</td>
                     <td>{material}</td>
                     <td class="text-center">{cor}</td>
-                    <td class="text-right">R$ {vu:,.2f}</td>
-                    <td class="text-right" style="font-weight: 700;">R$ {vt:,.2f}</td>
+                    <td class="text-right">R$ {vu_formatado}</td>
+                    <td class="text-right" style="font-weight: 700;">R$ {vt_formatado}</td>
                 </tr>'''
         else:
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
+
+        # CORREÇÃO: Formatar total geral no padrão brasileiro
+        total_geral_formatado = f"{total_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
         html = f'''<!DOCTYPE html>
 <html>
@@ -5257,7 +5262,6 @@ def pdf_orcamento(id):
 <table>
     <thead>
         <tr>
-            <!-- ALTERAÇÃO 2: Ajuste das larguras das colunas -->
             <th width="10%" class="text-center">QTD</th>
             <th width="28%">DESCRIÇÃO</th>
             <th width="28%">MATERIAL</th>
@@ -5271,7 +5275,7 @@ def pdf_orcamento(id):
     </tbody>
 </table>
 
-<div class="total-block">TOTAL GERAL: R$ {total_geral:,.2f}</div>
+<div class="total-block">TOTAL GERAL: R$ {total_geral_formatado}</div>
 
 <div class="terms">
     <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
