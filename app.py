@@ -5132,7 +5132,6 @@ def pdf_orcamento(id):
         
         if itens:
             for item in itens:
-                # Formatar quantidade
                 qtd_raw = item.get('quantidade', 1)
                 try:
                     qtd_float = float(qtd_raw)
@@ -5150,7 +5149,6 @@ def pdf_orcamento(id):
                 vt = float(item.get('valor_total', 0) or 0)
                 total_geral += vt
                 
-                # CORREÇÃO: Formatar valores no padrão brasileiro (12.456,00)
                 vu_formatado = f"{vu:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 vt_formatado = f"{vt:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 
@@ -5167,9 +5165,6 @@ def pdf_orcamento(id):
             linhas_html = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: #888;">Nenhum item adicionado</td></tr>'
 
         logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
-
-        # CORREÇÃO: Formatar total geral no padrão brasileiro
-        total_geral_formatado = f"{total_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
         html = f'''<!DOCTYPE html>
 <html>
@@ -5204,15 +5199,6 @@ def pdf_orcamento(id):
     tr:nth-child(even) {{ background: #f8fafc; }}
     .text-right {{ text-align: right; }}
     .text-center {{ text-align: center; }}
-    .total-block {{ 
-        text-align: right; 
-        margin-top: 20px; 
-        font-size: 20px;
-        font-weight: 900; 
-        color: #2c3e50; 
-        border-top: 3px solid #2c3e50;
-        padding-top: 12px;
-    }}
     .terms {{ 
         margin-top: 25px; 
         font-size: 12px; 
@@ -5274,8 +5260,6 @@ def pdf_orcamento(id):
         {linhas_html}
     </tbody>
 </table>
-
-<div class="total-block">TOTAL GERAL: R$ {total_geral_formatado}</div>
 
 <div class="terms">
     <strong>Prazo de entrega:</strong> {prazo} dias úteis após aprovação da arte.<br>
