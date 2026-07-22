@@ -1213,9 +1213,10 @@ def listar_servicos():
         </select>
         '''
 
+        # MUDANÇA AQUI: Link direto para o PDF com target="_blank"
         botoes_html = f'''
         <div style="display: flex; gap: 5px; align-items: center;">
-            <a href="/os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">📄 OS</a>
+            <a href="/pdf_os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;" target="_blank">📄 OS</a>
             <a href="/editar_servico/{s['id']}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a>
             <a href="/excluir_servico/{s['id']}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
         </div>
@@ -1282,7 +1283,7 @@ def listar_servicos():
     {MENU_FLUTUANTE}
     <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
     <div class="search-box">
-    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form>
+    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;"> Pesquisar</button></form>
     </div>
     <div class="tabs">
     <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
