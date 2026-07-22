@@ -1182,7 +1182,6 @@ def listar_servicos():
         except:
             return {"dias": 0, "cor": "#95a5a6", "texto": "Erro"}
 
-    # Função auxiliar para cor do status
     def get_status_color(status):
         cores = {
             'Pendente': '#e67e22',
@@ -1204,7 +1203,6 @@ def listar_servicos():
         status_atual = s.get('status', 'Pendente')
         prazo = calcular_prazo_restante(s.get('previsao_entrega'), status_atual)
 
-        # Dropdown de status editável
         status_options = ['Pendente', 'Em Produção', 'Concluído', 'Entregue']
         status_select = f'''
         <select onchange="atualizarStatus({s['id']}, this.value)" 
@@ -1213,10 +1211,10 @@ def listar_servicos():
         </select>
         '''
 
-        # MUDANÇA AQUI: Link direto para o PDF com target="_blank"
+        # Botão OS com função de download
         botoes_html = f'''
         <div style="display: flex; gap: 5px; align-items: center;">
-            <a href="/pdf_os/{s['id']}" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;" target="_blank">📄 OS</a>
+            <button onclick="baixarPDF({s['id']})" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px; cursor: pointer;" title="Baixar PDF da OS">👁️ OS</button>
             <a href="/editar_servico/{s['id']}" class="btn btn-edit" style="padding: 6px 12px; font-size: 12px;">✏️ Editar</a>
             <a href="/excluir_servico/{s['id']}" class="btn btn-delete" style="padding: 6px 12px; font-size: 12px;" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
         </div>
@@ -1286,28 +1284,63 @@ def listar_servicos():
     <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;"> Pesquisar</button></form>
     </div>
     <div class="tabs">
-    <div class="tab active" onclick="mostrarTab('todos')">Todos os Serviços</div>
-    <div class="tab" onclick="mostrarTab('andamento')">Em Andamento</div>
+    <div class="tab" onclick="mostrarTab('todos')">Todos os Serviços</div>
+    <div class="tab active" onclick="mostrarTab('andamento')">Em Andamento</div>
     <div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div>
     </div>
     <div style="overflow-x: auto;">
     <table>
     <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
-    <tbody id="tab-todos" class="tab-content active">{html_todos}</tbody>
-    <tbody id="tab-andamento" class="tab-content">{html_andamento}</tbody>
+    <tbody id="tab-todos" class="tab-content">{html_todos}</tbody>
+    <tbody id="tab-andamento" class="tab-content active">{html_andamento}</tbody>
     <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>
     </table>
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     
-    <!-- SCRIPT DAS ABAS E ATUALIZAÇÃO DE STATUS -->
     <script>
     function mostrarTab(nome) {{ 
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); 
         document.getElementById('tab-' + nome).classList.add('active'); 
         document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); 
+    }}
+
+    // Função para baixar PDF automaticamente
+    async function baixarPDF(id) {{
+        try {{
+            // Mostra loading
+            const btn = event.target;
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            btn.disabled = true;
+            
+            // Faz o download do PDF
+            const response = await fetch('/pdf_os/' + id);
+            if (!response.ok) throw new Error('Erro ao baixar PDF');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'OS_' + id + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Restaura botão
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+        }} catch (error) {{
+            console.error('Erro:', error);
+            alert('❌ Erro ao baixar PDF. Tente novamente.');
+            // Restaura botão em caso de erro
+            const btn = event.target;
+            btn.innerHTML = '👁️ OS';
+            btn.disabled = false;
+        }}
     }}
 
     // Atualizar status via AJAX
