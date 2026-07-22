@@ -3875,19 +3875,14 @@ def adicionar_orcamento():
         condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
         condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
         observacoes = request.form.get('observacoes_gerais', '')
-        aoscuidadosde = request.form.get('aoscuidadosde', '')  # CAMPO MANUAL
-        
-        print(f"=== DEBUG: Dados recebidos ===")
-        print(f"empresa_id: {empresa_id}")
-        print(f"aoscuidadosde: '{aoscuidadosde}'")
-        print(f"==============================")
+        aoscuidadosde = request.form.get('aoscuidadosde', '')
         
         if not empresa_id:
             flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
         try:
-            # CRIA PRIMEIRO SEM O CÓDIGO (para pegar o ID do banco)
+            # CRIA PRIMEIRO SEM O CÓDIGO
             json_data = {
                 "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
@@ -3902,43 +3897,46 @@ def adicionar_orcamento():
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}",
             }
             
-            # Só adiciona o campo se tiver valor
             if aoscuidadosde and aoscuidadosde.strip():
                 json_data["aoscuidadosde"] = aoscuidadosde.strip()
             
-            print(f"=== ENVIANDO PARA SUPABASE ===")
-            print(f"json_data keys: {list(json_data.keys())}")
-            print(f"================================")
+            print(f"=== CRIANDO ORÇAMENTO ===")
+            print(f"json_data: {json_data}")
             
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
             
-            print(f"Resposta Supabase: {resp.status_code}")
-            print(f"Conteúdo: {resp.text[:200]}")
+            print(f"Resposta: {resp.status_code}")
+            print(f"Conteúdo: {resp.text}")
             
             if resp.status_code in [200, 201]:
-                # PEGA O ID GERADO PELO BANCO
-                oid = resp.json().get('id')
+                # PEGA O ID
+                try:
+                    oid = resp.json().get('id')
+                except:
+                    oid = None
                 
                 if not oid:
-                    # Fallback: busca pelo código
+                    # Busca o último criado
                     busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&order=id.desc&limit=1", headers=headers)
                     if busca.status_code == 200 and busca.json():
                         oid = busca.json()[0].get('id')
                 
                 if not oid:
-                    flash("❌ Erro ao obter ID do orçamento.")
+                    flash(" Erro ao obter ID.")
                     return redirect(url_for('listar_orcamentos'))
                 
-                # GERA O CÓDIGO USANDO O ID (ex: OR-129)
+                print(f"✅ ID obtido: {oid}")
+                
+                # GERA O CÓDIGO USANDO O ID
                 codigo_servico = gerar_proximo_codigo('OR', oid)
+                print(f"Código gerado: {codigo_servico}")
                 
-                # ATUALIZA COM O CÓDIGO CORRETO
-                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                # ATUALIZA COM O CÓDIGO
+                resp_codigo = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                               json={"codigo_servico": codigo_servico}, headers=headers)
+                print(f"Atualização código: {resp_codigo.status_code}")
                 
-                print(f"✅ Código gerado: {codigo_servico} para ID {oid}")
-                
-                # Processa os itens
+                # PROCESSA OS ITENS
                 vt = 0.0
                 descricoes = request.form.getlist('item_descricao[]')
                 materiais = request.form.getlist('item_material[]')
@@ -3946,6 +3944,8 @@ def adicionar_orcamento():
                 valores_unit = request.form.getlist('item_valor_unit[]')
                 dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
+                
+                print(f"=== PROCESSANDO {len(descricoes)} ITENS ===")
                 
                 for i in range(len(descricoes)):
                     desc = descricoes[i].strip()
@@ -3961,7 +3961,7 @@ def adicionar_orcamento():
                         q = float(q_str) if q_str else 1.0
                         vu = float(vu_str) if vu_str else 0.0
                     except Exception as e:
-                        print(f"Erro ao converter: {e}")
+                        print(f"Erro ao converter item {i}: {e}")
                         continue
                     
                     dim = dimensoes[i].strip() if i < len(dimensoes) else ''
@@ -3969,7 +3969,9 @@ def adicionar_orcamento():
                     total_item = q * vu
                     vt += total_item
                     
-                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
+                    print(f"Item {i+1}: {desc}, Qtd: {q}, VU: {vu}, Total: {total_item}")
+                    
+                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
                         "orcamento_id": oid,
                         "titulo": desc,
                         "material": mat,
@@ -3979,24 +3981,29 @@ def adicionar_orcamento():
                         "valor_unitario": vu,
                         "valor_total": total_item
                     }, headers=headers)
+                    
+                    print(f"  → Status: {resp_item.status_code}")
                 
-                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
+                # ATUALIZA VALOR TOTAL
+                print(f"Valor total: {vt}")
+                resp_valor = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
                     json={"valor_cobrado": vt}, headers=headers)
+                print(f"Atualização valor: {resp_valor.status_code}")
                 
-                flash(f"✅ Orçamento {codigo_servico} criado e salvo com sucesso!")
+                flash(f"✅ Orçamento {codigo_servico} criado com sucesso!")
                 return redirect(url_for('listar_orcamentos'))
             else:
-                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code} - {resp.text[:100]}")
+                flash(f"❌ Erro: {resp.status_code} - {resp.text[:100]}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
-            print(f"❌ ERRO GERAL: {str(e)}")
+            print(f"❌ ERRO: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash(f" Erro ao criar orçamento: {str(e)[:100]}")
+            flash(f"❌ Erro: {str(e)[:100]}")
             return redirect(url_for('adicionar_orcamento'))
     
-    # GET - Renderiza o formulário
+    # GET - Formulario
     try:
         emps = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
     except:
@@ -4127,7 +4134,7 @@ def adicionar_orcamento():
                 <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
                 <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
                 <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
-                <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">️</button></div>
             </div>
         `;
         document.getElementById('itens-container').appendChild(div);
