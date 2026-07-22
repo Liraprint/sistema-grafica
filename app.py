@@ -348,24 +348,9 @@ def buscar_configuracoes():
 # ========================
 # 🔢 GERADOR SEQUENCIAL UNIFICADO (OR & OS)
 # ========================
-def gerar_proximo_codigo(prefixo):
-    """Gera o próximo código (ex: OR-005, OS-005) baseado no último criado."""
-    try:
-        # Busca o último registro criado (ordenado pelo ID automático do Supabase)
-        url = f"{SUPABASE_URL}/rest/v1/servicos?select=id,codigo_servico&order=id.desc&limit=1"
-        resp = requests.get(url, headers=headers)
-        dados = resp.json() if resp.status_code == 200 else []
-        
-        if dados:
-            cod = dados[0].get('codigo_servico', '000')
-            numero = int(cod.split('-')[1]) + 1
-        else:
-            numero = 1
-            
-        return f"{prefixo}-{numero:03d}"
-    except Exception as e:
-        print(f"⚠️ Erro ao gerar código: {e}")
-        return f"{prefixo}-001"  # Fallback seguro
+def gerar_proximo_codigo(prefixo, id_registro):
+    """Gera código usando o ID do registro (ex: OR-129, OS-130)"""
+    return f"{prefixo}-{id_registro:03d}"
 
 def salvar_configuracoes(config):
     try:
@@ -3890,23 +3875,15 @@ def adicionar_orcamento():
         condicao_pagamento = request.form.get('condicao_pagamento', '28 dias')
         condicao_entrega = request.form.get('condicao_entrega', 'a combinar')
         observacoes = request.form.get('observacoes_gerais', '')
-        aoscuidadosde = request.form.get('aoscuidadosde', '')  # CAMPO MANUAL
-        
-        print(f"=== DEBUG: Dados recebidos ===")
-        print(f"empresa_id: {empresa_id}")
-        print(f"aoscuidadosde: '{aoscuidadosde}'")
-        print(f"==============================")
+        aoscuidadosde = request.form.get('aoscuidadosde', '')
         
         if not empresa_id:
             flash("❌ Cliente é obrigatório!")
             return redirect(url_for('adicionar_orcamento'))
         
-        codigo_servico = gerar_proximo_codigo('OR')
-        
         try:
-            # PREPARA DADOS PARA SALVAR
+            # Cria primeiro SEM o código_servico
             json_data = {
-                "codigo_servico": codigo_servico,
                 "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
                 "tipo": "Orçamento",
@@ -3918,36 +3895,23 @@ def adicionar_orcamento():
                 "condicao_pagamento": condicao_pagamento,
                 "condicao_entrega": condicao_entrega,
                 "observacoes": f"Prazo: {prazo_dias} dias úteis após aprovação da arte. {observacoes}",
+                "aoscuidadosde": aoscuidadosde if aoscuidadosde else None
             }
-            
-            # Só adiciona o campo se tiver valor (evita erro se a coluna não existir)
-            if aoscuidadosde and aoscuidadosde.strip():
-                json_data["aoscuidadosde"] = aoscuidadosde.strip()
-            
-            print(f"=== ENVIANDO PARA SUPABASE ===")
-            print(f"json_data keys: {list(json_data.keys())}")
-            print(f"================================")
             
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
             
-            print(f"Resposta Supabase: {resp.status_code}")
-            print(f"Conteúdo: {resp.text[:200]}")  # Mostra só os primeiros 200 chars
-            
             if resp.status_code in [200, 201]:
-                try:
-                    oid = resp.json().get('id')
-                except Exception as e:
-                    print(f"Erro ao parsear JSON: {e}")
-                    busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&codigo_servico=eq.{codigo_servico}&order=id.desc&limit=1", headers=headers)
-                    if busca.status_code == 200 and busca.json():
-                        oid = busca.json()[0].get('id')
-                    else:
-                        flash("❌ Erro ao obter ID do orçamento.")
-                        return redirect(url_for('listar_orcamentos'))
+                # Pega o ID gerado
+                novo_id = resp.json().get('id')
                 
-                if not oid:
-                    flash("❌ Erro ao criar orçamento.")
-                    return redirect(url_for('adicionar_orcamento'))
+                # Gera código usando o ID (ex: OR-129)
+                codigo_servico = gerar_proximo_codigo('OR', novo_id)
+                
+                # Atualiza com o código correto
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{novo_id}", 
+                              json={"codigo_servico": codigo_servico}, headers=headers)
+                
+                oid = novo_id
                 
                 # Processa os itens
                 vt = 0.0
@@ -3997,15 +3961,14 @@ def adicionar_orcamento():
                 flash("✅ Orçamento criado e salvo com sucesso!")
                 return redirect(url_for('listar_orcamentos'))
             else:
-                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code} - {resp.text[:100]}")
+                flash(f"❌ Erro ao criar orçamento. Status: {resp.status_code}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
-            print(f"❌ ERRO GERAL: {str(e)}")
+            print(f"ERRO GERAL: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash(f"❌ Erro ao criar orçamento: {str(e)[:100]}")
-            return redirect(url_for('adicionar_orcamento'))
+            flash("❌ Erro ao criar orçamento.")
     
     # GET - Renderiza o formulário
     try:
@@ -5305,20 +5268,19 @@ def pdf_orcamento(id):
 
 @app.route('/processar_aceite_orcamento/<int:id>', methods=['POST'])
 def processar_aceite_orcamento(id):
-    """Processa o aceite do orçamento, converte para OS"""
+    """Processa o aceite do orçamento, converte para OS e salva dados de entrega/NF com CEP"""
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
     try:
-        # 1. Busca dados do orçamento
+        # 1. Busca dados do orçamento e da empresa vinculada
         url_orc = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(*)"
         resp = requests.get(url_orc, headers=headers)
-        orcamento = resp.json()[0] if resp.json() else None
-        
-        if not orcamento:
+        if not resp.json():
             flash("❌ Orçamento não encontrado!")
             return redirect(url_for('listar_orcamentos'))
         
+        orcamento = resp.json()[0]
         empresa = orcamento.get('empresas', {})
         
         # 2. Coleta dados do formulário
@@ -5328,7 +5290,7 @@ def processar_aceite_orcamento(id):
         # CNPJ
         cnpj_nota = request.form.get('cnpj_nota_fiscal', '').strip() if not usar_cnpj_cadastrado else empresa.get('cnpj', '')
         
-        # Endereço COM CEP
+        # Endereço (COM CEP CORRIGIDO)
         if usar_endereco_cadastrado:
             cep_emp = empresa.get('entrega_cep') or empresa.get('cep', '')
             if empresa.get('entrega_endereco'):
@@ -5336,33 +5298,30 @@ def processar_aceite_orcamento(id):
             else:
                 endereco_entrega = f"CEP: {cep_emp} - {empresa.get('endereco', '')}, {empresa.get('numero', '')} - {empresa.get('bairro', '')}, {empresa.get('cidade', '')} - {empresa.get('estado', '')}"
         else:
+            # Usa o endereço já formatado pelo JavaScript (que agora inclui CEP)
             endereco_entrega = request.form.get('endereco_entrega_os', '').strip()
         
-        # Aos cuidados de
         aos_cuidados = request.form.get('aos_cuidados_de', '').strip() or empresa.get('responsavel', '')
+        obs_entrega = request.form.get('observacoes_entrega', '').strip()
         
-        print(f"=== DADOS DE ENTREGA ===")
-        print(f"CNPJ: {cnpj_nota}")
-        print(f"Endereço: {endereco_entrega}")
-        print(f"A/C: {aos_cuidados}")
-        print(f"========================")
-        
-        # 3. Busca itens
+        # 3. Busca itens do orçamento
         url_itens = f"{SUPABASE_URL}/rest/v1/itens_orcamento?orcamento_id=eq.{id}&order=id.asc"
         resp_itens = requests.get(url_itens, headers=headers)
         itens_orcamento = resp_itens.json() if resp_itens.status_code == 200 else []
         
         if not itens_orcamento:
-            flash("⚠️ Orçamento sem itens!")
+            flash("⚠️ Orçamento sem itens! Adicione itens antes de aceitar.")
             return redirect(url_for('listar_orcamentos'))
         
-        # 4. Processa itens
-        quantidade_total = sum(float(item.get('quantidade', 0) or 0) for item in itens_orcamento)
+        # 4. Processa itens para a OS
+        quantidade_total = 0
         materiais_para_os = []
         lista_descricoes = []
         
         for idx, item in enumerate(itens_orcamento, 1):
             qtd_item = float(item.get('quantidade', 0) or 0)
+            quantidade_total += qtd_item
+            
             materiais_para_os.append({
                 'material_id': item.get('material_id'),
                 'quantidade_usada': qtd_item,
@@ -5370,6 +5329,7 @@ def processar_aceite_orcamento(id):
                 'valor_total': float(item.get('valor_total', 0) or 0)
             })
             
+            # Monta descrição formatada para as observações
             desc = item.get('titulo', f'Item {idx}')
             dim = item.get('dimensao', '')
             cor = item.get('numero_cores', '')
@@ -5381,50 +5341,51 @@ def processar_aceite_orcamento(id):
             if qtd: item_info += f" - Qtd: {int(qtd) if float(qtd).is_integer() else qtd} un"
             lista_descricoes.append(item_info)
         
+        # Pega dimensão e cores do primeiro item para campos principais da OS
         primeiro_item = itens_orcamento[0]
         dimensao = primeiro_item.get('dimensao', '')
         numero_cores = primeiro_item.get('numero_cores', '')
         
-        # 5. Gera código OS
-        codigo_atual = orcamento.get('codigo_servico', '')
-        novo_codigo = codigo_atual.replace('OR-', 'OS-') if codigo_atual.startswith('OR-') else f"OS-{codigo_atual.split('-')[1] if '-' in codigo_atual else '000'}"
+        # 5. Gera código OS usando o MESMO ID do orçamento (ex: OR-129 → OS-129)
+        novo_codigo = gerar_proximo_codigo('OS', id)
         
-        # 6. MONTA OBSERVAÇÕES COM DADOS DE ENTREGA
+        # 6. Monta observações completas
         obs_original = orcamento.get('observacoes', '') or ''
-        
-        # Remove dados de entrega antigos se existirem
         if '--- DADOS DE ENTREGA/NF ---' in obs_original:
             obs_original = obs_original.split('--- DADOS DE ENTREGA/NF ---')[0].strip()
         
-        # Monta NOVAS observações com dados de entrega
-        obs_completas = obs_original
-        
+        obs_adicionais = []
         if lista_descricoes:
-            obs_completas += "\n\nITENS DO PEDIDO:"
-            obs_completas += "\n" + "\n".join(lista_descricoes)
-        
-        obs_completas += "\n\n--- DADOS DE ENTREGA/NF ---"
+            obs_adicionais.append("ITENS DO PEDIDO:")
+            obs_adicionais.extend(lista_descricoes)
+            obs_adicionais.append("")
+            
+        obs_adicionais.append("--- DADOS DE ENTREGA/NF ---")
         if cnpj_nota:
-            obs_completas += f"\nCNPJ para NF: {cnpj_nota}"
+            obs_adicionais.append(f"CNPJ para NF: {cnpj_nota}")
         if endereco_entrega:
-            obs_completas += f"\nEndereço de entrega: {endereco_entrega}"
+            obs_adicionais.append(f"Endereço de entrega: {endereco_entrega}")
         if aos_cuidados:
-            obs_completas += f"\nAos cuidados de: {aos_cuidados}"
+            obs_adicionais.append(f"Aos cuidados de: {aos_cuidados}")
+        if obs_entrega:
+            obs_adicionais.append(f"Obs. entrega: {obs_entrega}")
+            
+        nova_obs = obs_original + "\n" + "\n".join(obs_adicionais)
         
-        print(f"=== OBSERVAÇÕES SALVAS ===")
-        print(obs_completas)
-        print(f"==========================")
-        
-        # 7. DUPLICA orçamento para histórico (status: Fechado)
+        # 7. DUPLICA o orçamento para ficar salvo no histórico da empresa (status: Fechado)
         dados_copia = {
-            "codigo_servico": codigo_atual,
+            "codigo_servico": orcamento.get('codigo_servico', ''),
             "titulo": orcamento.get('titulo', ''),
             "empresa_id": orcamento.get('empresa_id'),
             "tipo": "Orçamento",
             "status": "Fechado",
             "data_abertura": orcamento.get('data_abertura'),
+            "previsao_entrega": orcamento.get('previsao_entrega'),
             "valor_cobrado": orcamento.get('valor_cobrado', 0),
-            "observacoes": obs_original,  # Sem dados de entrega
+            "prazo_dias": orcamento.get('prazo_dias'),
+            "condicao_pagamento": orcamento.get('condicao_pagamento', ''),
+            "condicao_entrega": orcamento.get('condicao_entrega', ''),
+            "observacoes": obs_original,
             "aoscuidadosde": orcamento.get('aoscuidadosde', '')
         }
         
@@ -5448,7 +5409,7 @@ def processar_aceite_orcamento(id):
         except Exception as e:
             print(f"Erro ao duplicar orçamento: {e}")
         
-        # 8. CONVERTE em OS
+        # 8. Atualiza o serviço original para OS
         dados_atualizacao = {
             "tipo": "Produção",
             "status": "Pendente",
@@ -5456,16 +5417,16 @@ def processar_aceite_orcamento(id):
             "quantidade": quantidade_total if quantidade_total > 0 else None,
             "dimensao": dimensao if dimensao else None,
             "numero_cores": numero_cores if numero_cores else None,
-            "observacoes": obs_completas  # OBSERVAÇÕES COM DADOS DE ENTREGA
+            "observacoes": nova_obs
         }
         
         if orcamento.get('previsao_entrega'):
             dados_atualizacao['previsao_entrega'] = orcamento.get('previsao_entrega')
-        
+            
         response = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}", json=dados_atualizacao, headers=headers)
         
         if response.status_code == 204:
-            # 9. Cria materiais_usados
+            # 9. Cria os materiais_usados vinculados à OS
             for mat in materiais_para_os:
                 try:
                     if mat.get('material_id'):
@@ -5478,20 +5439,19 @@ def processar_aceite_orcamento(id):
                         }
                         requests.post(f"{SUPABASE_URL}/rest/v1/materiais_usados", json=dados_mat, headers=headers)
                 except Exception as e:
-                    print(f"Erro material: {e}")
+                    print(f"Erro ao criar material usado: {e}")
             
-            flash(f"✅ OS {novo_codigo} gerada com sucesso!")
+            flash(f"✅ Orçamento aceito! OS {novo_codigo} gerada com sucesso.")
             return redirect(url_for('imprimir_os', id=id))
         else:
-            flash(f"❌ Erro ao converter em OS. Status: {response.status_code}")
-            print(f"Erro na conversão: {response.text}")
+            flash("❌ Erro ao salvar dados. Tente novamente.")
             return redirect(url_for('listar_orcamentos'))
             
     except Exception as e:
-        print(f"ERRO GERAL: {e}")
+        print(f"Erro ao processar aceite: {e}")
         import traceback
         traceback.print_exc()
-        flash("❌ Erro ao processar aceite.")
+        flash("❌ Erro interno. Entre em contato com o suporte.")
         return redirect(url_for('listar_orcamentos'))
 
 @app.route('/excluir_orcamento/<int:id>')
