@@ -2295,6 +2295,10 @@ def excluir_servico(id):
 def imprimir_os(id):
     if 'usuario' not in session:
         return redirect(url_for('login'))
+    
+    # Verifica se é administrador
+    eh_admin = session.get('nivel') == 'administrador'
+    
     try:
         url_serv = f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{id}&select=*,empresas(nome_empresa,responsavel,whatsapp,email),materiais_usados(*,materiais(denominacao,unidade_medida))&order=codigo_servico.desc"
         response = requests.get(url_serv, headers=headers)
@@ -2357,7 +2361,6 @@ def imprimir_os(id):
                 elif 'Observações' in p or 'Obs. entrega' in p:
                     dados_entrega['Observações'] = p.split(':', 1)[1].strip()
     
-    # LOGO URL - SEU LINK AQUI!
     logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
     def format_data_safe(data):
@@ -2445,7 +2448,7 @@ def imprimir_os(id):
                     <div class="info-item"><label>Cores</label><span>{cor_display}</span></div>
                     <div class="info-item"><label>Abertura</label><span>{format_data_safe(servico.get('data_abertura'))}</span></div>
                     <div class="info-item"><label>Previsão</label><span>{format_data_safe(servico.get('previsao_entrega'))}</span></div>
-                    <div class="info-item"><label>Aplicação</label><span>{servico.get('aplicacao') or '—'}</span></div>
+                    {'<div class="info-item"><label>Aplicação</label><span>' + (servico.get('aplicacao') or '—') + '</span></div>' if eh_admin else ''}
                 </div>
             </div>
             {f'''
@@ -2469,18 +2472,20 @@ def imprimir_os(id):
                 </table>
                 {f'<p style="text-align: center; color: #888; padding: 20px;">Nenhum material registrado</p>' if not servico.get('materiais_usados') else ''}
             </div>
+            {f'''
             <div class="total-box">
                 <p>Custo com Materiais: <span class="valor">R$ {custo_materiais:.2f}</span></p>
                 <p>Valor Cobrado Total: <span class="valor">R$ {valor_cobrado:.2f}</span></p>
                 <p>Valor por Unidade: <span class="valor">R$ {valor_por_unidade:.2f}</span></p>
                 <p style="border-top: 1px solid #cbd5e1; padding-top: 10px; margin-top: 10px;"><strong>Lucro Estimado:</strong> <span class="destaque">R$ {lucro:.2f}</span></p>
             </div>
+            ''' if eh_admin else ''}
             {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{obs.split("--- DADOS DE ENTREGA/NF ---")[0].strip().replace(chr(10), "<br>") if "--- DADOS DE ENTREGA/NF ---" in obs else obs.replace(chr(10), "<br>")}</p></div>' if obs and obs.strip() else ''}
         </div>
         <div class="btn-group">
-            <a href="/pdf_os/{id}" class="btn btn-orange">📄 Gerar PDF</a>
+            <a href="/pdf_os/{id}" class="btn btn-orange"> Gerar PDF</a>
             <a href="/servicos" class="btn">← Voltar para Lista</a>
-            {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if session.get('nivel') in ['administrador', 'vendedor'] else ''}
+            {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if eh_admin else ''}
         </div>
         <div class="os-footer">LIRAPRINT - Sistema de Gestão | © 2025 | Guarulhos - SP</div>
     </div>
