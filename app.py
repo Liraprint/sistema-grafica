@@ -2706,7 +2706,8 @@ def pdf_os(id):
             "enable-local-file-access": None
         })
         return send_file(BytesIO(pdf), as_attachment=False, 
-                        mimetype="application/pdf")    except Exception as e:
+                        mimetype="application/pdf")
+    except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_servicos'))
