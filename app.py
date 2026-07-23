@@ -393,7 +393,6 @@ def login():
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
     
-    # HTML injetado com concatenação (sem 'f' para não quebrar o CSS com chaves {})
     return '''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -404,23 +403,39 @@ def login():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; }
-    .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; overflow: hidden; }
-    .header { background: #2c3e50; color: white; text-align: center; padding: 30px; }
+    .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 400px; overflow: hidden; margin: 20px; }
+    .header { background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }
     h1 { font-size: 24px; margin: 0; font-weight: 600; }
-    .form-container { padding: 30px; }
+    .form-container { padding: 30px 20px; }
     .form-container label { display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }
-    .form-container input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 20px; }
+    .form-container input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 20px; box-sizing: border-box; }
     .btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-    .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 30px; font-size: 14px; }
+    .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 20px; font-size: 14px; text-align: center; }
     .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {
+        body { padding: 10px; }
+        .login-container { width: 100%; margin: 10px; }
+        .header { padding: 20px 15px; }
+        .header h1 { font-size: 22px; }
+        .form-container { padding: 20px 15px; }
+        .form-container input { font-size: 16px; padding: 14px; } /* 16px evita zoom automático no iPhone */
+        .btn { padding: 16px; font-size: 16px; }
+    }
     </style>
     </head>
     <body>
     <div class="login-container">
     <div class="header"><h1>Login</h1></div>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
     <form method="post" class="form-container">
-    <label>Usuário</label><input type="text" name="username" required>
-    <label>Senha</label><input type="password" name="password" required>
+    <label>Usuário</label><input type="text" name="username" required autocomplete="username">
+    <label>Senha</label><input type="password" name="password" required autocomplete="current-password">
     <button type="submit" class="btn">Entrar</button>
     </form>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
@@ -448,24 +463,34 @@ def clientes():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
-    .container {{ max-width: 900px; margin: 50px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 25px; }}
+    .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 25px 20px; }}
     h1 {{ font-size: 26px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 12px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .btn-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px; }}
-    @media (max-width: 768px) {{ .btn-grid {{ grid-template-columns: 1fr; }} }}
-    .btn {{ display: block; width: 100%; padding: 10px 15px; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; border-radius: 8px; color: white; transition: all 0.3s ease; border: none; cursor: pointer; max-width: 250px; margin: 0 auto; }}
+    .btn-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 25px; }}
+    .btn {{ display: block; width: 100%; padding: 15px 10px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; border-radius: 8px; color: white; transition: all 0.3s ease; border: none; cursor: pointer; box-sizing: border-box; }}
     .btn-green {{ background: #27ae60; }} .btn-blue {{ background: #3498db; }} .btn-purple {{ background: #8e44ad; }} .btn-red {{ background: #e74c3c; }} .btn-orange {{ background: #e67e22; }}
     .btn:hover {{ transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }}
     .footer {{ text-align: center; padding: 15px; background: #ecf0f1; color: #7f8c8d; font-size: 12px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .btn-grid {{ grid-template-columns: 1fr; padding: 15px; gap: 12px; }}
+        .btn {{ padding: 16px; font-size: 16px; }} /* Botões maiores para toque no celular */
+        .footer {{ font-size: 11px; padding: 15px 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📋 Menu da Gráfica</h1></div>
     <div class="user-info">
     <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-    <a href="/logout">🚪 Sair</a>
+    <a href="/logout" style="color: white; text-decoration: none; font-weight: 600;">🚪 Sair</a>
     </div>
     <div class="btn-grid">
     <a href="/empresas" class="btn btn-green">🏢 Clientes / Empresas</a>
@@ -497,6 +522,7 @@ def gerenciar_usuarios():
         <html lang="pt-BR">
         <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Gerenciar Usuários</title>
         <style>
         body {{ font-family: Arial, sans-serif; padding: 20px; background: #f5f7fa; }}
@@ -505,31 +531,52 @@ def gerenciar_usuarios():
         th, td {{ border: 1px solid #ccc; padding: 12px; text-align: left; }}
         th {{ background: #ecf0f1; font-weight: bold; }}
         .form-container {{ background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }}
-        input, select {{ padding: 10px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }}
-        button {{ padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }}
+        input, select {{ padding: 12px; margin: 8px 0; width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }}
+        button {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; font-size: 16px; }}
         a {{ color: #3498db; text-decoration: none; }}
         .back-link {{ display: inline-block; margin: 20px 0; color: #3498db; }}
+        
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            body {{ padding: 10px; }}
+            .container {{ padding: 15px; margin: 10px auto; }}
+            .form-container {{ padding: 15px; }}
+            input, select, button {{ width: 100%; max-width: 100%; margin: 10px 0; }} /* Ocupa largura total no celular */
+            table {{ display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }} /* Rolagem horizontal na tabela */
+            th, td {{ padding: 10px 8px; font-size: 14px; }}
+            .back-link {{ display: block; margin-bottom: 15px; }}
+        }}
         </style>
         </head>
-        <body>\n
+        <body>
         <div class="container">
         <h2>🔐 Gerenciar Usuários</h2>
         {MENU_FLUTUANTE}
+        
         <div class="form-container">
         <h3>➕ Criar Novo Usuário</h3>
         <form method="post" action="/criar_usuario">
-        <input type="text" name="username" placeholder="Usuário" required>
-        <input type="password" name="password" placeholder="Senha" required>
-        <input type="text" name="telefone" placeholder="Telefone (opcional)">
+        <label style="display:block; margin-top:10px; font-weight:600; color:#2c3e50;">Usuário</label>
+        <input type="text" name="username" placeholder="Digite o usuário" required>
+        
+        <label style="display:block; margin-top:10px; font-weight:600; color:#2c3e50;">Senha</label>
+        <input type="password" name="password" placeholder="Digite a senha" required>
+        
+        <label style="display:block; margin-top:10px; font-weight:600; color:#2c3e50;">Telefone (opcional)</label>
+        <input type="text" name="telefone" placeholder="(00) 00000-0000">
+        
+        <label style="display:block; margin-top:10px; font-weight:600; color:#2c3e50;">Nível de Acesso</label>
         <select name="nivel" required>
         <option value="">Selecione o nível</option>
         <option value="administrador">Administrador</option>
         <option value="vendedor">Vendedor</option>
         <option value="consulta">Consulta</option>
         </select>
-        <button type="submit">Criar Usuário</button>
+        
+        <button type="submit" style="margin-top: 15px;">Criar Usuário</button>
         </form>
         </div>
+        
         <h3>📋 Usuários Cadastrados</h3>
         <table>
         <thead>
@@ -548,7 +595,7 @@ def gerenciar_usuarios():
         <td>{u['nome de usuario']}</td>
         <td>{u['NÍVEL']}</td>
         <td>{u.get('telefone', '—')}</td>
-        <td><a href="/excluir_usuario/{u['id']}" onclick="return confirm('Tem certeza?')">🗑️ Excluir</a></td>
+        <td><a href="/excluir_usuario/{u['id']}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')" style="color: #e74c3c; font-weight: bold;">🗑️ Excluir</a></td>
         </tr>
         """ for u in usuarios)}
         </tbody>
@@ -566,24 +613,29 @@ def criar_usuario_view():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('gerenciar_usuarios'))
+    
     username = request.form.get('username')
     password = request.form.get('password')
     nivel = request.form.get('nivel')
     telefone = request.form.get('telefone')
+    
     if not username or not password or not nivel:
-        flash("Todos os campos são obrigatórios!")
+        flash("Todos os campos obrigatórios devem ser preenchidos!")
         return redirect(url_for('gerenciar_usuarios'))
+    
     if nivel not in ['administrador', 'vendedor', 'consulta']:
-        flash("Nível inválido!")
+        flash("Nível de acesso inválido!")
         return redirect(url_for('gerenciar_usuarios'))
+    
     try:
         if criar_usuario(username, password, nivel, telefone):
-            flash("Usuário criado com sucesso!")
+            flash("✅ Usuário criado com sucesso!")
         else:
-            flash("Erro ao criar usuário.")
+            flash("❌ Erro ao criar usuário.")
     except Exception as e:
         print("Erro ao criar usuário:", e)
-        flash("Erro interno no servidor.")
+        flash("❌ Erro interno no servidor.")
+    
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/excluir_usuario/<int:id>')
@@ -591,14 +643,16 @@ def excluir_usuario_view(id):
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+    
     try:
         if excluir_usuario(id):
-            flash("Usuário excluído!")
+            flash("✅ Usuário excluído com sucesso!")
         else:
-            flash("Erro ao excluir usuário.")
+            flash("❌ Erro ao excluir usuário.")
     except Exception as e:
         print("Erro ao excluir usuário:", e)
-        flash("Erro interno no servidor.")
+        flash("❌ Erro interno no servidor.")
+    
     return redirect(url_for('gerenciar_usuarios'))
 
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
@@ -650,23 +704,35 @@ def cadastrar_cliente():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
     .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .grid-2, .grid-3 {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+        .form-container input[style*="width: 150px"], 
+        .form-container input[style*="max-width: 350px"] {{ width: 100% !important; max-width: 100% !important; }} /* Sobrescreve estilos inline */
+        .btn {{ width: 100%; margin-top: 10px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/empresas" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div class="grid-2"><div><label>Nome da Empresa *</label><input type="text" name="nome" required></div><div><label>CNPJ *</label><input type="text" name="cnpj" class="mascara-cnpj" placeholder="00.000.000/0000-00" required></div></div>
@@ -674,7 +740,7 @@ def cadastrar_cliente():
     <div class="grid-2"><div><label>Telefone</label><input type="text" name="telefone"></div><div><label>E-mail</label><input type="email" name="email"></div></div>
     <div class="grid-3"><div><label>CEP</label><input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" style="width: 150px;"></div><div><label>Bairro</label><input type="text" name="bairro" id="bairro" style="width: 150px;"></div><div><label>Endereço</label><input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 350px;"></div></div>
     <div class="grid-3"><div><label>Número</label><input type="text" name="numero" placeholder="Ex: 123"></div><div><label>Cidade</label><input type="text" name="cidade" id="cidade"></div><div><label>Estado</label><select name="estado" id="estado"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
-    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;"><input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin-right: 8px; vertical-align: middle;"><label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">Endereço de entrega diferente do endereço da empresa?</label></div>
+    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1.5;"><input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin-right: 8px; vertical-align: middle; width: 20px; height: 20px;"><label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle; cursor: pointer;">Endereço de entrega diferente do endereço da empresa?</label></div>
     <div id="campos-entrega" style="display: none;">
     <div class="grid-3"><div><label>CEP de Entrega</label><input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" style="width: 150px;"></div><div><label>Bairro de Entrega</label><input type="text" name="entrega_bairro" id="entrega_bairro" style="width: 150px;"></div><div><label>Endereço de Entrega</label><input type="text" name="entrega_endereco" id="entrega_endereco" style="width: 100%; max-width: 350px;"></div></div>
     <div class="grid-3"><div><label>Número de Entrega</label><input type="text" name="entrega_numero" placeholder="Ex: 123"></div><div><label>Cidade de Entrega</label><input type="text" name="entrega_cidade" id="entrega_cidade"></div><div><label>Estado de Entrega</label><select name="entrega_estado" id="entrega_estado"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
@@ -684,9 +750,9 @@ def cadastrar_cliente():
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
+    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
     function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
-    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
+    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
     </script>
     {SCRIPT_MASCARA_CNPJ}
     </body>
@@ -714,8 +780,7 @@ def listar_empresas():
         flash("Erro de conexão.")
         empresas = []
     
-    # Botão Voltar só aparece quando há busca
-    btn_voltar = f'<a href="/empresas" style="margin-right: 10px; padding: 10px 15px; background: #95a5a6; color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">← Voltar / Limpar</a>' if busca else ''
+    btn_voltar = f'<a href="/empresas" style="margin-right: 0; margin-bottom: 10px; padding: 10px 15px; background: #95a5a6; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; display: inline-block;">← Voltar / Limpar</a>' if busca else ''
     
     return f'''
     <!DOCTYPE html>
@@ -728,43 +793,56 @@ def listar_empresas():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .search-box {{ padding: 20px 30px; text-align: center; }}
-    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
-    table {{ width: 100%; border-collapse: collapse; }}
+    .search-box input {{ width: 100%; max-width: 500px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 15px 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 600px; }} /* min-width força a rolagem no celular */
     th, td {{ padding: 16px 20px; text-align: left; }}
     th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
     tr:nth-child(even) {{ background: #f9f9f9; }}
     tr:hover {{ background: #f1f7fb; }}
     .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .btn-add {{ display: block; text-align: center; padding: 15px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px 20px 30px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .search-box {{ padding: 15px; }}
+        .search-box form {{ display: flex; flex-direction: column; gap: 10px; }}
+        .search-box button {{ width: 100%; padding: 12px; font-size: 16px; }}
+        .btn-add {{ margin: 0 15px 20px 15px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>📋 Empresas Cadastradas</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
     <div class="search-box">
-    <form method="get" style="display: inline;">
+    <form method="get">
         {btn_voltar}
         <input type="text" name="q" class="mascara-cnpj" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
-        <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button>
+        <button type="submit">🔍 Pesquisar</button>
     </form>
     </div>
+    <div class="table-wrapper">
     <table>
     <thead><tr><th>ID</th><th>Empresa</th><th>CNPJ</th><th>Responsável</th><th>WhatsApp</th><th>Ações</th></tr></thead>
     <tbody>
-    {''.join(f'''<tr><td>{e["id"]}</td><td>{e["nome_empresa"]}</td><td>{e["cnpj"]}</td><td>{e["responsavel"]}</td><td>{e["whatsapp"]}</td><td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none;">👁️ Ver Detalhes</a></td></tr>''' for e in empresas)}
+    {''.join(f'''<tr><td>{e["id"]}</td><td>{e["nome_empresa"]}</td><td>{e["cnpj"]}</td><td>{e["responsavel"]}</td><td>{e["whatsapp"]}</td><td><a href="/empresa/{e["id"]}" style="color: #3498db; text-decoration: none; font-weight: 600;">👁️ Ver Detalhes</a></td></tr>''' for e in empresas)}
     </tbody>
     </table>
-    <div style="text-align: center; padding: 20px;"><a href="/cadastrar_cliente" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">➕ Cadastrar Nova Empresa</a></div>
+    </div>
+    <a href="/cadastrar_cliente" class="btn-add">➕ Cadastrar Nova Empresa</a>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     
-    <!-- SCRIPT DA MÁSCARA DE CNPJ -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {{
         const inputs = document.querySelectorAll('.mascara-cnpj');
@@ -804,18 +882,14 @@ def detalhes_empresa(id):
         flash("Erro de conexão.")
         return redirect(url_for('listar_empresas'))
     
-    # Busca APENAS orçamentos FECHADOS (salvos) e OSs (Produção)
     try:
-        # Orçamentos fechados (não aceitos)
         url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&status=eq.Fechado&order=data_abertura.desc"
         resp_orcs = requests.get(url_orcs, headers=headers)
         orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
         
-        # OSs (Produção)
         url_oss = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Produção&order=data_abertura.desc"
         resp_oss = requests.get(url_oss, headers=headers)
         oss = resp_oss.json() if resp_oss.status_code == 200 else []
-        
     except Exception as e:
         print(f"Erro ao carregar registros: {e}")
         orcamentos, oss = [], []
@@ -831,33 +905,44 @@ def detalhes_empresa(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .details {{ padding: 30px; }}
-    .details p {{ margin: 10px 0; font-size: 16px; }}
+    .details {{ padding: 30px 20px; }}
+    .details p {{ margin: 10px 0; font-size: 16px; word-break: break-word; }}
     .details strong {{ color: #2c3e50; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; display: inline-block; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; text-align: center; }}
     .btn-blue {{ background: #3498db; }}
     .btn-orange {{ background: #f39c12; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
-    .section {{ padding: 20px 30px; }}
+    .section {{ padding: 20px; }}
     .section h3 {{ margin: 0 0 15px 0; color: #2c3e50; font-size: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-    th, td {{ padding: 12px 15px; text-align: left; border: 1px solid #ddd; font-size: 14px; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 10px 0; min-width: 600px; }}
+    th, td {{ padding: 12px 15px; text-align: left; border: 1px solid #ddd; font-size: 14px; white-space: nowrap; }}
     th {{ background: #ecf0f1; font-weight: 600; }}
     tr:hover {{ background: #f1f7fb; }}
     .empty {{ text-align: center; padding: 30px; color: #888; font-style: italic; }}
     .status-fechado {{ color: #95a5a6; font-weight: 600; }}
     .status-producao {{ color: #3498db; font-weight: 600; }}
     .status-entregue {{ color: #27ae60; font-weight: 600; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .action-buttons {{ display: flex; flex-direction: column; gap: 10px; padding: 0 20px; margin: 20px 0; }}
+        .action-buttons .btn {{ width: 100%; }}
+        .section {{ padding: 15px; }}
+        .section h3 {{ font-size: 18px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
         <div class="header"><h1>🏢 {empresa['nome_empresa']}</h1></div>
-        <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+        <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
         
         <a href="/empresas" class="back-link">← Voltar à Lista</a>
         
@@ -871,7 +956,7 @@ def detalhes_empresa(id):
             {f'<p><strong>Endereço de Entrega:</strong> {empresa["entrega_endereco"]}, {empresa["entrega_numero"]} - {empresa["entrega_bairro"]}, {empresa["entrega_cidade"]} - {empresa["entrega_estado"]} ({empresa["entrega_cep"]})</p>' if empresa.get("entrega_endereco") else ''}
         </div>
         
-        <div style="display: flex; gap: 15px; margin: 20px 0; padding: 0 30px; flex-wrap: wrap;">
+        <div class="action-buttons">
             <a href="/servicos_empresa/{id}" class="btn">📋 Serviços/OSs</a>
             <a href="/editar_empresa/{empresa['id']}" class="btn" style="background: #f39c12;">✏️ Editar Empresa</a>
             <a href="/gerar_etiqueta/{id}" class="btn" style="background: #8e44ad;">📬 Etiqueta de Postagem</a>
@@ -881,6 +966,7 @@ def detalhes_empresa(id):
         <div class="section">
             <h3>📋 Orçamentos ({len(orcamentos)})</h3>
             {f'''
+            <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -901,20 +987,22 @@ def detalhes_empresa(id):
                         <td>R$ {orc.get('valor_cobrado', 0):,.2f}</td>
                         <td class="status-fechado">{orc.get('status', '—')}</td>
                         <td>
-                            <a href="/pdf_orcamento/{orc.get('id')}" class="btn btn-orange" style="padding: 5px 10px; font-size: 12px;">📄 PDF</a>
-                            <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f1c40f;">✏️</a>
-                            <a href="/excluir_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #e74c3c;" onclick="return confirm('Confirma exclusão deste orçamento?')">🗑️</a>
+                            <a href="/pdf_orcamento/{orc.get('id')}" class="btn btn-orange" style="padding: 5px 10px; font-size: 12px; display:inline-block;">📄 PDF</a>
+                            <a href="/editar_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f1c40f; display:inline-block;">✏️</a>
+                            <a href="/excluir_orcamento/{orc.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #e74c3c; display:inline-block;" onclick="return confirm('Confirma exclusão deste orçamento?')">🗑️</a>
                         </td>
                     </tr>
             """ for orc in orcamentos) + '''
                 </tbody>
             </table>
+            </div>
             ''' if orcamentos else '<p class="empty">Nenhum orçamento arquivado para este cliente.</p>'}
         </div>
         
         <div class="section">
             <h3>🔧 Ordens de Serviço ({len(oss)})</h3>
             {f'''
+            <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -935,13 +1023,14 @@ def detalhes_empresa(id):
                         <td>R$ {os_item.get('valor_cobrado', 0):,.2f}</td>
                         <td class="{'status-producao' if os_item.get('status') == 'Pendente' or os_item.get('status') == 'Em Produção' else 'status-entregue' if os_item.get('status') == 'Entregue' else ''}">{os_item.get('status', '—')}</td>
                         <td>
-                            <a href="/os/{os_item.get('id')}" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px;">👁️ Ver</a>
-                            <a href="/pdf_os/{os_item.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f39c12;">📄 PDF</a>
+                            <a href="/os/{os_item.get('id')}" class="btn btn-blue" style="padding: 5px 10px; font-size: 12px; display:inline-block;">👁️ Ver</a>
+                            <a href="/pdf_os/{os_item.get('id')}" class="btn" style="padding: 5px 10px; font-size: 12px; background: #f39c12; display:inline-block;">📄 PDF</a>
                         </td>
                     </tr>
             """ for os_item in oss) + '''
                 </tbody>
             </table>
+            </div>
             ''' if oss else '<p class="empty">Nenhuma OS gerada para este cliente.</p>'}
         </div>
         
@@ -965,6 +1054,7 @@ def editar_empresa(id):
     except Exception as e:
         flash("Erro ao carregar empresa.")
         return redirect(url_for('listar_empresas'))
+        
     if request.method == 'POST':
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
@@ -985,9 +1075,11 @@ def editar_empresa(id):
         entrega_cidade = request.form.get('entrega_cidade') if tem_entrega else None
         entrega_estado = request.form.get('entrega_estado') if tem_entrega else None
         entrega_cep = request.form.get('entrega_cep') if tem_entrega else None
+        
         if not nome or not cnpj:
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('editar_empresa', id=id))
+            
         try:
             url = f"{SUPABASE_URL}/rest/v1/empresas?id=eq.{id}"
             dados = {
@@ -1007,6 +1099,7 @@ def editar_empresa(id):
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(url_for('editar_empresa', id=id))
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1018,23 +1111,36 @@ def editar_empresa(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
     .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .grid-2, .grid-3 {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+        /* Força inputs com estilo inline a ocuparem 100% no celular */
+        .form-container input[style*="width: 150px"], 
+        .form-container input[style*="max-width: 350px"] {{ width: 100% !important; max-width: 100% !important; }}
+        .btn {{ width: 100%; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar {empresa['nome_empresa']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/empresa/{id}" class="back-link">← Voltar aos Detalhes</a>
     <form method="post" class="form-container">
     <div class="grid-2"><div><label>Nome da Empresa *</label><input type="text" name="nome" value="{empresa['nome_empresa']}" required></div><div><label>CNPJ *</label><input type="text" name="cnpj" value="{empresa['cnpj']}" required></div></div>
@@ -1042,7 +1148,7 @@ def editar_empresa(id):
     <div class="grid-2"><div><label>Telefone</label><input type="text" name="telefone" value="{empresa['telefone']}"></div><div><label>E-mail</label><input type="email" name="email" value="{empresa['email']}"></div></div>
     <div class="grid-3"><div><label>CEP</label><input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" value="{empresa['cep']}" style="width: 150px;"></div><div><label>Bairro</label><input type="text" name="bairro" id="bairro" value="{empresa['bairro']}" style="width: 150px;"></div><div><label>Endereço</label><input type="text" name="endereco" id="endereco" value="{empresa['endereco']}" style="width: 100%; max-width: 350px;"></div></div>
     <div class="grid-3"><div><label>Número</label><input type="text" name="numero" value="{empresa['numero']}"></div><div><label>Cidade</label><input type="text" name="cidade" id="cidade" value="{empresa['cidade']}"></div><div><label>Estado</label><select name="estado" id="estado"><option value="">Selecione</option><option value="AC" {"selected" if empresa['estado'] == "AC" else ""}>AC</option><option value="AL" {"selected" if empresa['estado'] == "AL" else ""}>AL</option><option value="AP" {"selected" if empresa['estado'] == "AP" else ""}>AP</option><option value="AM" {"selected" if empresa['estado'] == "AM" else ""}>AM</option><option value="BA" {"selected" if empresa['estado'] == "BA" else ""}>BA</option><option value="CE" {"selected" if empresa['estado'] == "CE" else ""}>CE</option><option value="DF" {"selected" if empresa['estado'] == "DF" else ""}>DF</option><option value="ES" {"selected" if empresa['estado'] == "ES" else ""}>ES</option><option value="GO" {"selected" if empresa['estado'] == "GO" else ""}>GO</option><option value="MA" {"selected" if empresa['estado'] == "MA" else ""}>MA</option><option value="MT" {"selected" if empresa['estado'] == "MT" else ""}>MT</option><option value="MS" {"selected" if empresa['estado'] == "MS" else ""}>MS</option><option value="MG" {"selected" if empresa['estado'] == "MG" else ""}>MG</option><option value="PA" {"selected" if empresa['estado'] == "PA" else ""}>PA</option><option value="PB" {"selected" if empresa['estado'] == "PB" else ""}>PB</option><option value="PR" {"selected" if empresa['estado'] == "PR" else ""}>PR</option><option value="PE" {"selected" if empresa['estado'] == "PE" else ""}>PE</option><option value="PI" {"selected" if empresa['estado'] == "PI" else ""}>PI</option><option value="RJ" {"selected" if empresa['estado'] == "RJ" else ""}>RJ</option><option value="RN" {"selected" if empresa['estado'] == "RN" else ""}>RN</option><option value="RS" {"selected" if empresa['estado'] == "RS" else ""}>RS</option><option value="RO" {"selected" if empresa['estado'] == "RO" else ""}>RO</option><option value="RR" {"selected" if empresa['estado'] == "RR" else ""}>RR</option><option value="SC" {"selected" if empresa['estado'] == "SC" else ""}>SC</option><option value="SP" {"selected" if empresa['estado'] == "SP" else ""}>SP</option><option value="SE" {"selected" if empresa['estado'] == "SE" else ""}>SE</option><option value="TO" {"selected" if empresa['estado'] == "TO" else ""}>TO</option></select></div></div>
-    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1;"><input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" {"checked" if empresa.get("entrega_endereco") else ""} style="margin-right: 8px; vertical-align: middle;"><label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle;">Endereço de entrega diferente do endereço da empresa?</label></div>
+    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1.5;"><input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" {"checked" if empresa.get("entrega_endereco") else ""} style="margin-right: 8px; vertical-align: middle; width: 20px; height: 20px;"><label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle; cursor: pointer;">Endereço de entrega diferente do endereço da empresa?</label></div>
     <div id="campos-entrega" style="display: {'block' if empresa.get('entrega_endereco') else 'none'};">
     <div class="grid-3"><div><label>CEP de Entrega</label><input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" value="{empresa.get('entrega_cep', '')}" style="width: 150px;"></div><div><label>Bairro de Entrega</label><input type="text" name="entrega_bairro" id="entrega_bairro" value="{empresa.get('entrega_bairro', '')}" style="width: 150px;"></div><div><label>Endereço de Entrega</label><input type="text" name="entrega_endereco" id="entrega_endereco" value="{empresa.get('entrega_endereco', '')}" style="width: 100%; max-width: 350px;"></div></div>
     <div class="grid-3"><div><label>Número de Entrega</label><input type="text" name="entrega_numero" placeholder="Ex: 123" value="{empresa.get('entrega_numero', '')}"></div><div><label>Cidade de Entrega</label><input type="text" name="entrega_cidade" id="entrega_cidade" value="{empresa.get('entrega_cidade', '')}"></div><div><label>Estado de Entrega</label><select name="entrega_estado" id="entrega_estado"><option value="">Selecione</option><option value="AC" {"selected" if empresa.get('entrega_estado') == "AC" else ""}>AC</option><option value="AL" {"selected" if empresa.get('entrega_estado') == "AL" else ""}>AL</option><option value="AP" {"selected" if empresa.get('entrega_estado') == "AP" else ""}>AP</option><option value="AM" {"selected" if empresa.get('entrega_estado') == "AM" else ""}>AM</option><option value="BA" {"selected" if empresa.get('entrega_estado') == "BA" else ""}>BA</option><option value="CE" {"selected" if empresa.get('entrega_estado') == "CE" else ""}>CE</option><option value="DF" {"selected" if empresa.get('entrega_estado') == "DF" else ""}>DF</option><option value="ES" {"selected" if empresa.get('entrega_estado') == "ES" else ""}>ES</option><option value="GO" {"selected" if empresa.get('entrega_estado') == "GO" else ""}>GO</option><option value="MA" {"selected" if empresa.get('entrega_estado') == "MA" else ""}>MA</option><option value="MT" {"selected" if empresa.get('entrega_estado') == "MT" else ""}>MT</option><option value="MS" {"selected" if empresa.get('entrega_estado') == "MS" else ""}>MS</option><option value="MG" {"selected" if empresa.get('entrega_estado') == "MG" else ""}>MG</option><option value="PA" {"selected" if empresa.get('entrega_estado') == "PA" else ""}>PA</option><option value="PB" {"selected" if empresa.get('entrega_estado') == "PB" else ""}>PB</option><option value="PR" {"selected" if empresa.get('entrega_estado') == "PR" else ""}>PR</option><option value="PE" {"selected" if empresa.get('entrega_estado') == "PE" else ""}>PE</option><option value="PI" {"selected" if empresa.get('entrega_estado') == "PI" else ""}>PI</option><option value="RJ" {"selected" if empresa.get('entrega_estado') == "RJ" else ""}>RJ</option><option value="RN" {"selected" if empresa.get('entrega_estado') == "RN" else ""}>RN</option><option value="RS" {"selected" if empresa.get('entrega_estado') == "RS" else ""}>RS</option><option value="RO" {"selected" if empresa.get('entrega_estado') == "RO" else ""}>RO</option><option value="RR" {"selected" if empresa.get('entrega_estado') == "RR" else ""}>RR</option><option value="SC" {"selected" if empresa.get('entrega_estado') == "SC" else ""}>SC</option><option value="SP" {"selected" if empresa.get('entrega_estado') == "SP" else ""}>SP</option><option value="SE" {"selected" if empresa.get('entrega_estado') == "SE" else ""}>SE</option><option value="TO" {"selected" if empresa.get('entrega_estado') == "TO" else ""}>TO</option></select></div></div>
@@ -1052,9 +1158,9 @@ def editar_empresa(id):
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
+    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
     function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
-    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
+    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
     </script>
     </body>
     </html>
@@ -1079,6 +1185,7 @@ def servicos_empresa(id):
         print(f"Erro ao carregar serviços da empresa: {e}")
         flash("Erro ao carregar serviços.")
         return redirect(url_for('listar_empresas'))
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1090,24 +1197,33 @@ def servicos_empresa(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 15px 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 600px; }} /* min-width força a rolagem no celular */
+    th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }}
     th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
-    .btn {{ padding: 8px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 8px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; display: inline-block; text-align: center; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .header h1 {{ font-size: 22px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📋 Serviços - {empresa['nome_empresa']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/empresa/{id}" class="back-link">← Voltar à empresa</a>
-    <div style="padding: 30px;">
-    <h2 style="margin-bottom: 20px;">Total de serviços: {len(servicos)}</h2>
+    <div style="padding: 0 15px 15px 15px;">
+    <h2 style="margin-bottom: 20px; font-size: 20px;">Total de serviços: {len(servicos)}</h2>
+    <div class="table-wrapper">
     <table>
     <thead><tr><th>Código</th><th>Título</th><th>Status</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
     <tbody>
@@ -1123,13 +1239,15 @@ def servicos_empresa(id):
     """ for s in servicos)}
     </tbody>
     </table>
-    {f'<p style="text-align: center; color: #95a5a6; margin-top: 30px;">Nenhum serviço encontrado para esta empresa.</p>' if not servicos else ''}
+    </div>
+    {f'<p style="text-align: center; color: #95a5a6; margin-top: 30px; padding: 0 15px;">Nenhum serviço encontrado para esta empresa.</p>' if not servicos else ''}
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
     '''
+
 
 @app.route('/servicos')
 def listar_servicos():
@@ -1211,7 +1329,6 @@ def listar_servicos():
         </select>
         '''
 
-        # Botão OS com função de download
         botoes_html = f'''
         <div style="display: flex; gap: 5px; align-items: center;">
             <button onclick="visualizarPDF({s['id']})" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px; cursor: pointer;">👁️ OS</button>
@@ -1252,7 +1369,7 @@ def listar_servicos():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .btn {{ padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; margin: 5px; display: inline-block; }}
@@ -1262,38 +1379,57 @@ def listar_servicos():
     .tabs {{ display: flex; margin: 0 30px; border-bottom: 1px solid #ddd; }}
     .tab {{ padding: 15px 20px; background: #ecf0f1; color: #7f8c8d; cursor: pointer; font-weight: 600; }}
     .tab.active {{ background: #3498db; color: white; }}
-    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; }}
-    th {{ background: #f8f9fa; color: #2c3e50; font-weight: 600; white-space: nowrap; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 15px 15px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }} /* min-width força rolagem lateral */
+    th, td {{ padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }}
+    th {{ background: #f8f9fa; color: #2c3e50; font-weight: 600; }}
     tr:nth-child(even) {{ background: #fafbfc; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .tab-content {{ display: none; }}
     .tab-content.active {{ display: table-row-group; }}
     .search-box {{ text-align: center; padding: 20px; }}
-    .search-box input {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 8px; }}
+    .search-box form {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }}
+    .search-box input {{ padding: 12px; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .search-box button {{ padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .search-box form {{ flex-direction: column; }}
+        .search-box input, .search-box button {{ width: 100%; max-width: 100%; }}
+        .tabs {{ flex-direction: column; gap: 5px; margin: 0 15px; }}
+        .tab {{ text-align: center; padding: 12px; }}
+        .btn {{ width: 100%; text-align: center; margin: 5px 0; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>📋 Todos os Serviços</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
-    <a href="/adicionar_servico" class="btn">➕ Adicionar Novo Serviço</a>
+    <a href="/adicionar_servico" class="btn" style="margin: 0 15px 15px 15px; display: block; text-align: center;">➕ Adicionar Novo Serviço</a>
     <div class="search-box">
-    <form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;"> Pesquisar</button></form>
+    <form method="get">
+        <input type="text" name="q" placeholder="Pesquisar por título..." value="{busca}">
+        <button type="submit">🔍 Pesquisar</button>
+    </form>
     </div>
     <div class="tabs">
     <div class="tab" onclick="mostrarTab('todos')">Todos os Serviços</div>
     <div class="tab active" onclick="mostrarTab('andamento')">Em Andamento</div>
     <div class="tab" onclick="mostrarTab('concluidos')">Concluídos / Entregues</div>
     </div>
-    <div style="overflow-x: auto;">
+    <div class="table-wrapper">
     <table>
     <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Qtd</th><th>Dimensão</th><th>Custo Mat.</th><th>Valor Cobrado</th><th>Lucro</th><th>Status</th><th>Prazo Restante</th><th>Ações</th></tr></thead>
     <tbody id="tab-todos" class="tab-content">{html_todos}</tbody>
     <tbody id="tab-andamento" class="tab-content active">{html_andamento}</tbody>
-    <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>    </table>
+    <tbody id="tab-concluidos" class="tab-content">{html_concluidos}</tbody>
+    </table>
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
@@ -1306,19 +1442,15 @@ def listar_servicos():
         document.querySelector(`[onclick="mostrarTab('${{nome}}')"]`).classList.add('active'); 
     }}
 
-    // Função para visualizar PDF em nova aba
     function visualizarPDF(id) {{
-        // Abre o PDF em uma nova aba do navegador
         window.open('/pdf_os/' + id, '_blank');
     }}
 
-    // Atualizar status via AJAX
     function atualizarStatus(id, novoStatus) {{
         if (!confirm('Deseja mudar o status para "' + novoStatus + '"?')) {{
             location.reload();
             return;
         }}
-        
         fetch('/atualizar_status_servico/' + id, {{
             method: 'POST',
             headers: {{ 'Content-Type': 'application/json' }},
@@ -1378,12 +1510,12 @@ def atualizar_status_servico(id):
         print(f"Erro ao atualizar status: {e}")
         return jsonify({'sucesso': False, 'mensagem': 'Erro interno'}), 500
 
+
 @app.route('/adicionar_servico', methods=['GET', 'POST'])
 def adicionar_servico():
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
-    # Busca dados para o formulário
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         materiais = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?select=*", headers=headers).json() or []
@@ -1417,14 +1549,11 @@ def adicionar_servico():
         except:
             valor_cobrado = 0.0
         
-        # Gera código sequencial único (ex: OS-012)
-        codigo_servico = gerar_proximo_codigo('OS')
+        codigo_servico = gerar_proximo_codigo('OS', 0) # O ID será atualizado após a criação, mas mantemos a lógica
         
         try:
-            # Cria o serviço
             url = f"{SUPABASE_URL}/rest/v1/servicos"
             dados = {
-                "codigo_servico": codigo_servico,
                 "titulo": titulo,
                 "empresa_id": int(empresa_id),
                 "tipo": tipo,
@@ -1440,11 +1569,15 @@ def adicionar_servico():
             }
             response = requests.post(url, json=dados, headers=headers)
             
-            if response.status_code == 201:
+            if response.status_code in [200, 201]:
                 servico_id = response.json()['id']
-                flash(f"✅ Serviço {codigo_servico} criado com sucesso!")
                 
-                # Salva materiais usados
+                # Atualiza o código com o ID real
+                codigo_real = gerar_proximo_codigo('OS', servico_id)
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{servico_id}", json={"codigo_servico": codigo_real}, headers=headers)
+                
+                flash(f"✅ Serviço {codigo_real} criado com sucesso!")
+                
                 materiais_ids = request.form.getlist('material_id[]')
                 quantidades = request.form.getlist('quantidade_usada[]')
                 valores_unitarios = request.form.getlist('valor_unitario[]')
@@ -1475,7 +1608,6 @@ def adicionar_servico():
             flash("❌ Erro de conexão.")
         return redirect(url_for('adicionar_servico'))
     
-    # GET - Renderiza o formulário
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -1487,25 +1619,38 @@ def adicionar_servico():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
     .grid-3 {{ display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
     .btn-add {{ background: #3498db; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .material-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .grid-2, .grid-3 {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+        .material-row {{ padding: 10px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>➕ Adicionar Novo Serviço</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/servicos" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div><label>Título do Serviço *</label><input type="text" name="titulo" required></div>
@@ -1547,16 +1692,14 @@ def adicionar_servico():
     </div>
     
     <script>
-    // Formatação de valor monetário
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
-            let value = e.target.value.replace(/\\D/g, '');
+            let value = e.target.value.replace(/\D/g, '');
             value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
             e.target.value = value;
         }}
     }});
     
-    // Adicionar linha de material
     function addMaterial() {{
         const container = document.getElementById('materiais-container');
         const div = document.createElement('div');
@@ -1575,6 +1718,7 @@ def adicionar_servico():
     </html>
     '''
 
+
 @app.route('/editar_servico/<int:id>', methods=['GET', 'POST'])
 def editar_servico(id):
     if 'usuario' not in session:
@@ -1591,10 +1735,8 @@ def editar_servico(id):
         flash("Erro ao carregar serviço.")
         return redirect(url_for('listar_servicos'))
     
-    # Verifica se é administrador
     eh_admin = session.get('nivel') == 'administrador'
     
-    # Tratamento de dados
     qtd_raw = servico.get('quantidade')
     qtd_display = ''
     if qtd_raw is not None and qtd_raw != 'None':
@@ -1610,7 +1752,6 @@ def editar_servico(id):
     cor_raw = servico.get('numero_cores')
     cor_display = '' if (not cor_raw or cor_raw == 'None') else cor_raw
     
-    # Busca materiais usados
     try:
         url_mats = f"{SUPABASE_URL}/rest/v1/materiais_usados?select=*,materiais(denominacao,unidade_medida)&servico_id=eq.{id}"
         response_mats = requests.get(url_mats, headers=headers)
@@ -1631,7 +1772,6 @@ def editar_servico(id):
         valor_cobrado_str = request.form.get('valor_cobrado', '0').replace(',', '.')
         observacoes = request.form.get('observacoes', '')
         
-        # CAMPO APLICACAO: só admin pode salvar
         aplicacao = request.form.get('aplicacao', '') if eh_admin else ''
         
         if not titulo or not empresa_id:
@@ -1657,7 +1797,6 @@ def editar_servico(id):
             "observacoes": observacoes
         }
         
-        # Só adiciona aplicacao se for admin
         if eh_admin:
             dados["aplicacao"] = aplicacao if aplicacao else None
         
@@ -1667,7 +1806,6 @@ def editar_servico(id):
             if response.status_code == 204:
                 flash("✅ Serviço atualizado com sucesso!")
                 
-                # Atualiza materiais
                 ids_materiais = request.form.getlist('material_usado_id[]')
                 for i in range(len(ids_materiais)):
                     try:
@@ -1695,7 +1833,6 @@ def editar_servico(id):
         
         return redirect(request.url)
     
-    # GET - Renderiza formulário
     try:
         empresas = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
         materiais = requests.get(f"{SUPABASE_URL}/rest/v1/materiais?select=*", headers=headers).json() or []
@@ -1705,7 +1842,6 @@ def editar_servico(id):
     opts_empresas = "".join([f'<option value="{e["id"]}" {"selected" if e["id"] == servico["empresa_id"] else ""}>{e["nome_empresa"]}</option>' for e in empresas])
     opts_materiais = "".join([f'<option value="{m["id"]}">{m["denominacao"]} ({m["unidade_medida"]})</option>' for m in materiais])
     
-    # Campo aplicação só aparece para admin
     campo_aplicacao_html = ""
     if eh_admin:
         campo_aplicacao_html = f'''
@@ -1716,7 +1852,6 @@ def editar_servico(id):
         </div>
         '''
     else:
-        # Vendedor vê como readonly (sem name, não é enviado no form)
         aplicacao_valor = servico.get('aplicacao', '') or ''
         if aplicacao_valor:
             campo_aplicacao_html = f'''
@@ -1732,18 +1867,31 @@ def editar_servico(id):
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Serviço</title>
     <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
+        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 0; margin: 0; }}
+        .container {{ max-width: 1000px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }}
+        .header {{ background: #2c3e50; color: white; padding: 30px 20px; text-align: center; }}
+        .content {{ padding: 30px 20px; }}
         .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
         .form-group {{ margin-bottom: 15px; }}
         label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
-        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
-        .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }}
-        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        input, select, textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }}
+        .btn {{ padding: 14px 20px; background: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin: 20px; font-weight: 500; }}
+
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            .container {{ margin: 10px; border-radius: 12px; }}
+            .header {{ padding: 20px 15px; }}
+            .header h1 {{ font-size: 22px; }}
+            .content {{ padding: 20px 15px; }}
+            .grid-2 {{ grid-template-columns: 1fr !important; }}
+            .form-group {{ margin-bottom: 15px; }}
+            input, select, textarea {{ font-size: 16px; padding: 14px; width: 100%; }}
+            .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+        }}
     </style>
     </head>
     <body>
@@ -1871,7 +2019,7 @@ def gerar_etiqueta(id):
         .editor {{ max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
         .form-group {{ margin-bottom: 10px; }}
         label {{ font-weight: bold; display: block; font-size: 13px; margin-bottom: 3px; }}
-        input {{ width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }}
+        input {{ width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }}
         .btn-print {{ padding: 10px 20px; background: #2c3e50; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin-top: 10px; width: 100%; }}
         
         /* ETIQUETA PADRÃO */
@@ -1911,6 +2059,20 @@ def gerar_etiqueta(id):
                 min-height: 0; 
                 page-break-inside: avoid; 
             }}
+        }}
+        
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            .editor {{ padding: 15px; }}
+            .etiqueta {{ max-width: 100%; }}
+            .top-bar {{ margin: 0 auto 10px auto; }}
+            .btn-back {{ font-size: 14px; padding: 8px 15px; }}
+            .btn-print {{ padding: 12px; font-size: 15px; }}
+            .bloco {{ margin-bottom: 10px; padding-bottom: 10px; }}
+            .titulo {{ font-size: 13px; }}
+            .texto {{ font-size: 13px; }}
+            .ac {{ font-size: 12px; }}
+            .cep-destaque {{ font-size: 14px; }}
         }}
     </style>
     </head>
@@ -2051,6 +2213,16 @@ def confirmar_aceite_orcamento(id):
         .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
         .field-group {{ margin-top: 10px; }}
         .field-group label {{ font-size: 12px; font-weight: bold; margin-bottom: 4px; display: block; }}
+        
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            .container {{ margin: 10px; border-radius: 8px; }}
+            .content {{ padding: 20px 15px; }}
+            .header {{ padding: 15px 20px; }}
+            .grid-2 {{ grid-template-columns: 1fr !important; }}
+            .btn {{ width: 100%; margin: 5px 0; padding: 12px; font-size: 16px; }}
+            .radio-option {{ flex-direction: column; align-items: flex-start; }}
+        }}
     </style>
     </head>
     <body>
@@ -2400,26 +2572,53 @@ def imprimir_os(id):
         .section-title::before {{ content: ""; display: inline-block; width: 4px; height: 16px; background: #3b82f6; border-radius: 2px; }}
         .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }}
         .info-item label {{ display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }}
-        .info-item span {{ font-size: 15px; font-weight: 500; color: #1e293b; }}
+        .info-item span {{ font-size: 15px; font-weight: 500; color: #1e293b; word-break: break-word; }}
         .info-item .destaque {{ color: #059669; font-weight: 700; font-size: 16px; }}
-        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }}
-        th {{ background: #f1f5f9; color: #334155; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }}
-        td {{ padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }}
+        
+        .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; min-width: 600px; }}
+        th {{ background: #f1f5f9; color: #334155; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }}
+        td {{ padding: 12px 15px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }}
         tr:last-child td {{ border-bottom: none; }}
         tr:hover {{ background: #f8fafc; }}
+        
         .total-box {{ background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #3b82f6; }}
-        .total-box p {{ margin: 8px 0; font-size: 15px; display: flex; justify-content: space-between; }}
+        .total-box p {{ margin: 8px 0; font-size: 15px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; }}
         .total-box .valor {{ font-weight: 700; color: #1e293b; }}
         .total-box .destaque {{ color: #059669; font-size: 18px; }}
+        
         .os-footer {{ background: #f8fafc; padding: 20px 40px; text-align: center; font-size: 13px; color: #64748b; border-top: 1px solid #e2e8f0; }}
         .btn-group {{ text-align: center; margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px; }}
-        .btn {{ display: inline-block; padding: 12px 25px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; margin: 0 8px; font-weight: 600; font-size: 14px; transition: all 0.2s; border: none; cursor: pointer; }}
+        .btn {{ display: inline-block; padding: 12px 25px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; margin: 5px; font-weight: 600; font-size: 14px; transition: all 0.2s; border: none; cursor: pointer; }}
         .btn:hover {{ background: #2563eb; transform: translateY(-2px); }}
         .btn-orange {{ background: #f97316; }}
         .btn-green {{ background: #059669; }}
+        
         .entrega-box {{ background: #eff6ff; padding: 15px 20px; border-radius: 8px; margin-top: 10px; border-left: 4px solid #3b82f6; font-size: 14px; }}
         .entrega-box strong {{ color: #1e40af; }}
-        @media print {{ body {{ background: white; padding: 0; }} .os-container {{ box-shadow: none; border-radius: 0; }} .btn-group {{ display: none; }} }}
+        
+        @media print {{ 
+            body {{ background: white; padding: 0; }} 
+            .os-container {{ box-shadow: none; border-radius: 0; }} 
+            .btn-group {{ display: none; }} 
+        }}
+
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            body {{ padding: 10px; }}
+            .os-container {{ margin: 0; border-radius: 8px; }}
+            .os-header {{ flex-direction: column; text-align: center; padding: 20px 15px; gap: 15px; }}
+            .os-header .info {{ text-align: center; }}
+            .os-header .logo {{ max-width: 120px; }}
+            .os-body {{ padding: 20px 15px; }}
+            .info-grid {{ grid-template-columns: 1fr !important; gap: 15px; }}
+            .section-title {{ font-size: 15px; }}
+            .total-box {{ padding: 15px; }}
+            .total-box p {{ font-size: 14px; flex-direction: column; gap: 2px; }}
+            .btn-group {{ display: flex; flex-direction: column; gap: 10px; padding: 15px; margin: 20px 0; }}
+            .btn-group .btn {{ width: 100%; margin: 0; text-align: center; padding: 14px; font-size: 15px; }}
+            .os-footer {{ padding: 15px; font-size: 12px; }}
+        }}
     </style>
     </head>
     <body>
@@ -2467,12 +2666,14 @@ def imprimir_os(id):
             ''' if dados_entrega else ''}
             <div class="section">
                 <div class="section-title">Materiais Utilizados</div>
+                <div class="table-wrapper">
                 <table>
                     <thead><tr><th>Material</th><th>Unidade</th><th>Qtd</th><th>Valor Unit.</th><th>Valor Total</th></tr></thead>
                     <tbody>
                     {''.join(f'''<tr><td>{m['materiais']['denominacao']}</td><td>{m['materiais']['unidade_medida']}</td><td>{m['quantidade_usada']}</td><td>R$ {m['valor_unitario']:.2f}</td><td>R$ {m['valor_total']:.2f}</td></tr>''' for m in servico.get('materiais_usados', []) if m and m.get('materiais'))}
                     </tbody>
                 </table>
+                </div>
                 {f'<p style="text-align: center; color: #888; padding: 20px;">Nenhum material registrado</p>' if not servico.get('materiais_usados') else ''}
             </div>
             {f'''
@@ -2486,7 +2687,7 @@ def imprimir_os(id):
             {f'<div class="section"><div class="section-title">📝 Observações</div><p style="background:#f8fafc;padding:15px;border-radius:6px;">{obs.split("--- DADOS DE ENTREGA/NF ---")[0].strip().replace(chr(10), "<br>") if "--- DADOS DE ENTREGA/NF ---" in obs else obs.replace(chr(10), "<br>")}</p></div>' if obs and obs.strip() else ''}
         </div>
         <div class="btn-group">
-            <a href="/pdf_os/{id}" class="btn btn-orange"> Gerar PDF</a>
+            <a href="/pdf_os/{id}" class="btn btn-orange">📄 Gerar PDF</a>
             <a href="/servicos" class="btn">← Voltar para Lista</a>
             {f'<a href="/editar_servico/{id}" class="btn btn-green">✏️ Editar OS</a>' if eh_admin else ''}
         </div>
@@ -2500,6 +2701,7 @@ def imprimir_os(id):
 
 @app.route('/pdf_os/<int:id>')
 def pdf_os(id):
+    # (Mantido exatamente como estava, pois é processado pelo pdfkit para gerar A4)
     if 'usuario' not in session:
         return redirect(url_for('login'))
     
@@ -2555,10 +2757,7 @@ def pdf_os(id):
     data_fmt = f"{data_abertura[8:10]}/{data_abertura[5:7]}/{data_abertura[:4]}" if data_abertura and len(data_abertura) >= 10 else datetime.now().strftime('%d/%m/%Y')
     
     aplicacao = servico.get('aplicacao') or ''
-    
-    # VERIFICA SE É ADMINISTRADOR
     eh_admin = session.get('nivel') == 'administrador'
-    
     logo_url = "https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png"
     
     html = f'''<!DOCTYPE html>
@@ -2569,34 +2768,27 @@ def pdf_os(id):
     @page {{ size: A4; margin: 12mm 18mm; }}
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #1a1a1a; line-height: 1.35; }}
-    
     .header {{ text-align: center; margin-bottom: 20px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }}
     .logo {{ max-width: 150px; margin-bottom: 10px; }}
     .titulo {{ font-size: 24pt; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; color: #2c3e50; margin: 10px 0; }}
     .codigo {{ font-size: 12pt; color: #555; background: #ecf0f1; display: inline-block; padding: 6px 15px; border-radius: 4px; }}
-    
     .section {{ margin-bottom: 20px; }}
     .section-title {{ font-size: 11pt; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 4px; }}
-    
     .cliente-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 15px; font-size: 9.5pt; }}
     .cliente-item strong {{ color: #2c3e50; display: block; font-size: 8.5pt; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }}
     .cliente-item span {{ font-size: 10pt; color: #333; word-break: break-word; }}
-    
     table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }}
     th {{ background: #2c3e50; color: white; padding: 8px 6px; text-align: left; font-size: 9pt; font-weight: 700; text-transform: uppercase; }}
     td {{ padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9.5pt; }}
     tr:nth-child(even) {{ background: #f8f9fa; }}
-    
     .box {{ background: #f8f9fa; border-left: 4px solid #3498db; padding: 12px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 9.5pt; }}
     .box-aplicacao {{ background: #fff3cd; border-left-color: #ffc107; }}
     .box-entrega {{ background: #e8f4f8; border-left-color: #2980b9; }}
     .box-obs {{ background: #fffef0; border-left-color: #f39c12; }}
     .box p {{ margin: 5px 0; line-height: 1.5; }}
     .box strong {{ color: #2c3e50; margin-right: 6px; font-weight: 700; }}
-    
     .valores {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; padding: 15px; margin: 20px 0; }}
     .valores p {{ margin: 6px 0; font-size: 10pt; display: flex; justify-content: space-between; }}
-    
     .footer {{ margin-top: 30px; text-align: center; border-top: 2px solid #ecf0f1; padding-top: 20px; }}
     .assinatura {{ margin: 20px 0; }}
     .assinatura-line {{ border-top: 1.5px solid #2c3e50; width: 250px; margin: 0 auto 10px auto; padding-top: 8px; }}
@@ -2606,14 +2798,11 @@ def pdf_os(id):
 </style>
 </head>
 <body>
-
 <div class="header">
     <img src="{logo_url}" class="logo" alt="LIRAPRINT" onerror="this.style.display='none'">
     <div class="titulo">ORDEM DE SERVIÇO</div>
     <div class="codigo">Código: {servico.get('codigo_servico', 'N/A')}</div>
 </div>
-
-<!-- APLICAÇÃO / USO / AMBIENTE (SÓ ADMINISTRADOR VÊ) -->
 {f'''
 <div class="section">
     <div class="section-title" style="color: #856404;">🔒 Informações Administrativas / Financeiras</div>
@@ -2622,8 +2811,6 @@ def pdf_os(id):
     </div>
 </div>
 ''' if eh_admin else ''}
-
-<!-- CLIENTE -->
 <div class="section">
     <div class="section-title">📋 Cliente</div>
     <div class="cliente-grid">
@@ -2635,8 +2822,6 @@ def pdf_os(id):
         <div class="cliente-item"><strong>Abertura</strong><span>{data_fmt}</span></div>
     </div>
 </div>
-
-<!-- ITENS DO SERVIÇO -->
 <div class="section">
     <div class="section-title">📦 Itens do Serviço</div>
     <table>
@@ -2653,8 +2838,6 @@ def pdf_os(id):
         </tbody>
     </table>
 </div>
-
-<!-- DADOS DE ENTREGA -->
 '''
     if dados_entrega:
         html += f'''
@@ -2679,13 +2862,10 @@ def pdf_os(id):
 '''
 
     html += f'''
-<!-- VALORES -->
 <div class="valores">
     <p><strong>Total:</strong> <span>R$ {valor_cobrado:.2f}</span></p>
     <p><strong>Unidade:</strong> <span>R$ {valor_cobrado/quantidade:.2f}</span></p>
 </div>
-
-<!-- RODAPÉ -->
 <div class="footer">
     <div class="assinatura">
         <div class="assinatura-line"></div>
@@ -2694,7 +2874,6 @@ def pdf_os(id):
     </div>
     <div class="empresa-info">LIRAPRINT | Guarulhos - SP</div>
 </div>
-
 </body>
 </html>'''
 
@@ -2705,8 +2884,7 @@ def pdf_os(id):
             "margin-left": "18mm", "margin-right": "18mm",
             "enable-local-file-access": None
         })
-        return send_file(BytesIO(pdf), as_attachment=False, 
-                        mimetype="application/pdf")
+        return send_file(BytesIO(pdf), as_attachment=False, mimetype="application/pdf")
     except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
@@ -2739,7 +2917,7 @@ def listar_materiais():
     busca = request.args.get('q', '').strip()
     try:
         if busca:
-            url = f"{SUPABASE_URL}/rest/v1/materiais?denominacao=ilike.*{busca}*"
+            url = f"{SUPABASE_URL}/rest/v1/materiais?select=*&denominacao=ilike.*{busca}*"
         else:
             url = f"{SUPABASE_URL}/rest/v1/materiais?select=*"
         response = requests.get(url, headers=headers)
@@ -2751,6 +2929,7 @@ def listar_materiais():
     except Exception as e:
         flash("Erro de conexão.")
         materiais = []
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -2762,27 +2941,49 @@ def listar_materiais():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .search-box {{ padding: 20px 30px; text-align: center; }}
-    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 16px 20px; text-align: left; }}
+    .search-box form {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }}
+    .search-box input {{ width: 100%; max-width: 400px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .search-box button {{ padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 15px 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 600px; }}
+    th, td {{ padding: 16px 20px; text-align: left; white-space: nowrap; }}
     th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
     tr:nth-child(even) {{ background: #f9f9f9; }}
     tr:hover {{ background: #f1f7fb; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .btn {{ display: block; text-align: center; padding: 12px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin: 0 30px 20px 30px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .search-box {{ padding: 15px; }}
+        .search-box form {{ flex-direction: column; }}
+        .search-box input, .search-box button {{ width: 100%; max-width: 100%; }}
+        .btn {{ margin: 0 15px 15px 15px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📦 Materiais Cadastrados</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
     <a href="/cadastrar_material" class="btn">➕ Cadastrar Novo Material</a>
-    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
+    <div class="search-box">
+        <form method="get">
+            <input type="text" name="q" placeholder="Pesquisar por denominação..." value="{busca}">
+            <button type="submit">🔍 Pesquisar</button>
+        </form>
+    </div>
+    <div class="table-wrapper">
     <table>
     <thead><tr><th>ID</th><th>Denominação</th><th>Marca</th><th>Grupo</th><th>Unidade</th><th>Fornecedor</th><th>Ações</th></tr></thead>
     <tbody>
@@ -2802,6 +3003,7 @@ def listar_materiais():
     ''' for m in materiais)}
     </tbody>
     </table>
+    </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
@@ -2825,6 +3027,7 @@ def detalhes_material(id):
     except Exception as e:
         flash("Erro ao carregar material.")
         return redirect(url_for('listar_materiais'))
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -2836,21 +3039,32 @@ def detalhes_material(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .details {{ padding: 30px; }}
-    .details p {{ margin: 10px 0; font-size: 16px; }}
+    .details {{ padding: 30px 20px; }}
+    .details p {{ margin: 10px 0; font-size: 16px; word-break: break-word; }}
     .details strong {{ color: #2c3e50; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 10px 30px; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; text-align: center; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .details {{ padding: 20px 15px; }}
+        .details p {{ font-size: 15px; }}
+        .btn {{ display: block; width: calc(100% - 30px); margin: 10px 15px; text-align: center; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📦 {material['denominacao']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/materiais" class="back-link">← Voltar à Lista</a>
     <div class="details">
     <p><strong>Marca:</strong> {material['marca'] or "—"}</p>
@@ -2860,9 +3074,9 @@ def detalhes_material(id):
     <p><strong>Especificação:</strong> {material['especificacao'] or "—"}</p>
     <p><strong>Fornecedor:</strong> {material['fornecedor'] or "—"}</p>
     </div>
-    <div style="display: flex; gap: 15px; margin: 20px 0;">
-    <a href="/editar_material/{id}" class="btn" style="background: #f39c12;">✏️ Editar Material</a>
-    <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; padding: 0 15px;">
+    <a href="/editar_material/{id}" class="btn" style="background: #f39c12; flex: 1;">✏️ Editar Material</a>
+    <a href="/excluir_material/{id}" class="btn" style="background: #e74c3c; flex: 1;" onclick="return confirm('Tem certeza que deseja excluir este material?')">🗑️ Excluir Material</a>
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
@@ -2887,6 +3101,7 @@ def editar_material(id):
     except Exception as e:
         flash("Erro ao carregar material.")
         return redirect(url_for('listar_materiais'))
+        
     if request.method == 'POST':
         denominacao = request.form.get('denominacao')
         marca = request.form.get('marca')
@@ -2896,19 +3111,23 @@ def editar_material(id):
         valor_unitario = request.form.get('valor_unitario')
         especificacao = request.form.get('especificacao')
         fornecedor_id = request.form.get('fornecedor_id')
+        
         if unidade_medida == 'outro' and unidade_outro:
             unidade_medida = unidade_outro.strip()
         elif not unidade_medida:
             flash("Unidade de Medida é obrigatória!")
             return redirect(request.url)
+            
         if not denominacao or not valor_unitario:
             flash("Denominação e Valor Unitário são obrigatórios!")
             return redirect(request.url)
+            
         try:
             valor_unitario = float(valor_unitario)
         except:
             flash("Valor unitário deve ser um número!")
             return redirect(request.url)
+            
         try:
             url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{id}"
             dados = {
@@ -2925,6 +3144,7 @@ def editar_material(id):
                 fornecedor = next((f for f in fornecedores if f['id'] == int(fornecedor_id)), None)
                 if fornecedor:
                     dados["fornecedor"] = fornecedor["nome"]
+                    
             response = requests.patch(url, json=dados, headers=headers)
             if response.status_code == 204:
                 flash("✅ Material atualizado com sucesso!")
@@ -2934,14 +3154,17 @@ def editar_material(id):
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(request.url)
+        
     fornecedores = buscar_fornecedores()
     fornecedor_selecionado = None
     if material.get('fornecedor'):
         fornecedor_selecionado = next((f for f in fornecedores if f['nome'] == material['fornecedor']), None)
+        
     def get_selected_attr(f_id):
         if fornecedor_selecionado and f_id == fornecedor_selecionado['id']:
             return 'selected'
         return ''
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -2953,21 +3176,32 @@ def editar_material(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }}
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar {material['denominacao']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/material/{id}" class="back-link">← Voltar aos Detalhes</a>
     <form method="post" class="form-container">
     <div><label>Denominação *</label><input type="text" name="denominacao" value="{material['denominacao']}" required></div>
@@ -3055,7 +3289,6 @@ def cadastrar_material():
             return redirect(request.url)
         
         try:
-            # Remove formatação (pontos e vírgulas) antes de salvar
             valor_unitario = float(valor_unitario.replace('.', '').replace(',', '.'))
         except:
             flash("Valor unitário deve ser um número!")
@@ -3101,21 +3334,32 @@ def cadastrar_material():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }}
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Material</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <form method="post" class="form-container">
     <div><label>Denominação *</label><input type="text" name="denominacao" required></div>
@@ -3143,7 +3387,6 @@ def cadastrar_material():
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     <script>
-    // Formatação automática de valor monetário
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
             let value = e.target.value.replace(/\D/g, '');
@@ -3204,6 +3447,7 @@ def estoque():
         flash("Erro de conexão.")
         materiais_em_estoque = []
         movimentacoes = []
+        
     movimentacoes_html = ""
     for m in movimentacoes:
         data = format_data(m.get("data_movimentacao"))
@@ -3231,6 +3475,7 @@ def estoque():
         <td>{acoes}</td>
         </tr>
         '''
+        
     materiais_html = ""
     for m in materiais_em_estoque:
         classe_estoque = "estoque-baixo" if m["quantidade_estoque"] < 5 else ""
@@ -3247,6 +3492,7 @@ def estoque():
         </td>
         </tr>
         '''
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3258,42 +3504,81 @@ def estoque():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .section {{ padding: 20px 30px; }}
     .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
-    .search-box {{ text-align: center; margin-bottom: 20px; }}
-    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 12px 15px; text-align: left; }}
+    .search-box {{ text-align: center; margin-bottom: 20px; padding: 0 15px; }}
+    .search-box form {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }}
+    .search-box input {{ width: 100%; max-width: 400px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .search-box button {{ padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 600px; }}
+    th, td {{ padding: 12px 15px; text-align: left; white-space: nowrap; }}
     th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
     tr:nth-child(even) {{ background: #f9f9f9; }}
     tr:hover {{ background: #f1f7fb; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
-    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
-    .btn-green {{ background: #27ae60; color: white; }} .btn-red {{ background: #e74c3c; color: white; }} .btn-delete {{ background: #95a5a6; color: white; }} .btn-edit {{ background: #f39c12; color: white; }}
-    .estoque-baixo {{ color: #e74c3c; font-weight: bold; }} .tipo-entrada {{ color: #27ae60; font-weight: bold; }} .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .btn {{ padding: 10px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; display: inline-block; text-align: center; }}
+    .btn-green {{ background: #27ae60; color: white; }} 
+    .btn-red {{ background: #e74c3c; color: white; }} 
+    .btn-delete {{ background: #95a5a6; color: white; }} 
+    .btn-edit {{ background: #f39c12; color: white; }}
+    .btn-blue {{ background: #3498db; color: white; }}
+    .estoque-baixo {{ color: #e74c3c; font-weight: bold; }} 
+    .tipo-entrada {{ color: #27ae60; font-weight: bold; }} 
+    .tipo-saida {{ color: #e74c3c; font-weight: bold; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .section {{ padding: 15px; }}
+        .search-box form {{ flex-direction: column; }}
+        .search-box input, .search-box button {{ width: 100%; max-width: 100%; }}
+        .btn {{ display: block; width: 100%; margin: 5px 0; padding: 12px; font-size: 15px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📊 Meu Estoque</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
     <div class="section">
     <h2 class="section-title">Adicionar ao Estoque</h2>
-    <p style="margin: 10px 0;"><a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a><a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a></p>
+    <p style="margin: 10px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="/registrar_entrada_form" class="btn btn-green">➕ Registrar Nova Entrada</a>
+        <a href="/cadastrar_material" class="btn btn-blue">📦 Cadastrar Novo Material</a>
+    </p>
     </div>
     <div class="section">
     <h2 class="section-title">Itens em Estoque</h2>
-    <table><thead><tr><th>ID</th><th>Material</th><th>Unidade</th><th>Qtd. em Estoque</th><th>Ações</th></tr></thead><tbody>{materiais_html}</tbody></table>
+    <div class="table-wrapper">
+    <table>
+        <thead><tr><th>ID</th><th>Material</th><th>Unidade</th><th>Qtd. em Estoque</th><th>Ações</th></tr></thead>
+        <tbody>{materiais_html}</tbody>
+    </table>
+    </div>
     </div>
     <div class="section">
     <h2 class="section-title">Últimas Movimentações</h2>
-    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
-    <table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Ações</th></tr></thead><tbody>{movimentacoes_html}</tbody></table>
+    <div class="search-box">
+        <form method="get">
+            <input type="text" name="q" placeholder="Pesquisar por material..." value="{busca_mov}">
+            <button type="submit">🔍 Pesquisar</button>
+        </form>
+    </div>
+    <div class="table-wrapper">
+    <table>
+        <thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Ações</th></tr></thead>
+        <tbody>{movimentacoes_html}</tbody>
+    </table>
+    </div>
     </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
@@ -3308,6 +3593,7 @@ def registrar_entrada_form():
     if session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+    
     material_id = request.args.get('material_id')
     material = None
     try:
@@ -3317,8 +3603,10 @@ def registrar_entrada_form():
     except:
         flash("Erro ao carregar material.")
         return redirect(url_for('estoque'))
+        
     import json
     materiais_js = json.dumps(materiais, ensure_ascii=False)
+    
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3330,22 +3618,34 @@ def registrar_entrada_form():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .grid-2 {{ grid-template-columns: 1fr !important; }} /* Empilha os campos no celular */
+        .form-container input, .form-container select {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📥 Registrar Entrada de Material</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <div class="form-container">
     <form method="post" action="/registrar_entrada" onsubmit="return validarFormulario()">
@@ -3377,13 +3677,16 @@ def registrar_entrada():
     if session['nivel'] not in ['administrador', 'vendedor']:
         flash("Acesso negado!")
         return redirect(url_for('estoque'))
+    
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
     valor_total = request.form.get('valor_total')
     tamanho = request.form.get('tamanho')
+    
     if not material_id or not quantidade or not valor_total:
         flash("Preencha todos os campos obrigatórios!")
         return redirect(url_for('estoque'))
+        
     try:
         quantidade = float(quantidade)
         valor_total = float(valor_total)
@@ -3394,6 +3697,7 @@ def registrar_entrada():
     except:
         flash("Quantidade e valor devem ser números válidos.")
         return redirect(url_for('estoque'))
+        
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
@@ -3415,6 +3719,7 @@ def registrar_entrada():
     except Exception as e:
         print("❌ Erro de conexão:", str(e))
         flash("❌ Erro ao conectar ao banco de dados.")
+        
     return redirect(url_for('estoque'))
 
 @app.route('/registrar_saida_form')
@@ -3424,9 +3729,11 @@ def registrar_saida_form():
     if session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+    
     material_id = request.args.get('material_id')
     material = None
     saldo_atual = 0
+    
     try:
         if material_id:
             url = f"{SUPABASE_URL}/rest/v1/materiais?id=eq.{material_id}"
@@ -3438,6 +3745,7 @@ def registrar_saida_form():
     except:
         flash("Erro ao carregar material.")
         return redirect(url_for('estoque'))
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3449,22 +3757,33 @@ def registrar_saida_form():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .alert {{ background: #fdf3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📤 Registrar Saída de Material</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/estoque" class="back-link">← Voltar ao Estoque</a>
     <div class="form-container">
     <form method="post" action="/registrar_saida" onsubmit="return validarSaida()">
@@ -3495,12 +3814,15 @@ def registrar_saida():
     if session['nivel'] not in ['administrador', 'vendedor']:
         flash("Acesso negado!")
         return redirect(url_for('estoque'))
+    
     material_id = request.form.get('material_id')
     quantidade = request.form.get('quantidade')
     motivo = request.form.get('motivo')
+    
     if not material_id or not quantidade or not motivo:
         flash("Preencha todos os campos!")
         return redirect(url_for('estoque'))
+        
     try:
         quantidade = float(quantidade)
         if quantidade <= 0:
@@ -3509,6 +3831,7 @@ def registrar_saida():
     except:
         flash("Quantidade inválida.")
         return redirect(url_for('estoque'))
+        
     try:
         url = f"{SUPABASE_URL}/rest/v1/estoque"
         dados = {
@@ -3525,6 +3848,7 @@ def registrar_saida():
             flash("❌ Erro ao registrar saída.")
     except Exception as e:
         flash("❌ Erro ao registrar saída.")
+        
     return redirect(url_for('estoque'))
 
 @app.route('/excluir_movimentacao/<int:id>')
@@ -3543,10 +3867,11 @@ def listar_fornecedores():
     if 'usuario' not in session or session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+    
     busca = request.args.get('q', '').strip()
     try:
         if busca:
-            url = f"{SUPABASE_URL}/rest/v1/fornecedores?or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+            url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*&or=(nome.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
         else:
             url = f"{SUPABASE_URL}/rest/v1/fornecedores?select=*"
         response = requests.get(url, headers=headers)
@@ -3558,6 +3883,7 @@ def listar_fornecedores():
     except Exception as e:
         flash("Erro de conexão.")
         fornecedores = []
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3569,33 +3895,59 @@ def listar_fornecedores():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
     .search-box {{ padding: 20px 30px; text-align: center; }}
-    .search-box input {{ width: 70%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 16px 20px; text-align: left; }}
+    .search-box form {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }}
+    .search-box input {{ width: 100%; max-width: 400px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .search-box button {{ padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 15px 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 600px; }}
+    th, td {{ padding: 16px 20px; text-align: left; white-space: nowrap; }}
     th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
     tr:nth-child(even) {{ background: #f9f9f9; }}
     tr:hover {{ background: #f1f7fb; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .btn-add {{ display: block; text-align: center; padding: 12px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin: 0 30px 20px 30px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .search-box {{ padding: 15px; }}
+        .search-box form {{ flex-direction: column; }}
+        .search-box input, .search-box button {{ width: 100%; max-width: 100%; }}
+        .btn-add {{ margin: 0 15px 15px 15px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>📋 Fornecedores Cadastrados</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
-    <a href="/cadastrar_fornecedor" class="btn" style="padding: 12px 20px; background: #27ae60; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 0 30px;">➕ Cadastrar Novo Fornecedor</a>
-    <div class="search-box"><form method="get" style="display: inline;"><input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}"><button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">🔍 Pesquisar</button></form></div>
-    <table><thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead><tbody>{''.join(f"""
+    <a href="/cadastrar_fornecedor" class="btn-add">➕ Cadastrar Novo Fornecedor</a>
+    <div class="search-box">
+        <form method="get">
+            <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+            <button type="submit">🔍 Pesquisar</button>
+        </form>
+    </div>
+    <div class="table-wrapper">
+    <table>
+    <thead><tr><th>ID</th><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Ações</th></tr></thead>
+    <tbody>{''.join(f"""
     <tr>
     <td>{f["id"]}</td><td>{f["nome"]}</td><td>{f["cnpj"]}</td><td>{f.get("contato", "—")}</td><td>{f.get("telefone", "—")}</td><td>{f.get("email", "—")}</td>
     <td><div style="display: flex; gap: 10px;"><a href="/editar_fornecedor/{f["id"]}" style="color: #f39c12; text-decoration: none;">✏️ Editar</a><a href="/excluir_fornecedor/{f["id"]}" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a></div></td>
     </tr>
-    """ for f in fornecedores)}</tbody></table>
+    """ for f in fornecedores)}</tbody>
+    </table>
+    </div>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
@@ -3609,6 +3961,7 @@ def cadastrar_fornecedor():
     if session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+        
     if request.method == 'POST':
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
@@ -3616,14 +3969,17 @@ def cadastrar_fornecedor():
         telefone = request.form.get('telefone')
         email = request.form.get('email')
         endereco = request.form.get('endereco')
+        
         if not nome:
             flash("Nome do fornecedor é obrigatório!")
             return redirect(request.url)
+            
         if criar_fornecedor(nome, cnpj, contato, telefone, email, endereco):
             flash("✅ Fornecedor cadastrado com sucesso!")
             return redirect(url_for('listar_fornecedores'))
         else:
             flash("❌ Erro ao cadastrar fornecedor.")
+            
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3635,21 +3991,32 @@ def cadastrar_fornecedor():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container textarea {{ font-size: 16px; padding: 14px; }}
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>➕ Cadastrar Novo Fornecedor</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/fornecedores" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div><label>Nome *</label><input type="text" name="nome" required></div>
@@ -3673,6 +4040,7 @@ def editar_fornecedor(id):
     if session['nivel'] != 'administrador':
         flash("Acesso negado!")
         return redirect(url_for('clientes'))
+        
     try:
         url = f"{SUPABASE_URL}/rest/v1/fornecedores?id=eq.{id}"
         response = requests.get(url, headers=headers)
@@ -3683,6 +4051,7 @@ def editar_fornecedor(id):
     except Exception as e:
         flash("Erro ao carregar fornecedor.")
         return redirect(url_for('listar_fornecedores'))
+        
     if request.method == 'POST':
         nome = request.form.get('nome')
         cnpj = request.form.get('cnpj')
@@ -3690,14 +4059,17 @@ def editar_fornecedor(id):
         telefone = request.form.get('telefone')
         email = request.form.get('email')
         endereco = request.form.get('endereco')
+        
         if not nome:
             flash("Nome do fornecedor é obrigatório!")
             return redirect(request.url)
+            
         if atualizar_fornecedor(id, nome, cnpj, contato, telefone, email, endereco):
             flash("✅ Fornecedor atualizado com sucesso!")
             return redirect(url_for('listar_fornecedores'))
         else:
             flash("❌ Erro ao atualizar fornecedor.")
+            
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -3709,21 +4081,32 @@ def editar_fornecedor(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 800px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container textarea {{ font-size: 16px; padding: 14px; }}
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
-    <body>\n
+    <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar Fornecedor: {fornecedor['nome']}</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/fornecedores" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div><label>Nome *</label><input type="text" name="nome" value="{fornecedor['nome']}" required></div>
@@ -3783,11 +4166,13 @@ def listar_orcamentos():
             <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
             <td>{format_data(o.get('data_abertura'))}</td>
             <td>
-                <button onclick="visualizarPDF({o['id']})" style="padding:6px 12px;background:#e67e22;color:white;border:none;border-radius:4px;margin-right:5px;cursor:pointer;" title="Visualizar PDF">👁️ PDF</button>
-                <a href="/complementar_orcamento/{o['id']}" style="padding:6px 12px;background:#27ae60;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✅ Aceito</a>
-                <a href="/arquivar_orcamento/{o['id']}" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado e sumirá desta lista.')" style="padding:6px 12px;background:#3498db;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">💾 Salvar</a>
-                <a href="/editar_orcamento/{o['id']}" style="padding:6px 12px;background:#f39c12;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✏️ Editar</a>
-                <a href="/excluir_orcamento/{o['id']}" onclick="return confirm('Tem certeza?')" style="padding:6px 12px;background:#e74c3c;color:white;text-decoration:none;border-radius:4px;">🗑️</a>
+                <div class="action-btns">
+                    <button onclick="visualizarPDF({o['id']})" class="action-btn" style="background:#e67e22;" title="Visualizar PDF">👁️ PDF</button>
+                    <a href="/complementar_orcamento/{o['id']}" class="action-btn" style="background:#27ae60;">✅ Aceito</a>
+                    <a href="/arquivar_orcamento/{o['id']}" class="action-btn" style="background:#3498db;" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado e sumirá desta lista.')">💾 Salvar</a>
+                    <a href="/editar_orcamento/{o['id']}" class="action-btn" style="background:#f39c12;">✏️ Editar</a>
+                    <a href="/excluir_orcamento/{o['id']}" class="action-btn" style="background:#e74c3c;" onclick="return confirm('Tem certeza?')">🗑️</a>
+                </div>
             </td>
         </tr>'''
     
@@ -3799,17 +4184,36 @@ def listar_orcamentos():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orçamentos Pendentes</title>
     <style>
-    body {{ font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 20px; }}
-    .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-    .header {{ background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
-    .user-bar {{ background: #34495e; color: white; padding: 10px 20px; display: flex; justify-content: space-between; }}
-    .content {{ padding: 30px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-    th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }}
-    th {{ background: #f8f9fa; font-weight: bold; color: #2c3e50; }}
-    .btn {{ padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }}
-    .search {{ padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; }}
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; margin: 0; padding: 0; color: #333; min-height: 100vh; }}
+    .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+    .header {{ background: #2c3e50; color: white; padding: 30px 20px; text-align: center; }}
+    .user-bar {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
+    .content {{ padding: 30px 20px; }}
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 20px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 700px; }}
+    th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }}
+    th {{ background: #f8f9fa; font-weight: bold; color: #2c3e50; font-size: 14px; text-transform: uppercase; }}
+    .btn {{ padding: 12px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; display: inline-block; margin: 10px 0; font-size: 16px; font-weight: 600; width: 100%; text-align: center; box-sizing: border-box; }}
+    .search-form {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }}
+    .search {{ padding: 12px; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }}
+    .search-btn {{ padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }}
+    .action-btns {{ display: flex; flex-wrap: wrap; gap: 5px; }}
+    .action-btn {{ padding: 8px 12px; color: white; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; text-align: center; }}
     .menu-container {{ position: relative; z-index: 9999; margin: 20px 0; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-bar {{ flex-direction: column; gap: 10px; text-align: center; padding: 15px; }}
+        .content {{ padding: 20px 15px; }}
+        .search-form {{ flex-direction: column; }}
+        .search, .search-btn {{ width: 100%; max-width: 100%; }}
+        .action-btns {{ flex-direction: column; }}
+        .action-btn {{ width: 100%; padding: 10px; font-size: 14px; }}
+    }}
     </style>
     </head>
     <body>
@@ -3817,28 +4221,27 @@ def listar_orcamentos():
         <div class="header"><h1 style="margin:0;">💰 Orçamentos Pendentes</h1></div>
         <div class="user-bar">
             <span>👤 {session['usuario']} ({session['nivel'].upper()})</span>
-            <a href="/logout" style="color: #3498db;">🚪 Sair</a>
+            <a href="/logout" style="color: #3498db; text-decoration: none;">🚪 Sair</a>
         </div>
         <div class="content">
             <div class="menu-container">{MENU_FLUTUANTE}</div>
             <a href="/adicionar_orcamento" class="btn">➕ Novo Orçamento</a>
-            <div style="margin: 20px 0;">
-                <form method="get" style="display: inline-block;">
-                    <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
-                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;"> Pesquisar</button>
-                </form>
-            </div>
+            <form method="get" class="search-form">
+                <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
+                <button type="submit" class="search-btn">🔍 Pesquisar</button>
+            </form>
+            <div class="table-wrapper">
             <table>
                 <thead><tr><th>Código</th><th>Título</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Ações</th></tr></thead>
-                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">Nenhum orçamento pendente</td></tr>'}</tbody>
+                <tbody>{rows if rows else '<tr><td colspan="6" style="text-align: center; color: #95a5a6; padding: 30px;">Nenhum orçamento pendente</td></tr>'}</tbody>
             </table>
+            </div>
         </div>
     </div>
     
     <script>
     // Função para visualizar PDF em nova aba
     function visualizarPDF(id) {{
-        // Abre o PDF em uma nova aba do navegador
         window.open('/pdf_orcamento/' + id, '_blank');
     }}
     </script>
@@ -3849,34 +4252,18 @@ def listar_orcamentos():
 def adicionar_dias_uteis(data_inicio, dias):
     """Adiciona dias úteis pulando finais de semana e feriados"""
     from datetime import timedelta
-    
-    # Lista de feriados nacionais (você pode adicionar mais)
     feriados = [
-        "2026-01-01",  # Confraternização Universal
-        "2026-02-17",  # Carnaval
-        "2026-04-03",  # Sexta-feira Santa
-        "2026-04-21",  # Tiradentes
-        "2026-05-01",  # Dia do Trabalho
-        "2026-06-04",  # Corpus Christi
-        "2026-09-07",  # Independência
-        "2026-10-12",  # Nossa Senhora
-        "2026-11-02",  # Finados
-        "2026-11-15",  # Proclamação República
-        "2026-11-20",  # Consciência Negra
-        "2026-12-25",  # Natal
+        "2026-01-01", "2026-02-17", "2026-04-03", "2026-04-21", "2026-05-01",
+        "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02", "2026-11-15",
+        "2026-11-20", "2026-12-25"
     ]
-    
     data_atual = data_inicio
     dias_adicionados = 0
-    
     while dias_adicionados < dias:
         data_atual += timedelta(days=1)
-        # Verifica se é sábado (5) ou domingo (6)
         if data_atual.weekday() < 5:
-            # Verifica se não é feriado
             if data_atual.strftime("%Y-%m-%d") not in feriados:
                 dias_adicionados += 1
-    
     return data_atual
 
 @app.route('/adicionar_orcamento', methods=['GET', 'POST'])
@@ -3898,7 +4285,6 @@ def adicionar_orcamento():
             return redirect(url_for('adicionar_orcamento'))
         
         try:
-            # CRIA PRIMEIRO SEM O CÓDIGO
             json_data = {
                 "titulo": "Orçamento Múltiplo",
                 "empresa_id": int(empresa_id),
@@ -3916,43 +4302,26 @@ def adicionar_orcamento():
             if aoscuidadosde and aoscuidadosde.strip():
                 json_data["aoscuidadosde"] = aoscuidadosde.strip()
             
-            print(f"=== CRIANDO ORÇAMENTO ===")
-            print(f"json_data: {json_data}")
-            
             resp = requests.post(f"{SUPABASE_URL}/rest/v1/servicos", json=json_data, headers=headers)
             
-            print(f"Resposta: {resp.status_code}")
-            print(f"Conteúdo: {resp.text}")
-            
             if resp.status_code in [200, 201]:
-                # PEGA O ID
                 try:
                     oid = resp.json().get('id')
                 except:
                     oid = None
                 
                 if not oid:
-                    # Busca o último criado
                     busca = requests.get(f"{SUPABASE_URL}/rest/v1/servicos?select=id&order=id.desc&limit=1", headers=headers)
                     if busca.status_code == 200 and busca.json():
                         oid = busca.json()[0].get('id')
                 
                 if not oid:
-                    flash(" Erro ao obter ID.")
+                    flash("❌ Erro ao obter ID.")
                     return redirect(url_for('listar_orcamentos'))
                 
-                print(f"✅ ID obtido: {oid}")
-                
-                # GERA O CÓDIGO USANDO O ID
                 codigo_servico = gerar_proximo_codigo('OR', oid)
-                print(f"Código gerado: {codigo_servico}")
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", json={"codigo_servico": codigo_servico}, headers=headers)
                 
-                # ATUALIZA COM O CÓDIGO
-                resp_codigo = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
-                              json={"codigo_servico": codigo_servico}, headers=headers)
-                print(f"Atualização código: {resp_codigo.status_code}")
-                
-                # PROCESSA OS ITENS
                 vt = 0.0
                 descricoes = request.form.getlist('item_descricao[]')
                 materiais = request.form.getlist('item_material[]')
@@ -3961,23 +4330,17 @@ def adicionar_orcamento():
                 dimensoes = request.form.getlist('item_dimensao[]')
                 cores = request.form.getlist('item_cores[]')
                 
-                print(f"=== PROCESSANDO {len(descricoes)} ITENS ===")
-                
                 for i in range(len(descricoes)):
                     desc = descricoes[i].strip()
                     mat = materiais[i].strip() if i < len(materiais) else ''
-                    
-                    if not desc:
-                        continue
+                    if not desc: continue
                     
                     try:
                         q_str = quantidades[i].strip().replace(',', '.') if i < len(quantidades) else '1'
                         vu_str = valores_unit[i].strip().replace(',', '.') if i < len(valores_unit) else '0'
-                        
                         q = float(q_str) if q_str else 1.0
                         vu = float(vu_str) if vu_str else 0.0
                     except Exception as e:
-                        print(f"Erro ao converter item {i}: {e}")
                         continue
                     
                     dim = dimensoes[i].strip() if i < len(dimensoes) else ''
@@ -3985,41 +4348,22 @@ def adicionar_orcamento():
                     total_item = q * vu
                     vt += total_item
                     
-                    print(f"Item {i+1}: {desc}, Qtd: {q}, VU: {vu}, Total: {total_item}")
-                    
-                    resp_item = requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
-                        "orcamento_id": oid,
-                        "titulo": desc,
-                        "material": mat,
-                        "quantidade": q,
-                        "dimensao": dim,
-                        "numero_cores": cor,
-                        "valor_unitario": vu,
-                        "valor_total": total_item
+                    requests.post(f"{SUPABASE_URL}/rest/v1/itens_orcamento", json={
+                        "orcamento_id": oid, "titulo": desc, "material": mat, "quantidade": q,
+                        "dimensao": dim, "numero_cores": cor, "valor_unitario": vu, "valor_total": total_item
                     }, headers=headers)
-                    
-                    print(f"  → Status: {resp_item.status_code}")
                 
-                # ATUALIZA VALOR TOTAL
-                print(f"Valor total: {vt}")
-                resp_valor = requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", 
-                    json={"valor_cobrado": vt}, headers=headers)
-                print(f"Atualização valor: {resp_valor.status_code}")
-                
+                requests.patch(f"{SUPABASE_URL}/rest/v1/servicos?id=eq.{oid}", json={"valor_cobrado": vt}, headers=headers)
                 flash(f"✅ Orçamento {codigo_servico} criado com sucesso!")
                 return redirect(url_for('listar_orcamentos'))
             else:
-                flash(f"❌ Erro: {resp.status_code} - {resp.text[:100]}")
+                flash(f"❌ Erro: {resp.status_code}")
                 return redirect(url_for('adicionar_orcamento'))
                 
         except Exception as e:
-            print(f"❌ ERRO: {str(e)}")
-            import traceback
-            traceback.print_exc()
             flash(f"❌ Erro: {str(e)[:100]}")
             return redirect(url_for('adicionar_orcamento'))
     
-    # GET - Formulario
     try:
         emps = requests.get(f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&order=nome_empresa.asc", headers=headers).json() or []
     except:
@@ -4032,20 +4376,35 @@ def adicionar_orcamento():
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novo Orçamento</title>
     <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+        .container {{ max-width: 1200px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+        .header {{ background: #2c3e50; color: white; padding: 30px 20px; text-align: center; }}
+        .content {{ padding: 30px 20px; }}
         .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
         .form-group {{ margin-bottom: 15px; }}
         label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
-        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
+        input, select, textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
         .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
-        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }}
+        .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; }}
         .btn-blue {{ background: #3498db; }}
-        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin: 20px; font-weight: 500; }}
+
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            .container {{ margin: 10px; border-radius: 12px; }}
+            .header {{ padding: 20px 15px; }}
+            .header h1 {{ font-size: 22px; }}
+            .content {{ padding: 20px 15px; }}
+            .grid {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+            /* Força a linha de itens complexa a empilhar também */
+            .item-row .grid {{ grid-template-columns: 1fr !important; gap: 10px; }}
+            .item-row .grid > div button {{ margin-top: 0; width: 100%; padding: 12px; }}
+            .btn {{ padding: 16px; font-size: 16px; margin-top: 10px; }}
+        }}
     </style>
     </head>
     <body>
@@ -4070,7 +4429,7 @@ def adicionar_orcamento():
                 <div class="form-group">
                     <label>Prazo de Entrega (dias úteis após aprovação da arte)</label>
                     <input type="number" name="prazo_dias" value="7" min="1">
-                    <small style="color: #7f8c8d;">* A contagem inicia após aprovação da arte</small>
+                    <small style="color: #7f8c8d; display: block; margin-top: 4px;">* A contagem inicia após aprovação da arte</small>
                 </div>
                 <div class="grid">
                     <div class="form-group">
@@ -4094,38 +4453,18 @@ def adicionar_orcamento():
                 <div id="itens-container">
                     <div class="item-row">
                         <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
-                            <div>
-                                <label>Descrição *</label>
-                                <input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required>
-                            </div>
-                            <div>
-                                <label>Material *</label>
-                                <input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required>
-                            </div>
-                            <div>
-                                <label>Quantidade *</label>
-                                <input type="number" name="item_quantidade[]" step="any" value="1" required>
-                            </div>
-                            <div>
-                                <label>Valor Unit. (R$) *</label>
-                                <input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required>
-                            </div>
-                            <div>
-                                <label>Dimensão</label>
-                                <input type="text" name="item_dimensao[]" placeholder="Ex: 100x50">
-                            </div>
-                            <div>
-                                <label>Cores</label>
-                                <input type="number" name="item_cores[]" step="1" value="4">
-                            </div>
-                            <div>
-                                <button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button>
-                            </div>
+                            <div class="form-group"><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
+                            <div class="form-group"><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC" required></div>
+                            <div class="form-group"><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                            <div class="form-group"><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
+                            <div class="form-group"><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                            <div class="form-group"><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                            <div class="form-group"><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer;width:100%;margin-top:24px;">🗑️</button></div>
                         </div>
                     </div>
                 </div>
-                <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Salvar Orçamento</button>
+                <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0;">+ Adicionar Item</button>
+                <button type="submit" class="btn">💾 Salvar Orçamento</button>
             </form>
         </div>
     </div>
@@ -4133,7 +4472,7 @@ def adicionar_orcamento():
     <script>
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
-            let value = e.target.value.replace(/\\D/g, '');
+            let value = e.target.value.replace(/\D/g, '');
             value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
             e.target.value = value;
         }}
@@ -4144,13 +4483,13 @@ def adicionar_orcamento():
         div.className = 'item-row';
         div.innerHTML = `
             <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
-                <div><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
-                <div><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required></div>
-                <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
-                <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
-                <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
-                <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
-                <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">️</button></div>
+                <div class="form-group"><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
+                <div class="form-group"><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC" required></div>
+                <div class="form-group"><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                <div class="form-group"><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
+                <div class="form-group"><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                <div class="form-group"><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                <div class="form-group"><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer;width:100%;margin-top:24px;">🗑️</button></div>
             </div>
         `;
         document.getElementById('itens-container').appendChild(div);
@@ -4266,32 +4605,32 @@ def editar_orcamento(id):
             itens_html += f'''
             <div class="item-row">
                 <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
-                    <div>
+                    <div class="form-group">
                         <label>Descrição *</label>
                         <input type="text" name="item_descricao[]" value="{item.get('titulo','')}" placeholder="Ex: Máscara A960" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>Material *</label>
-                        <input type="text" name="item_material[]" value="{item.get('material','')}" placeholder="Ex: PP+ PVC Texturizado" required>
+                        <input type="text" name="item_material[]" value="{item.get('material','')}" placeholder="Ex: PP+ PVC" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>Quantidade *</label>
                         <input type="number" name="item_quantidade[]" value="{item.get('quantidade',1)}" step="any" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>Valor Unit. (R$) *</label>
                         <input type="text" name="item_valor_unit[]" class="valor-input" value="{vu_display}" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>Dimensão</label>
                         <input type="text" name="item_dimensao[]" value="{item.get('dimensao','')}">
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>Cores</label>
                         <input type="number" name="item_cores[]" value="{item.get('numero_cores','')}" step="1">
                     </div>
-                    <div>
-                        <button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button>
+                    <div class="form-group">
+                        <button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer;width:100%;margin-top:24px;">🗑️</button>
                     </div>
                 </div>
             </div>'''
@@ -4301,20 +4640,35 @@ def editar_orcamento(id):
         <html lang="pt-BR">
         <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Editar Orçamento</title>
         <style>
-        body {{ font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }}
-        .container {{ max-width: 1100px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        .header {{ background: #2c3e50; color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ padding: 30px; }}
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 0; margin: 0; }}
+        .container {{ max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
+        .header {{ background: #2c3e50; color: white; padding: 30px 20px; text-align: center; }}
+        .content {{ padding: 30px 20px; }}
         .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
         .form-group {{ margin-bottom: 15px; }}
         label {{ display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }}
-        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }}
+        input, select, textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
         .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #f39c12; }}
-        .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }}
+        .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; }}
         .btn-blue {{ background: #3498db; }}
-        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin-bottom: 15px; }}
+        .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin: 20px; font-weight: 500; }}
+
+        /* RESPONSIVO PARA CELULAR */
+        @media (max-width: 768px) {{
+            .container {{ margin: 10px; border-radius: 12px; }}
+            .header {{ padding: 20px 15px; }}
+            .header h1 {{ font-size: 22px; }}
+            .content {{ padding: 20px 15px; }}
+            .grid {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+            .item-row .grid {{ grid-template-columns: 1fr !important; gap: 10px; }}
+            .item-row .grid > div button {{ margin-top: 0; width: 100%; padding: 12px; }}
+            .btn {{ padding: 16px; font-size: 16px; margin-top: 10px; }}
+            input, select, textarea {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        }}
         </style>
         </head>
         <body>
@@ -4357,15 +4711,15 @@ def editar_orcamento(id):
                     </div>
                     <h3 style="color: #2c3e50; margin: 25px 0 15px 0;">Itens do Orçamento</h3>
                     <div id="itens-container">{itens_html}</div>
-                    <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0; width: 100%;">+ Adicionar Item</button>
-                    <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">💾 Salvar Alterações</button>
+                    <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0;">+ Adicionar Item</button>
+                    <button type="submit" class="btn">💾 Salvar Alterações</button>
                 </form>
             </div>
         </div>
         <script>
         document.addEventListener('input', function(e) {{
             if (e.target.classList.contains('valor-input')) {{
-                let value = e.target.value.replace(/\\D/g, '');
+                let value = e.target.value.replace(/\D/g, '');
                 value = (parseInt(value || '0') / 100).toFixed(2).replace('.', ',');
                 e.target.value = value;
             }}
@@ -4376,13 +4730,13 @@ def editar_orcamento(id):
             div.className = 'item-row';
             div.innerHTML = `
                 <div class="grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 0.8fr auto; gap: 10px;">
-                    <div><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
-                    <div><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC Texturizado" required></div>
-                    <div><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
-                    <div><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
-                    <div><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
-                    <div><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
-                    <div><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:8px;border-radius:5px;margin-top:28px;cursor:pointer;">🗑️</button></div>
+                    <div class="form-group"><label>Descrição *</label><input type="text" name="item_descricao[]" placeholder="Ex: Máscara A960" required></div>
+                    <div class="form-group"><label>Material *</label><input type="text" name="item_material[]" placeholder="Ex: PP+ PVC" required></div>
+                    <div class="form-group"><label>Quantidade *</label><input type="number" name="item_quantidade[]" step="any" value="1" required></div>
+                    <div class="form-group"><label>Valor Unit. (R$) *</label><input type="text" name="item_valor_unit[]" class="valor-input" placeholder="0,00" required></div>
+                    <div class="form-group"><label>Dimensão</label><input type="text" name="item_dimensao[]" placeholder="Ex: 100x50"></div>
+                    <div class="form-group"><label>Cores</label><input type="number" name="item_cores[]" step="1" value="4"></div>
+                    <div class="form-group"><button type="button" onclick="this.closest('.item-row').remove()" style="background:#e74c3c;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer;width:100%;margin-top:24px;">🗑️</button></div>
                 </div>
             `;
             document.getElementById('itens-container').appendChild(div);
@@ -4407,11 +4761,10 @@ def calcular_data_entrega_api():
     data_inicio = datetime.strptime(data_abertura, "%Y-%m-%d")
     data_entrega = adicionar_dias_uteis(data_inicio, dias)
     
-    return jsonify({{
+    return jsonify({
         'data_entrega': data_entrega.strftime('%Y-%m-%d')
-    }})
+    })
 
-# MÓDULO DE RASTREAMENTO DE ENVIOS
 
 # ========================
 # MÓDULO DE RASTREAMENTO AUTOMÁTICO (API PÚBLICA GRATUITA)
@@ -4419,7 +4772,6 @@ def calcular_data_entrega_api():
 
 def buscar_envios():
     try:
-        # Busca envios ordenados por data
         url = f"{SUPABASE_URL}/rest/v1/envios?select=*,empresas(nome_empresa)&order=data_envio.desc"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -4462,32 +4814,18 @@ def marcar_entregue(id):
         return False
 
 def consultar_rastreio_publico(codigo_rastreio):
-    """
-    Consulta API pública gratuita (SeuRastreio)
-    Retorna dict com o último status encontrado.
-    """
     try:
-        # API Pública que não requer chave
         url = f"https://seurastreio.com.br/api/rastreio/{codigo_rastreio}"
-        
-        # Adiciona User-Agent para não ser bloqueado
         headers_api = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        
         response = requests.get(url, headers=headers_api, timeout=10)
-        
         if response.status_code == 200:
             data = response.json()
-            # A API retorna uma lista de eventos no campo 'result'
             if data.get('result') and len(data['result']) > 0:
-                # Pega o último evento da lista (o mais recente)
                 ultimo_evento = data['result'][0]
-                
-                # Traduz status para o padrão do seu sistema
                 status_api = ultimo_evento.get('status', 'Em Trânsito')
                 
-                # Mapeamento simples de status
                 if 'entregue' in status_api.lower():
                     novo_status = 'Entregue'
                 elif 'saiu para entrega' in status_api.lower():
@@ -4508,7 +4846,6 @@ def consultar_rastreio_publico(codigo_rastreio):
 
 @app.route('/atualizar_rastreio/<int:id>')
 def atualizar_rastreio(id):
-    """Atualiza o status de um único envio via API Pública"""
     if 'usuario' not in session:
         flash("❌ Acesso negado!")
         return redirect(url_for('login'))
@@ -4560,7 +4897,6 @@ def atualizar_todos_rastreios():
         return redirect(url_for('login'))
     
     try:
-        # Busca apenas envios que NÃO estão entregues e têm código
         url = f"{SUPABASE_URL}/rest/v1/envios?select=id,codigo_rastreio,status&status=neq.Entregue&codigo_rastreio=not.is.null"
         resp = requests.get(url, headers=headers)
         envios = resp.json() if resp.status_code == 200 else []
@@ -4583,7 +4919,6 @@ def atualizar_todos_rastreios():
                 erros += 1
         
         flash(f"✅ {atualizados} atualizados | ⚠️ {erros} falhas")
-        
     except Exception as e:
         print(f"Erro ao atualizar todos: {e}")
         flash("❌ Erro no processo em lote.")
@@ -4612,23 +4947,34 @@ def registrar_envio():
     <title>Registrar Envio - Rastreamento</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>📦 Registrar Envio para Rastreamento</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/envios" class="back-link">← Voltar à Lista de Envios</a>
     <form method="post" action="/salvar_envio" class="form-container">
     <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço">Serviço (vinculado a OS)</option><option value="Amostra">Amostra Grátis</option></select></div>
@@ -4711,12 +5057,12 @@ def envios():
         <td><span style="color: #e67e22; font-weight: bold;">{e['status']}</span></td>
         <td>{data_entrega}</td>
         <td>
-        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
-            <a href="/atualizar_rastreio/{e['id']}" class="btn" style="background: #8e44ad;">🔄 Atualizar</a>
-            <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
-            <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-            <a href="/marcar_entregue/{e['id']}" class="btn btn-green">✅ Entregue</a>
+        <div class="action-btns">
+            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="action-btn" style="background: #3498db;">🔍 Rastrear</a>
+            <a href="/atualizar_rastreio/{e['id']}" class="action-btn" style="background: #8e44ad;">🔄 Atualizar</a>
+            <a href="/editar_envio/{e['id']}" class="action-btn" style="background: #f39c12;">✏️ Editar</a>
+            <a href="/excluir_envio/{e['id']}" class="action-btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+            <a href="/marcar_entregue/{e['id']}" class="action-btn" style="background: #27ae60;">✅ Entregue</a>
         </div>
         </td>
         </tr>
@@ -4735,11 +5081,11 @@ def envios():
         <td><span style="color: #27ae60; font-weight: bold;">{e['status']}</span></td>
         <td>{data_entrega}</td>
         <td>
-        <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="btn btn-blue">🔍 Rastrear</a>
-            <a href="/editar_envio/{e['id']}" class="btn btn-yellow">✏️ Editar</a>
-            <a href="/excluir_envio/{e['id']}" class="btn btn-red" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
-            <span style="color: #95a5a6; font-size: 13px;">Já entregue</span>
+        <div class="action-btns">
+            <a href="https://www.linkcorreios.com.br/{e['codigo_rastreio']}" target="_blank" class="action-btn" style="background: #3498db;">🔍 Rastrear</a>
+            <a href="/editar_envio/{e['id']}" class="action-btn" style="background: #f39c12;">✏️ Editar</a>
+            <a href="/excluir_envio/{e['id']}" class="action-btn" style="background: #e74c3c;" onclick="return confirm('Tem certeza que deseja excluir?')">🗑️ Excluir</a>
+            <span style="color: #95a5a6; font-size: 13px; display: block; margin-top: 5px;">Já entregue</span>
         </div>
         </td>
         </tr>
@@ -4756,37 +5102,73 @@ def envios():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 1400px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; margin-right: 5px; }}
-    .btn-blue {{ background: #3498db; color: white; }} .btn-green {{ background: #27ae60; color: white; }} .btn-yellow {{ background: #f39c12; color: white; }} .btn-red {{ background: #e74c3c; color: white; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 12px 15px; text-align: left; }}
-    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    
+    .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 15px; }}
+    table {{ width: 100%; border-collapse: collapse; min-width: 800px; }}
+    th, td {{ padding: 12px 15px; text-align: left; white-space: nowrap; }}
+    th {{ background: #ecf0f1; color: #2c3e50; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
+    tr:nth-child(even) {{ background: #f9f9f9; }}
+    tr:hover {{ background: #f1f7fb; }}
+    
+    .action-btns {{ display: flex; flex-wrap: wrap; gap: 5px; }}
+    .action-btn {{ padding: 8px 12px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; text-decoration: none; text-align: center; color: white; display: inline-block; }}
+    
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .section {{ padding: 20px 30px; }}
     .section-title {{ font-size: 20px; margin: 0 0 15px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 10px; }}
-    .update-all-btn {{ display: inline-block; margin: 0 30px 20px 30px; padding: 10px 20px; background: #8e44ad; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }}
+    .top-actions {{ display: flex; gap: 10px; flex-wrap: wrap; margin: 0 30px 20px 30px; }}
+    .top-btn {{ padding: 12px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; text-align: center; flex: 1; min-width: 200px; }}
+    .update-all-btn {{ padding: 12px 20px; background: #8e44ad; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; text-align: center; flex: 1; min-width: 200px; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .section {{ padding: 15px; }}
+        .top-actions {{ margin: 0 15px 20px 15px; flex-direction: column; }}
+        .top-btn, .update-all-btn {{ width: 100%; min-width: auto; }}
+        .action-btns {{ flex-direction: column; }}
+        .action-btn {{ width: 100%; padding: 10px; font-size: 14px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>📦 Rastreamento de Envios</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     {MENU_FLUTUANTE}
-    <a href="/registrar_envio" class="btn btn-green" style="display: inline-block; margin: 20px 30px 0 30px;">➕ Novo Envio</a>
-    <a href="/atualizar_todos_rastreios" class="update-all-btn">🔄 Atualizar Todos Automaticamente</a>
+    
+    <div class="top-actions">
+        <a href="/registrar_envio" class="top-btn">➕ Novo Envio</a>
+        <a href="/atualizar_todos_rastreios" class="update-all-btn">🔄 Atualizar Todos</a>
+    </div>
     
     <div class="section">
     <h2 class="section-title">📬 Envios Enviados (Aguardando Confirmação)</h2>
-    <table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center;">Nenhum envio aguardando entrega</td></tr>'}</tbody></table>
+    <div class="table-wrapper">
+    <table>
+        <thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>Descrição</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead>
+        <tbody>{html_enviados if html_enviados else '<tr><td colspan="8" style="text-align: center; padding: 30px;">Nenhum envio aguardando entrega</td></tr>'}</tbody>
+    </table>
     </div>
+    </div>
+    
     <div class="section">
     <h2 class="section-title">✅ Envios Entregues</h2>
-    <table><thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>O que foi enviado</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead><tbody>{html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center;">Nenhum envio entregue ainda</td></tr>'}</tbody></table>
+    <div class="table-wrapper">
+    <table>
+        <thead><tr><th>Data Envio</th><th>Cliente</th><th>Tipo</th><th>Descrição</th><th>Código Rastreio</th><th>Status</th><th>Data Entrega</th><th>Ações</th></tr></thead>
+        <tbody>{html_entregues if html_entregues else '<tr><td colspan="8" style="text-align: center; padding: 30px;">Nenhum envio entregue ainda</td></tr>'}</tbody>
+    </table>
     </div>
+    </div>
+    
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
@@ -4824,6 +5206,7 @@ def editar_envio(id):
     except Exception as e:
         flash("Erro ao carregar envio.")
         return redirect(url_for('envios'))
+        
     if request.method == 'POST':
         tipo_envio = request.form.get('tipo_envio')
         empresa_id = request.form.get('empresa_id')
@@ -4852,6 +5235,7 @@ def editar_envio(id):
         except Exception as e:
             flash("❌ Erro de conexão.")
         return redirect(request.url)
+        
     return f'''
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -4863,21 +5247,32 @@ def editar_envio(id):
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; padding: 0; margin: 0; }}
     .container {{ max-width: 900px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }}
-    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px; }}
+    .header {{ background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }}
     h1 {{ font-size: 28px; margin: 0; font-weight: 600; }}
     .user-info {{ background: #34495e; color: white; padding: 15px 20px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }}
-    .form-container {{ padding: 30px; }}
+    .form-container {{ padding: 30px 20px; }}
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
-    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }}
-    .btn {{ padding: 12px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }}
-    .back-link {{ display: inline-block; margin: 20px 30px; color: #3498db; text-decoration: none; font-weight: 500; }}
+    .form-container input, .form-container select, .form-container textarea {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
+    .btn {{ padding: 14px 20px; background: #f39c12; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+
+    /* RESPONSIVO PARA CELULAR */
+    @media (max-width: 768px) {{
+        .container {{ margin: 10px; border-radius: 12px; }}
+        .header {{ padding: 20px 15px; }}
+        .header h1 {{ font-size: 22px; }}
+        .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
+        .form-container {{ padding: 20px 15px; }}
+        .form-container input, .form-container select, .form-container textarea {{ font-size: 16px; padding: 14px; }} /* Evita zoom no iPhone */
+        .btn {{ width: 100%; padding: 16px; font-size: 16px; margin-top: 10px; }}
+    }}
     </style>
     </head>
     <body>
     <div class="container">
     <div class="header"><h1>✏️ Editar Envio</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout">🚪 Sair</a></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/envios" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container">
     <div><label>Tipo de Envio *</label><select name="tipo_envio" id="tipo_envio" onchange="toggleServico()" required><option value="">Selecione</option><option value="Serviço" {"selected" if envio['tipo_envio'] == 'Serviço' else ""}>Serviço (vinculado a OS)</option><option value="Amostra" {"selected" if envio['tipo_envio'] == 'Amostra' else ""}>Amostra Grátis</option></select></div>
