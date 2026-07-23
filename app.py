@@ -3783,7 +3783,7 @@ def listar_orcamentos():
             <td>R$ {float(o.get('valor_cobrado', 0) or 0):.2f}</td>
             <td>{format_data(o.get('data_abertura'))}</td>
             <td>
-                <a href="/pdf_orcamento/{o['id']}" style="padding:6px 12px;background:#e67e22;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">📄 PDF</a>
+                <button onclick="visualizarPDF({o['id']})" style="padding:6px 12px;background:#e67e22;color:white;border:none;border-radius:4px;margin-right:5px;cursor:pointer;" title="Visualizar PDF">👁️ PDF</button>
                 <a href="/complementar_orcamento/{o['id']}" style="padding:6px 12px;background:#27ae60;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✅ Aceito</a>
                 <a href="/arquivar_orcamento/{o['id']}" onclick="return confirm('Deseja salvar este orçamento como NÃO ACEITO? Ele será arquivado e sumirá desta lista.')" style="padding:6px 12px;background:#3498db;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">💾 Salvar</a>
                 <a href="/editar_orcamento/{o['id']}" style="padding:6px 12px;background:#f39c12;color:white;text-decoration:none;border-radius:4px;margin-right:5px;">✏️ Editar</a>
@@ -3825,7 +3825,7 @@ def listar_orcamentos():
             <div style="margin: 20px 0;">
                 <form method="get" style="display: inline-block;">
                     <input type="text" name="q" class="search" placeholder="Pesquisar por título..." value="{busca}">
-                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 Pesquisar</button>
+                    <button type="submit" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;"> Pesquisar</button>
                 </form>
             </div>
             <table>
@@ -3834,6 +3834,14 @@ def listar_orcamentos():
             </table>
         </div>
     </div>
+    
+    <script>
+    // Função para visualizar PDF em nova aba
+    function visualizarPDF(id) {{
+        // Abre o PDF em uma nova aba do navegador
+        window.open('/pdf_orcamento/' + id, '_blank');
+    }}
+    </script>
     </body>
     </html>
     '''
@@ -5116,12 +5124,11 @@ def pdf_orcamento(id):
         
         emp = orc.get('empresas', {})
         cliente = emp.get('nome_empresa', '—')
-        responsavel = emp.get('responsavel', '—') or emp.get('nome_empresa', '—')
         cnpj = emp.get('cnpj', '—')
         tel_cliente = emp.get('telefone', '—')
         email = emp.get('email', '—')
-        
         aoscuidadosde = orc.get('aoscuidadosde', '') or '—'
+        
         usuario_logado = session.get('usuario', '')
         
         data_abr = orc.get('data_abertura', '')
@@ -5298,7 +5305,8 @@ def pdf_orcamento(id):
             "enable-local-file-access": None
         })
         
-        return send_file(BytesIO(pdf), as_attachment=True, download_name=f"Proposta_{orc.get('codigo_servico','')}.pdf", mimetype="application/pdf")
+        # ALTERAÇÃO AQUI: as_attachment=False para visualização
+        return send_file(BytesIO(pdf), as_attachment=False, mimetype="application/pdf")
         
     except Exception as e:
         print("ERRO PDF:", str(e))
