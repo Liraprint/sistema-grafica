@@ -1,5 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
-import requests
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify, render_template_stringimport requests
 import os
 import pandas as pd
 from openpyxl import Workbook
@@ -393,18 +392,19 @@ def login():
         except Exception as e:
             flash("Erro ao conectar ao banco de dados.")
     
-    return '''
+    return render_template_string('''
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Gráfica Rápida</title>
+    <title>Login - LIRAPRINT</title>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; }
-    .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 400px; overflow: hidden; margin: 20px; }
+    .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 450px; overflow: hidden; margin: 20px; }
     .header { background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }
+    .logo { max-width: 180px; margin-bottom: 15px; }
     h1 { font-size: 24px; margin: 0; font-weight: 600; }
     .form-container { padding: 30px 20px; }
     .form-container label { display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }
@@ -413,36 +413,41 @@ def login():
     .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 20px; font-size: 14px; text-align: center; }
     .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
 
-    /* RESPONSIVO PARA CELULAR */
     @media (max-width: 768px) {
         body { padding: 10px; }
         .login-container { width: 100%; margin: 10px; }
         .header { padding: 20px 15px; }
+        .logo { max-width: 150px; }
         .header h1 { font-size: 22px; }
         .form-container { padding: 20px 15px; }
-        .form-container input { font-size: 16px; padding: 14px; } /* 16px evita zoom automático no iPhone */
+        .form-container input { font-size: 16px; padding: 14px; }
         .btn { padding: 16px; font-size: 16px; }
     }
     </style>
     </head>
     <body>
     <div class="login-container">
-    <div class="header"><h1>Login</h1></div>
+    <div class="header">
+        <img src="https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
+        <h1>Login</h1>
+    </div>
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <div class="flash">{{ messages[0] }}</div>
       {% endif %}
     {% endwith %}
     <form method="post" class="form-container">
-    <label>Usuário</label><input type="text" name="username" required autocomplete="username">
-    <label>Senha</label><input type="password" name="password" required autocomplete="current-password">
+    <label>Usuário</label>
+    <input type="text" name="username" required autocomplete="username">
+    <label>Senha</label>
+    <input type="password" name="password" required autocomplete="current-password">
     <button type="submit" class="btn">Entrar</button>
     </form>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
-    '''
+    ''')
 
 @app.route('/logout')
 def logout():
