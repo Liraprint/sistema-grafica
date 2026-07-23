@@ -391,6 +391,7 @@ def login():
             else:
                 flash("Usuário ou senha incorretos!")
         except Exception as e:
+            print("Erro no login:", e)
             flash("Erro ao conectar ao banco de dados.")
     
     return render_template_string('''
@@ -404,21 +405,23 @@ def login():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; }
     .login-container { background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 450px; overflow: hidden; margin: 20px; }
-    .header { background: #2c3e50; color: white; text-align: center; padding: 30px 20px; }
-    .logo { max-width: 180px; margin-bottom: 15px; }
-    h1 { font-size: 24px; margin: 0; font-weight: 600; }
+    .header { background: white; text-align: center; padding: 30px 20px; border-bottom: 3px solid #ecf0f1; }
+    .logo { max-width: 200px; margin-bottom: 15px; }
+    h1 { font-size: 26px; margin: 10px 0 0 0; font-weight: 700; color: #2c3e50; }
     .form-container { padding: 30px 20px; }
     .form-container label { display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }
     .form-container input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 20px; box-sizing: border-box; }
-    .btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-    .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 20px; font-size: 14px; text-align: center; }
+    .btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
+    .btn:hover { background: #219150; }
+    .flash { background: #fdf3cd; color: #856404; padding: 12px; border-radius: 8px; margin: 15px 20px; font-size: 14px; text-align: center; border: 1px solid #ffeeba; }
     .footer { text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }
 
+    /* RESPONSIVO PARA CELULAR */
     @media (max-width: 768px) {
         body { padding: 10px; }
         .login-container { width: 100%; margin: 10px; }
-        .header { padding: 20px 15px; }
-        .logo { max-width: 150px; }
+        .header { padding: 20px 15px; border-bottom: 2px solid #ecf0f1; }
+        .logo { max-width: 160px; }
         .header h1 { font-size: 22px; }
         .form-container { padding: 20px 15px; }
         .form-container input { font-size: 16px; padding: 14px; }
@@ -428,23 +431,25 @@ def login():
     </head>
     <body>
     <div class="login-container">
-    <div class="header">
-        <img src="https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
-        <h1>Login</h1>
-    </div>
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div class="flash">{{ messages[0] }}</div>
-      {% endif %}
-    {% endwith %}
-    <form method="post" class="form-container">
-    <label>Usuário</label>
-    <input type="text" name="username" required autocomplete="username">
-    <label>Senha</label>
-    <input type="password" name="password" required autocomplete="current-password">
-    <button type="submit" class="btn">Entrar</button>
-    </form>
-    <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
+        <div class="header">
+            <img src="https://i.ibb.co/d4Ktnrhp/Logo-fundo-tran.png" alt="LIRAPRINT" class="logo" onerror="this.style.display='none'">
+            <h1>Login</h1>
+        </div>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+        
+        <form method="post" class="form-container">
+            <label>Usuário</label>
+            <input type="text" name="username" required autocomplete="username">
+            <label>Senha</label>
+            <input type="password" name="password" required autocomplete="current-password">
+            <button type="submit" class="btn">Entrar</button>
+        </form>
+        <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     </body>
     </html>
