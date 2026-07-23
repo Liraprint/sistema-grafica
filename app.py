@@ -2705,9 +2705,8 @@ def pdf_os(id):
             "margin-left": "18mm", "margin-right": "18mm",
             "enable-local-file-access": None
         })
-        return send_file(BytesIO(pdf), as_attachment=True, 
-                        download_name=f"OS_{servico.get('codigo_servico', 'N/A')}.pdf")
-    except Exception as e:
+        return send_file(BytesIO(pdf), as_attachment=False, 
+                        mimetype="application/pdf")    except Exception as e:
         print(f"ERRO PDF: {e}")
         flash("❌ Erro ao gerar PDF: " + str(e))
         return redirect(url_for('listar_servicos'))
