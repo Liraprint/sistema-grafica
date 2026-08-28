@@ -710,6 +710,18 @@ def cadastrar_cliente():
             flash("Nome e CNPJ são obrigatórios!")
             return redirect(url_for('cadastrar_cliente'))
         
+        # ✅ TRAVA ANTI-DUPLICIDADE: verifica se já existe empresa com este CNPJ
+        cnpj_numeros = ''.join(ch for ch in cnpj if ch.isdigit())
+        try:
+            url_check = f"{SUPABASE_URL}/rest/v1/empresas?select=id,nome_empresa&or=(cnpj.eq.{cnpj},cnpj.eq.{cnpj_numeros})"
+            resp_check = requests.get(url_check, headers=headers)
+            if resp_check.status_code == 200 and resp_check.json():
+                existente = resp_check.json()[0]
+                flash(f"⚠️ Este CNPJ já está cadastrado para: {existente.get('nome_empresa')}. Edite a empresa existente em vez de criar outra.")
+                return redirect(url_for('listar_empresas'))
+        except Exception as e:
+            print(f"Erro ao verificar CNPJ duplicado: {e}")
+        
         if criar_empresa(nome, cnpj, responsavel, telefone, whatsapp, email, endereco, bairro, cidade, estado, cep, numero,
                         entrega_endereco, entrega_numero, entrega_bairro, entrega_cidade, entrega_estado, entrega_cep):
             flash("✅ Empresa cadastrada com sucesso!")
@@ -739,6 +751,7 @@ def cadastrar_cliente():
     .form-container input, .form-container select {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
     .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
     .btn-blue {{ background: #3498db; }}
+    .btn:disabled {{ background: #95a5a6; cursor: not-allowed; opacity: 0.7; }}
     .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
     .cnpj-group {{ display: flex; gap: 10px; align-items: flex-end; }}
@@ -785,16 +798,22 @@ def cadastrar_cliente():
     <div class="grid-3"><div><label>CEP de Entrega</label><input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" style="width: 150px;"></div><div><label>Bairro de Entrega</label><input type="text" name="entrega_bairro" id="entrega_bairro" style="width: 150px;"></div><div><label>Endereço de Entrega</label><input type="text" name="entrega_endereco" id="entrega_endereco" style="width: 100%; max-width: 350px;"></div></div>
     <div class="grid-3"><div><label>Número de Entrega</label><input type="text" name="entrega_numero" placeholder="Ex: 123"></div><div><label>Cidade de Entrega</label><input type="text" name="entrega_cidade" id="entrega_cidade"></div><div><label>Estado de Entrega</label><select name="entrega_estado" id="entrega_estado"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
     </div>
-    <button type="submit" class="btn">💾 Salvar Empresa</button>
+    <button type="submit" class="btn" id="btnSalvarEmpresa">💾 Salvar Empresa</button>
     </form>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
     
     <script>
-    // Consulta CNPJ automaticamente
+    // ✅ NOVO - TRAVA ANTI-DUPLICIDADE: bloqueia o botão após o primeiro clique
+    document.getElementById('formEmpresa').addEventListener('submit', function() {{
+        var btn = document.getElementById('btnSalvarEmpresa');
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Salvando... Aguarde';
+    }});
+
     function consultarCNPJ() {{
         const cnpjInput = document.getElementById('cnpj');
-        let cnpj = cnpjInput.value.replace(/\\D/g, '');
+        let cnpj = cnpjInput.value.replace(/\D/g, '');
         
         if (cnpj.length !== 14) {{
             if (cnpj.length > 0) {{
@@ -808,7 +827,6 @@ def cadastrar_cliente():
         btn.innerHTML = '⏳ Consultando...';
         btn.disabled = true;
         
-        // Consulta NOSSO servidor (sem bloqueio de CORS)
         fetch('/consultar_cnpj/' + cnpj)
             .then(response => response.json())
             .then(data => {{
@@ -819,10 +837,9 @@ def cadastrar_cliente():
                     return;
                 }}
                 
-                // Preenche os campos automaticamente
                 document.getElementById('nome').value = data.nome || data.fantasia || '';
                 
-                const tel = (data.telefone || '').replace(/\\D/g, '');
+                const tel = (data.telefone || '').replace(/\D/g, '');
                 if (tel.length >= 10) {{
                     document.getElementById('telefone').value = '(' + tel.substring(0,2) + ') ' + tel.substring(2, tel.length-4) + '-' + tel.substring(tel.length-4);
                 }}
@@ -850,9 +867,10 @@ def cadastrar_cliente():
                 btn.innerHTML = textoOriginal;
                 btn.disabled = false;
             }});
-    }}    
+    }}
+    
     function buscarEnderecoPorCEP() {{ 
-        const cep = document.getElementById('cep').value.replace(/\\D/g, ''); 
+        const cep = document.getElementById('cep').value.replace(/\D/g, ''); 
         if (cep.length !== 8) {{ 
             alert('CEP inválido!'); 
             return; 
@@ -881,7 +899,7 @@ def cadastrar_cliente():
     }}
     
     document.getElementById('entrega_cep').onblur = function() {{ 
-        const cep = this.value.replace(/\\D/g, ''); 
+        const cep = this.value.replace(/\D/g, ''); 
         if (cep.length !== 8) return; 
         fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
             .then(r => r.json())
@@ -908,10 +926,10 @@ def listar_empresas():
     busca = request.args.get('q', '').strip()
     try:
         if busca:
-            url = f"{SUPABASE_URL}/rest/v1/empresas?or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)"
+            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*&or=(nome_empresa.ilike.*{busca}*,cnpj.ilike.*{busca}*)&order=id.asc"
         else:
-            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*"
-        response = requests.get(url, headers=headers)
+            url = f"{SUPABASE_URL}/rest/v1/empresas?select=*&order=id.asc"
+            response = requests.get(url, headers=headers)
         if response.status_code == 200:
             empresas = response.json()
         else:
@@ -4413,6 +4431,14 @@ def adicionar_orcamento():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
+        # ✅ NOVO - TRAVA ANTI-DUPLICIDADE: impede salvar 2 vezes em menos de 5 segundos
+        agora = datetime.now().timestamp()
+        ultimo = session.get('ultimo_orcamento_ts', 0)
+        if agora - ultimo < 5:
+            flash("⚠️ Orçamento já foi salvo! Aguarde alguns segundos para criar outro.")
+            return redirect(url_for('listar_orcamentos'))
+        session['ultimo_orcamento_ts'] = agora
+        
         empresa_id = request.form.get('empresa_id')
         data_abertura = request.form.get('data_abertura')
         prazo_dias = request.form.get('prazo_dias', '7')
@@ -4532,16 +4558,15 @@ def adicionar_orcamento():
         .item-row {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }}
         .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; }}
         .btn-blue {{ background: #3498db; }}
+        .btn:disabled {{ background: #95a5a6; cursor: not-allowed; opacity: 0.7; }}
         .back-link {{ color: #3498db; text-decoration: none; display: inline-block; margin: 20px; font-weight: 500; }}
 
-        /* RESPONSIVO PARA CELULAR */
         @media (max-width: 768px) {{
             .container {{ margin: 10px; border-radius: 12px; }}
             .header {{ padding: 20px 15px; }}
             .header h1 {{ font-size: 22px; }}
             .content {{ padding: 20px 15px; }}
-            .grid {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
-            /* Força a linha de itens complexa a empilhar também */
+            .grid {{ grid-template-columns: 1fr !important; }}
             .item-row .grid {{ grid-template-columns: 1fr !important; gap: 10px; }}
             .item-row .grid > div button {{ margin-top: 0; width: 100%; padding: 12px; }}
             .btn {{ padding: 16px; font-size: 16px; margin-top: 10px; }}
@@ -4605,12 +4630,19 @@ def adicionar_orcamento():
                     </div>
                 </div>
                 <button type="button" onclick="addRow()" class="btn btn-blue" style="margin: 15px 0;">+ Adicionar Item</button>
-                <button type="submit" class="btn">💾 Salvar Orçamento</button>
+                <button type="submit" class="btn" id="btnSalvarOrcamento">💾 Salvar Orçamento</button>
             </form>
         </div>
     </div>
     
     <script>
+    // ✅ NOVO - TRAVA ANTI-DUPLICIDADE: bloqueia o botão após o primeiro clique
+    document.getElementById('formOrcamento').addEventListener('submit', function() {{
+        var btn = document.getElementById('btnSalvarOrcamento');
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Salvando... Aguarde';
+    }});
+
     document.addEventListener('input', function(e) {{
         if (e.target.classList.contains('valor-input')) {{
             let value = e.target.value.replace(/\D/g, '');
