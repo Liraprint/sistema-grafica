@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('.mascara-cnpj');
     inputs.forEach(input => {
         input.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, "");
+            let value = e.target.value.replace(/\\D/g, "");
             value = value.replace(/^(\\d{2})(\\d)/, "$1.$2");
             value = value.replace(/^(\\d{2})\\.(\\d{3})(\\d)/, "$1.$2.$3");
             value = value.replace(/\\.(\\d{3})(\\d)/, ".$1/$2");
