@@ -724,8 +724,12 @@ def cadastrar_cliente():
     .form-container label {{ display: block; margin: 10px 0 5px 0; font-weight: 600; color: #2c3e50; }}
     .form-container input, .form-container select {{ width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }}
     .btn {{ padding: 14px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; }}
+    .btn-blue {{ background: #3498db; }}
     .back-link {{ display: inline-block; margin: 20px; color: #3498db; text-decoration: none; font-weight: 500; }}
     .footer {{ text-align: center; padding: 20px; background: #ecf0f1; color: #7f8c8d; font-size: 13px; border-top: 1px solid #bdc3c7; }}
+    .cnpj-group {{ display: flex; gap: 10px; align-items: flex-end; }}
+    .cnpj-group input {{ flex: 1; }}
+    .cnpj-group button {{ width: auto; padding: 12px 20px; margin-bottom: 0; white-space: nowrap; }}
 
     /* RESPONSIVO PARA CELULAR */
     @media (max-width: 768px) {{
@@ -733,24 +737,36 @@ def cadastrar_cliente():
         .header {{ padding: 20px 15px; }}
         .header h1 {{ font-size: 22px; }}
         .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
-        .grid-2, .grid-3 {{ grid-template-columns: 1fr !important; }} /* Empilha tudo no celular */
+        .grid-2, .grid-3 {{ grid-template-columns: 1fr !important; }}
         .form-container input[style*="width: 150px"], 
-        .form-container input[style*="max-width: 350px"] {{ width: 100% !important; max-width: 100% !important; }} /* Sobrescreve estilos inline */
+        .form-container input[style*="max-width: 350px"] {{ width: 100% !important; max-width: 100% !important; }}
         .btn {{ width: 100%; margin-top: 10px; }}
+        .cnpj-group {{ flex-direction: column; }}
+        .cnpj-group button {{ width: 100%; }}
     }}
     </style>
     </head>
     <body>
     <div class="container">
-    <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
-    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
+    <div class="header"><h1> Cadastrar Nova Empresa</h1></div>
+    <div class="user-info"><span> {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/empresas" class="back-link">← Voltar à lista</a>
-    <form method="post" class="form-container">
-    <div class="grid-2"><div><label>Nome da Empresa *</label><input type="text" name="nome" required></div><div><label>CNPJ *</label><input type="text" name="cnpj" class="mascara-cnpj" placeholder="00.000.000/0000-00" required></div></div>
-    <div class="grid-2"><div><label>Nome do Responsável</label><input type="text" name="responsavel"></div><div><label>WhatsApp</label><input type="text" name="whatsapp"></div></div>
-    <div class="grid-2"><div><label>Telefone</label><input type="text" name="telefone"></div><div><label>E-mail</label><input type="email" name="email"></div></div>
+    <form method="post" class="form-container" id="formEmpresa">
+    <div class="grid-2">
+        <div><label>Nome da Empresa *</label><input type="text" name="nome" id="nome" required></div>
+        <div>
+            <label>CNPJ *</label>
+            <div class="cnpj-group">
+                <input type="text" name="cnpj" id="cnpj" class="mascara-cnpj" placeholder="00.000.000/0000-00" required onblur="consultarCNPJ()">
+                <button type="button" class="btn btn-blue" onclick="consultarCNPJ()" style="margin: 0;">🔍 Consultar</button>
+            </div>
+            <small style="color: #7f8c8d; margin-top: 5px; display: block;">* Clique em Consultar ou saia do campo para buscar automaticamente</small>
+        </div>
+    </div>
+    <div class="grid-2"><div><label>Nome do Responsável</label><input type="text" name="responsavel" id="responsavel"></div><div><label>WhatsApp</label><input type="text" name="whatsapp" id="whatsapp"></div></div>
+    <div class="grid-2"><div><label>Telefone</label><input type="text" name="telefone" id="telefone"></div><div><label>E-mail</label><input type="email" name="email" id="email"></div></div>
     <div class="grid-3"><div><label>CEP</label><input type="text" name="cep" id="cep" onblur="buscarEnderecoPorCEP()" placeholder="00000-000" style="width: 150px;"></div><div><label>Bairro</label><input type="text" name="bairro" id="bairro" style="width: 150px;"></div><div><label>Endereço</label><input type="text" name="endereco" id="endereco" style="width: 100%; max-width: 350px;"></div></div>
-    <div class="grid-3"><div><label>Número</label><input type="text" name="numero" placeholder="Ex: 123"></div><div><label>Cidade</label><input type="text" name="cidade" id="cidade"></div><div><label>Estado</label><select name="estado" id="estado"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
+    <div class="grid-3"><div><label>Número</label><input type="text" name="numero" id="numero" placeholder="Ex: 123"></div><div><label>Cidade</label><input type="text" name="cidade" id="cidade"></div><div><label>Estado</label><select name="estado" id="estado"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
     <div style="margin: 20px 0; padding: 15px; border: 1px dashed #3498db; border-radius: 8px; line-height: 1.5;"><input type="checkbox" name="tem_entrega" id="tem_entrega" onchange="toggleEntrega()" style="margin-right: 8px; vertical-align: middle; width: 20px; height: 20px;"><label for="tem_entrega" style="font-weight: 600; font-size: 16px; vertical-align: middle; cursor: pointer;">Endereço de entrega diferente do endereço da empresa?</label></div>
     <div id="campos-entrega" style="display: none;">
     <div class="grid-3"><div><label>CEP de Entrega</label><input type="text" name="entrega_cep" id="entrega_cep" placeholder="00000-000" style="width: 150px;"></div><div><label>Bairro de Entrega</label><input type="text" name="entrega_bairro" id="entrega_bairro" style="width: 150px;"></div><div><label>Endereço de Entrega</label><input type="text" name="entrega_endereco" id="entrega_endereco" style="width: 100%; max-width: 350px;"></div></div>
@@ -760,7 +776,65 @@ def cadastrar_cliente():
     </form>
     <div class="footer">Sistema de Gestão para Gráfica Rápida | © 2025</div>
     </div>
+    
     <script>
+    // Consulta CNPJ automaticamente
+    function consultarCNPJ() {{
+        const cnpjInput = document.getElementById('cnpj');
+        let cnpj = cnpjInput.value.replace(/\D/g, '');
+        
+        if (cnpj.length !== 14) {{
+            if (cnpj.length > 0) {{
+                alert('CNPJ inválido! Digite 14 números.');
+            }}
+            return;
+        }}
+        
+        // Mostra loading
+        const btn = document.querySelector('.cnpj-group button');
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '⏳ Consultando...';
+        btn.disabled = true;
+        
+        // Consulta API ReceitaWS
+        fetch(`https://www.receitaws.com.br/v1/cnpj/${{cnpj}}`)
+            .then(response => response.json())
+            .then(data => {{
+                if (data.status === 'ERROR') {{
+                    alert('CNPJ não encontrado ou erro na consulta.');
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                    return;
+                }}
+                
+                // Preenche os campos automaticamente
+                document.getElementById('nome').value = data.nome || '';
+                document.getElementById('telefone').value = data.telefone?.replace(/\D/g, '').replace(/(\\d{2})(\\d{4,5})(\\d{4})/, '($1) $2-$3') || '';
+                document.getElementById('email').value = data.email || '';
+                
+                // Endereço
+                document.getElementById('endereco').value = data.logradouro || '';
+                document.getElementById('bairro').value = data.bairro || '';
+                document.getElementById('cidade').value = data.municipio || '';
+                document.getElementById('estado').value = data.uf || '';
+                
+                // Foca no campo número
+                document.getElementById('numero').focus();
+                
+                btn.innerHTML = '✅ CNPJ Encontrado!';
+                setTimeout(() => {{
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                }}, 2000);
+            }})
+            .catch(error => {{
+                console.error('Erro:', error);
+                alert('Erro ao consultar CNPJ. Tente novamente.');
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }});
+    }}
+    
     function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
     function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
     document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
@@ -894,8 +968,7 @@ def detalhes_empresa(id):
         return redirect(url_for('listar_empresas'))
     
     try:
-        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&status=eq.Fechado&order=data_abertura.desc"
-        resp_orcs = requests.get(url_orcs, headers=headers)
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"        resp_orcs = requests.get(url_orcs, headers=headers)
         orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
         
         url_oss = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Produção&order=data_abertura.desc"
