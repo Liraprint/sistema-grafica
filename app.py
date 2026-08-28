@@ -666,6 +666,20 @@ def excluir_usuario_view(id):
     
     return redirect(url_for('gerenciar_usuarios'))
 
+@app.route('/consultar_cnpj/<cnpj>')
+def consultar_cnpj(cnpj):
+    """Consulta dados do CNPJ na API ReceitaWS pelo servidor (sem bloqueio CORS)"""
+    if 'usuario' not in session:
+        return jsonify({'status': 'ERROR', 'message': 'Não autorizado'}), 401
+    try:
+        url = f"https://www.receitaws.com.br/v1/cnpj/{cnpj}"
+        headers_api = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        resp = requests.get(url, headers=headers_api, timeout=10)
+        return jsonify(resp.json())
+    except Exception as e:
+        print(f"Erro ao consultar CNPJ: {e}")
+        return jsonify({'status': 'ERROR', 'message': str(e)}), 500
+
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
     if 'usuario' not in session:
@@ -794,7 +808,8 @@ def cadastrar_cliente():
         btn.innerHTML = '⏳ Consultando...';
         btn.disabled = true;
         
-        fetch(`https://www.receitaws.com.br/v1/cnpj/${{cnpj}}`)
+        // Consulta NOSSO servidor (sem bloqueio de CORS)
+        fetch('/consultar_cnpj/' + cnpj)
             .then(response => response.json())
             .then(data => {{
                 if (data.status === 'ERROR') {{
@@ -804,14 +819,22 @@ def cadastrar_cliente():
                     return;
                 }}
                 
-                document.getElementById('nome').value = data.nome || '';
-                document.getElementById('telefone').value = data.telefone?.replace(/\\D/g, '').replace(/(\\d{{2}})(\\d{{4,5}})(\\d{{4}})/, '($1) $2-$3') || '';
-                document.getElementById('email').value = data.email || '';
+                // Preenche os campos automaticamente
+                document.getElementById('nome').value = data.nome || data.fantasia || '';
                 
+                const tel = (data.telefone || '').replace(/\\D/g, '');
+                if (tel.length >= 10) {{
+                    document.getElementById('telefone').value = '(' + tel.substring(0,2) + ') ' + tel.substring(2, tel.length-4) + '-' + tel.substring(tel.length-4);
+                }}
+                
+                document.getElementById('email').value = data.email || '';
                 document.getElementById('endereco').value = data.logradouro || '';
                 document.getElementById('bairro').value = data.bairro || '';
                 document.getElementById('cidade').value = data.municipio || '';
                 document.getElementById('estado').value = data.uf || '';
+                if (data.numero) {{
+                    document.getElementById('numero').value = data.numero;
+                }}
                 
                 document.getElementById('numero').focus();
                 
@@ -827,8 +850,7 @@ def cadastrar_cliente():
                 btn.innerHTML = textoOriginal;
                 btn.disabled = false;
             }});
-    }}
-    
+    }}    
     function buscarEnderecoPorCEP() {{ 
         const cep = document.getElementById('cep').value.replace(/\\D/g, ''); 
         if (cep.length !== 8) {{ 
@@ -946,7 +968,7 @@ def listar_empresas():
     <div class="search-box">
     <form method="get">
         {btn_voltar}
-        <input type="text" name="q" class="mascara-cnpj" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
+        <input type="text" name="q" placeholder="Pesquisar por nome ou CNPJ..." value="{busca}">
         <button type="submit">🔍 Pesquisar</button>
     </form>
     </div>
