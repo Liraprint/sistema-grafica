@@ -9,17 +9,17 @@ from datetime import datetime
 import pdfkit
 
 # Script global de máscara de CNPJ
-SCRIPT_MASCARA_CNPJ = """
+SCRIPT_MASCARA_CNPJ = r"""
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('.mascara-cnpj');
     inputs.forEach(input => {
         input.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\\D/g, "");
-            value = value.replace(/^(\\d{2})(\\d)/, "$1.$2");
-            value = value.replace(/^(\\d{2})\\.(\\d{3})(\\d)/, "$1.$2.$3");
-            value = value.replace(/\\.(\\d{3})(\\d)/, ".$1/$2");
-            value = value.replace(/(\\d{4})(\\d)/, "$1-$2");
+            let value = e.target.value.replace(/\D/g, "");
+            value = value.replace(/^(\d{2})(\d)/, "$1.$2");
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+            value = value.replace(/\.(\d{3})(\d)/, ".$1/$2");
+            value = value.replace(/(\d{4})(\d)/, "$1-$2");
             e.target.value = value;
         });
     });
@@ -731,7 +731,6 @@ def cadastrar_cliente():
     .cnpj-group input {{ flex: 1; }}
     .cnpj-group button {{ width: auto; padding: 12px 20px; margin-bottom: 0; white-space: nowrap; }}
 
-    /* RESPONSIVO PARA CELULAR */
     @media (max-width: 768px) {{
         .container {{ margin: 10px; border-radius: 12px; }}
         .header {{ padding: 20px 15px; }}
@@ -748,8 +747,8 @@ def cadastrar_cliente():
     </head>
     <body>
     <div class="container">
-    <div class="header"><h1> Cadastrar Nova Empresa</h1></div>
-    <div class="user-info"><span> {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
+    <div class="header"><h1>➕ Cadastrar Nova Empresa</h1></div>
+    <div class="user-info"><span>👤 {session['usuario']} ({session['nivel'].upper()})</span><a href="/logout" style="color:white; text-decoration:none;">🚪 Sair</a></div>
     <a href="/empresas" class="back-link">← Voltar à lista</a>
     <form method="post" class="form-container" id="formEmpresa">
     <div class="grid-2">
@@ -781,7 +780,7 @@ def cadastrar_cliente():
     // Consulta CNPJ automaticamente
     function consultarCNPJ() {{
         const cnpjInput = document.getElementById('cnpj');
-        let cnpj = cnpjInput.value.replace(/\D/g, '');
+        let cnpj = cnpjInput.value.replace(/\\D/g, '');
         
         if (cnpj.length !== 14) {{
             if (cnpj.length > 0) {{
@@ -790,13 +789,11 @@ def cadastrar_cliente():
             return;
         }}
         
-        // Mostra loading
         const btn = document.querySelector('.cnpj-group button');
         const textoOriginal = btn.innerHTML;
         btn.innerHTML = '⏳ Consultando...';
         btn.disabled = true;
         
-        // Consulta API ReceitaWS
         fetch(`https://www.receitaws.com.br/v1/cnpj/${{cnpj}}`)
             .then(response => response.json())
             .then(data => {{
@@ -807,18 +804,15 @@ def cadastrar_cliente():
                     return;
                 }}
                 
-                // Preenche os campos automaticamente
                 document.getElementById('nome').value = data.nome || '';
-                document.getElementById('telefone').value = data.telefone?.replace(/\D/g, '').replace(/(\\d{2})(\\d{4,5})(\\d{4})/, '($1) $2-$3') || '';
+                document.getElementById('telefone').value = data.telefone?.replace(/\\D/g, '').replace(/(\\d{{2}})(\\d{{4,5}})(\\d{{4}})/, '($1) $2-$3') || '';
                 document.getElementById('email').value = data.email || '';
                 
-                // Endereço
                 document.getElementById('endereco').value = data.logradouro || '';
                 document.getElementById('bairro').value = data.bairro || '';
                 document.getElementById('cidade').value = data.municipio || '';
                 document.getElementById('estado').value = data.uf || '';
                 
-                // Foca no campo número
                 document.getElementById('numero').focus();
                 
                 btn.innerHTML = '✅ CNPJ Encontrado!';
@@ -835,9 +829,49 @@ def cadastrar_cliente():
             }});
     }}
     
-    function buscarEnderecoPorCEP() {{ const cep = document.getElementById('cep').value.replace(/\D/g, ''); if (cep.length !== 8) {{ alert('CEP inválido!'); return; }} fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(response => response.json()).then(data => {{ if (data.erro) {{ alert('CEP não encontrado!'); return; }} document.getElementById('endereco').value = data.logradouro; document.getElementById('bairro').value = data.bairro; document.getElementById('cidade').value = data.localidade; document.getElementById('estado').value = data.uf; }}).catch(error => {{ console.error('Erro ao buscar CEP:', error); alert('Erro ao buscar CEP. Tente novamente.'); }}); }}
-    function toggleEntrega() {{ const campos = document.getElementById('campos-entrega'); campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; }}
-    document.getElementById('entrega_cep').onblur = function() {{ const cep = this.value.replace(/\D/g, ''); if (cep.length !== 8) return; fetch(`https://viacep.com.br/ws/${{cep}}/json/`).then(r => r.json()).then(data => {{ if (!data.erro) {{ document.getElementById('entrega_endereco').value = data.logradouro; document.getElementById('entrega_bairro').value = data.bairro; document.getElementById('entrega_cidade').value = data.localidade; document.getElementById('entrega_estado').value = data.uf; }} }}); }};
+    function buscarEnderecoPorCEP() {{ 
+        const cep = document.getElementById('cep').value.replace(/\\D/g, ''); 
+        if (cep.length !== 8) {{ 
+            alert('CEP inválido!'); 
+            return; 
+        }} 
+        fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+            .then(response => response.json())
+            .then(data => {{ 
+                if (data.erro) {{ 
+                    alert('CEP não encontrado!'); 
+                    return; 
+                }} 
+                document.getElementById('endereco').value = data.logradouro; 
+                document.getElementById('bairro').value = data.bairro; 
+                document.getElementById('cidade').value = data.localidade; 
+                document.getElementById('estado').value = data.uf; 
+            }})
+            .catch(error => {{ 
+                console.error('Erro ao buscar CEP:', error); 
+                alert('Erro ao buscar CEP. Tente novamente.'); 
+            }}); 
+    }}
+    
+    function toggleEntrega() {{ 
+        const campos = document.getElementById('campos-entrega'); 
+        campos.style.display = document.getElementById('tem_entrega').checked ? 'block' : 'none'; 
+    }}
+    
+    document.getElementById('entrega_cep').onblur = function() {{ 
+        const cep = this.value.replace(/\\D/g, ''); 
+        if (cep.length !== 8) return; 
+        fetch(`https://viacep.com.br/ws/${{cep}}/json/`)
+            .then(r => r.json())
+            .then(data => {{ 
+                if (!data.erro) {{ 
+                    document.getElementById('entrega_endereco').value = data.logradouro; 
+                    document.getElementById('entrega_bairro').value = data.bairro; 
+                    document.getElementById('entrega_cidade').value = data.localidade; 
+                    document.getElementById('entrega_estado').value = data.uf; 
+                }} 
+            }}); 
+    }};
     </script>
     {SCRIPT_MASCARA_CNPJ}
     </body>
@@ -968,7 +1002,9 @@ def detalhes_empresa(id):
         return redirect(url_for('listar_empresas'))
     
     try:
-        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"        resp_orcs = requests.get(url_orcs, headers=headers)
+        # CORREÇÃO AQUI: Removido o filtro de status e separadas as linhas corretamente
+        url_orcs = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Orçamento&order=data_abertura.desc"
+        resp_orcs = requests.get(url_orcs, headers=headers)
         orcamentos = resp_orcs.json() if resp_orcs.status_code == 200 else []
         
         url_oss = f"{SUPABASE_URL}/rest/v1/servicos?select=*&empresa_id=eq.{id}&tipo=eq.Produção&order=data_abertura.desc"
@@ -1012,7 +1048,6 @@ def detalhes_empresa(id):
     .status-producao {{ color: #3498db; font-weight: 600; }}
     .status-entregue {{ color: #27ae60; font-weight: 600; }}
 
-    /* RESPONSIVO PARA CELULAR */
     @media (max-width: 768px) {{
         .container {{ margin: 10px; }}
         .user-info {{ flex-direction: column; gap: 8px; text-align: center; padding: 15px; }}
